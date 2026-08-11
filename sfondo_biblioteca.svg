@@ -1,67 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1536" height="1024" viewBox="0 0 1536 1024">
 <defs>
-  <filter id="paper" x="-10%" y="-10%" width="120%" height="120%">
-    <feTurbulence type="fractalNoise" baseFrequency="0.55" numOctaves="4" seed="8" result="noise"/>
-    <feColorMatrix in="noise" type="saturate" values="0" result="mono"/>
-    <feComponentTransfer in="mono" result="soft"><feFuncA type="table" tableValues="0 0.055"/></feComponentTransfer>
-    <feBlend in="SourceGraphic" in2="soft" mode="multiply"/>
-  </filter>
-  <radialGradient id="bg" cx="48%" cy="40%" r="78%">
-    <stop offset="0" stop-color="#fbf6ee"/>
-    <stop offset=".6" stop-color="#f6eee3"/>
-    <stop offset="1" stop-color="#f3e7d8"/>
-  </radialGradient>
-  <linearGradient id="pencil" x1="0" x2="1"><stop offset="0" stop-color="#edbe78"/><stop offset=".18" stop-color="#db9c4f"/><stop offset=".82" stop-color="#c98740"/><stop offset="1" stop-color="#e6ad63"/></linearGradient>
-  <linearGradient id="wood" x1="0" x2="1"><stop offset="0" stop-color="#edd3aa"/><stop offset=".5" stop-color="#dfb57c"/><stop offset="1" stop-color="#c88f56"/></linearGradient>
-  <filter id="shadow" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="2" dy="5" stdDeviation="5" flood-color="#715538" flood-opacity=".14"/></filter>
+  <filter id="paper" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="0.6" numOctaves="3" seed="8" result="n"/><feColorMatrix in="n" type="saturate" values="0" result="m"/><feComponentTransfer in="m"><feFuncA type="table" tableValues="0 0.045"/></feComponentTransfer></filter>
+  <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f6ede0"/><stop offset="0.52" stop-color="#f4eadc"/><stop offset="1" stop-color="#f7efe4"/></linearGradient>
 </defs>
-
 <rect width="1536" height="1024" fill="url(#bg)"/>
-<rect width="1536" height="1024" fill="#f7efe4" opacity=".28" filter="url(#paper)"/>
-
-<!-- dried flower bouquet, copied in proportions from the approved mockup -->
-<g transform="translate(3 128)" stroke-linecap="round">
-  <g fill="none" stroke="#a57936" stroke-width="1.7">
-    <path d="M20 650 C30 535 44 420 58 315 C68 230 78 145 85 50"/>
-    <path d="M42 650 C51 548 68 449 90 355 C108 278 122 198 138 98"/>
-    <path d="M24 650 C30 563 38 485 49 414 C57 358 63 307 70 260"/>
-    <path d="M52 650 C63 561 83 479 104 400 C123 329 136 266 150 199"/>
-  </g>
-  <g fill="none" stroke="#b18853" stroke-width="1.15">
-    <path d="M82 88L55 66M82 110L112 84M73 160L42 142M69 215L99 189M61 292L34 271M91 355L66 333M109 285L140 260M127 217L154 190M137 145L113 123M49 414L28 394M104 400L133 376"/>
-  </g>
-  <g fill="#d0a35b" stroke="#bb8841" stroke-width=".5">
-    <g transform="translate(85 50)"><circle r="7"/><circle cx="8" cy="-5" r="5.2"/><circle cx="-8" cy="-4" r="5"/><circle cx="6" cy="7" r="4.5"/><circle cx="-6" cy="7" r="4.3"/></g>
-    <g transform="translate(55 66)"><circle r="6"/><circle cx="7" cy="-4" r="4.3"/><circle cx="-7" cy="-4" r="4.2"/><circle cx="5" cy="6" r="3.8"/></g>
-    <g transform="translate(112 84)"><circle r="6.4"/><circle cx="7" cy="-4" r="4.5"/><circle cx="-7" cy="-4" r="4.4"/><circle cx="5" cy="6" r="3.8"/></g>
-    <g transform="translate(42 142)"><circle r="6"/><circle cx="7" cy="-4" r="4.2"/><circle cx="-7" cy="-4" r="4.1"/></g>
-    <g transform="translate(99 189)"><circle r="6.4"/><circle cx="7" cy="-5" r="4.4"/><circle cx="-7" cy="-4" r="4.3"/><circle cx="5" cy="6" r="3.9"/></g>
-    <g transform="translate(154 190)"><circle r="6.8"/><circle cx="8" cy="-5" r="4.8"/><circle cx="-8" cy="-4" r="4.7"/><circle cx="6" cy="7" r="4.1"/></g>
-    <g transform="translate(113 123)"><circle r="5.8"/><circle cx="7" cy="-4" r="4"/><circle cx="-6" cy="-4" r="4"/></g>
-    <g transform="translate(34 271)"><circle r="5.8"/><circle cx="7" cy="-4" r="4"/><circle cx="-6" cy="-4" r="4"/></g>
-    <g transform="translate(140 260)"><circle r="6.2"/><circle cx="7" cy="-4" r="4.2"/><circle cx="-7" cy="-4" r="4.2"/></g>
-    <g transform="translate(66 333)"><circle r="5.6"/><circle cx="6" cy="-4" r="3.9"/><circle cx="-6" cy="-4" r="3.8"/></g>
-    <g transform="translate(28 394)"><circle r="5.3"/><circle cx="6" cy="-4" r="3.7"/><circle cx="-6" cy="-3" r="3.6"/></g>
-    <g transform="translate(133 376)"><circle r="5.6"/><circle cx="6" cy="-4" r="3.8"/><circle cx="-6" cy="-4" r="3.8"/></g>
-  </g>
-</g>
-
-<!-- three complete paper clips, bottom left -->
-<g transform="translate(43 754)" fill="none" stroke="#b48a4b" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" filter="url(#shadow)">
-  <g transform="rotate(12 28 38)"><path d="M27 3c17-7 31 15 16 28L18 54C5 66-9 46 4 35l24-22c8-7 18 4 10 11L19 42"/></g>
-  <g transform="translate(27 55) rotate(-11 30 40)"><path d="M29 4c18-8 33 16 17 30L20 58C6 71-9 49 5 37l25-23c9-8 19 4 11 12L21 45"/></g>
-  <g transform="translate(7 112) rotate(17 29 38)"><path d="M28 4c17-7 31 15 16 28L19 55C5 67-9 47 5 35l24-22c8-7 18 4 10 11L19 43"/></g>
-</g>
-
-<!-- complete pencil at right, entirely inside viewport -->
-<g transform="translate(1400 318) rotate(8 42 340)" filter="url(#shadow)">
-  <polygon points="42,0 20,69 64,69" fill="url(#wood)"/>
-  <polygon points="42,0 36,22 49,22" fill="#2e2924"/>
-  <rect x="20" y="69" width="44" height="500" rx="3" fill="url(#pencil)"/>
-  <path d="M29 69v500M55 69v500" stroke="#f4ca8a" stroke-width="1.2" opacity=".55"/>
-  <rect x="20" y="569" width="44" height="9" fill="#b58731"/>
-  <rect x="20" y="578" width="44" height="14" fill="#e1bf6d"/>
-  <rect x="20" y="592" width="44" height="44" rx="5" fill="#b85a4b"/>
-  <path d="M22 603h40" stroke="#d98778" stroke-width="2" opacity=".45"/>
-</g>
+<rect width="1536" height="1024" fill="#d7c2a8" opacity=".13" filter="url(#paper)"/>
+<image href="https://images.rawpixel.com/image_png_social_portrait/cHJpdmF0ZS9sci9pbWFnZXMvd2Vic2l0ZS8yMDI0LTEyL3Jhd3BpeGVsb2ZmaWNlMTJfYV9waG90b19vZl9kcmllZF9wcmVzc2VkX2Zsb3dlcl9hX2JhYnlzX2JyZWF0aF8xNDEzZDEzMy0yNGJkLTQxNzktOTE2NC01ZDM1YmIwYzBhNzNfMS5wbmc.png" x="0" y="125" width="185" height="650" preserveAspectRatio="xMinYMid meet"/>
+<image href="https://pngimg.com/uploads/Paper_clip/Paper_clip_PNG18.png" x="34" y="735" width="120" height="210" preserveAspectRatio="xMidYMid meet"/>
+<image href="https://images.rawpixel.com/image_png_800/cHJpdmF0ZS9sci9pbWFnZXMvd2Vic2l0ZS8yMDI0LTA3L3dvcmxkZmFjZXNsYWJfcGhvdG9fb2ZfcGVuY2lsX3RvcF92aWV3X2lzb2xhdGVkX29uX3doaXRlX2JhY2tncl8xNTFlMTgwYS00MmE4LTQ5NTUtODc0Mi04ZmJhOTk5MjZlN2EucG5n.png" x="1335" y="315" width="175" height="670" preserveAspectRatio="xMidYMid meet" transform="rotate(5 1422 650)"/>
 </svg>
