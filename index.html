@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#f3eadf" />
+  <title>Libri di Carta</title>
+  <style>
+    :root{
+      --ink:#27211d;
+      --muted:#6d6259;
+      --paper:#f8f0e5;
+      --paper-2:#f2e5d5;
+      --line:#d9c8b6;
+      --gold:#e7a11a;
+      --accent:#b27544;
+      --shadow:0 18px 50px rgba(89,63,40,.16);
+    }
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{
+      margin:0;
+      min-height:100vh;
+      color:var(--ink);
+      font-family:"Segoe Print","Bradley Hand","Comic Sans MS",cursive;
+      background:
+        radial-gradient(circle at 20% 12%, rgba(255,255,255,.9), transparent 28%),
+        radial-gradient(circle at 80% 75%, rgba(217,189,151,.18), transparent 30%),
+        linear-gradient(135deg,#f6eee4,#efe2d4 50%,#f9f2e9);
+      overflow-x:hidden;
+    }
+    body:before{
+      content:"";
+      position:fixed; inset:0; pointer-events:none; opacity:.20;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.16'/%3E%3C/svg%3E");
+      mix-blend-mode:multiply;
+      z-index:0;
+    }
+    .decor{position:fixed;pointer-events:none;z-index:1;opacity:.92}
+    .stems{left:0;top:125px;width:150px;height:650px}
+    .pencil{right:18px;bottom:0;width:90px;height:650px;transform:rotate(8deg);transform-origin:bottom center}
+    .clips{left:42px;bottom:58px;width:95px;height:170px}
+
+    header{
+      position:sticky; top:0; z-index:20;
+      backdrop-filter:blur(9px);
+      background:rgba(248,240,229,.88);
+      border-bottom:1px solid rgba(144,112,80,.15);
+    }
+    .nav{
+      width:min(1460px,calc(100% - 36px)); margin:auto;
+      min-height:90px; display:flex; align-items:center; gap:30px;
+    }
+    .brand{display:flex;align-items:center;gap:12px;min-width:290px}
+    .brand-mark{width:66px;height:54px;display:grid;place-items:center}
+    .brand h1{font-size:30px;font-weight:500;margin:0;letter-spacing:.01em}
+    nav{display:flex;align-items:center;gap:24px;flex:1;justify-content:center;white-space:nowrap}
+    nav a{color:var(--ink);text-decoration:none;font-size:16px;padding:7px 0;border-bottom:1px solid transparent}
+    nav a.active,nav a:hover{border-color:var(--ink)}
+    .search{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.52);border:1px solid #dfcfbf;border-radius:14px;padding:10px 14px;min-width:260px}
+    .search input{font:inherit;background:transparent;border:0;outline:0;width:100%;color:var(--ink)}
+    .profile{font-size:28px}
+
+    main{position:relative;z-index:2;width:min(1230px,calc(100% - 180px));margin:34px auto 70px}
+    .book-sheet{
+      position:relative;
+      background:rgba(250,243,233,.94);
+      border:1px solid rgba(178,140,101,.18);
+      border-radius:28px;
+      box-shadow:var(--shadow);
+      padding:54px 50px 42px;
+      overflow:hidden;
+    }
+    .book-sheet:after{
+      content:""; position:absolute; inset:0; pointer-events:none; opacity:.18;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='a'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.45' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23a)' opacity='.12'/%3E%3C/svg%3E");
+    }
+    .book-layout{position:relative;z-index:2;display:grid;grid-template-columns:300px 1fr;gap:58px}
+    .cover-wrap{position:relative;padding:14px;background:#f9f1e6;border-radius:8px;box-shadow:0 7px 16px rgba(72,46,25,.16);align-self:start}
+    .tape{position:absolute;width:130px;height:35px;background:rgba(226,195,153,.65);top:-17px;left:50%;transform:translateX(-50%) rotate(-1deg);box-shadow:0 1px 2px rgba(0,0,0,.04)}
+    .cover{display:block;width:100%;aspect-ratio:2/3;object-fit:cover;background:linear-gradient(#e8791f,#a23b13 60%,#1b110a);border-radius:2px}
+    .info h2{font-size:44px;font-weight:400;line-height:1.1;margin:6px 0 6px;border-bottom:1px solid #8f8378;padding-bottom:7px;display:inline-block}
+    .author{font-size:25px;margin:0 0 38px}
+    .section-label{display:inline-block;font-size:19px;margin-bottom:10px;border-bottom:1px solid #8f8378}
+    .plot{font-size:19px;line-height:1.8;margin:0 0 42px;max-width:860px}
+    .quick{display:grid;grid-template-columns:1fr .8fr 1.15fr;gap:22px;margin-bottom:25px}
+    .panel{border:1px solid var(--line);border-radius:12px;padding:18px 22px;background:rgba(255,255,255,.10);min-height:135px}
+    .panel h3{font-size:17px;font-weight:400;margin:0 0 16px;border-bottom:1px solid #8f8378;display:inline-block}
+    .stars{display:flex;gap:7px}
+    .star{border:0;background:transparent;font-size:34px;line-height:1;color:#b3aaa2;cursor:pointer;padding:0;transition:.15s}
+    .star.on{color:var(--gold);text-shadow:0 1px 0 #8d5e10}
+    .checkline{display:flex;align-items:center;gap:10px;font-size:19px}
+    .checkline input{width:26px;height:26px;accent-color:#4f7048}
+    .loan-grid{display:grid;grid-template-columns:auto 1fr;gap:8px 12px;font-size:18px;align-items:center}
+    .loan-grid input{font:inherit;background:transparent;border:0;border-bottom:1px dashed #bca995;outline:0;color:var(--ink);min-width:0}
+    .notes-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+    .notes{min-height:210px;position:relative}
+    .notes textarea{width:100%;min-height:140px;resize:vertical;border:0;outline:0;background:transparent;font:inherit;font-size:18px;line-height:1.65;color:var(--ink)}
+    .edit{position:absolute;right:16px;top:14px;font-size:21px;color:#59483b}
+    .hint{color:#a99c91}
+    .savebar{display:flex;justify-content:flex-end;margin-top:18px;position:relative;z-index:3}
+    .savebtn{border:1px solid #bda68f;background:#ead9c6;color:#4b3b2e;border-radius:12px;padding:11px 18px;font:inherit;cursor:pointer;box-shadow:0 4px 10px rgba(80,54,32,.08)}
+    .savebtn:hover{background:#dfc7ae}
+
+    @media(max-width:1180px){
+      .nav{flex-wrap:wrap;padding:14px 0;gap:12px}.brand{min-width:auto}.brand h1{font-size:25px}nav{order:3;width:100%;overflow:auto;justify-content:flex-start;padding-bottom:4px}.search{margin-left:auto}.book-layout{grid-template-columns:220px 1fr;gap:30px}.info h2{font-size:36px}main{width:min(100% - 50px,1100px)}.stems,.pencil,.clips{opacity:.3}
+    }
+    @media(max-width:760px){
+      .nav{width:calc(100% - 24px)}.brand h1{font-size:22px}.brand-mark{width:50px}.search{min-width:0;flex:1}.profile{display:none}nav{gap:18px;font-size:14px}
+      main{width:calc(100% - 24px);margin-top:18px}.book-sheet{padding:28px 18px 24px;border-radius:20px}.book-layout{grid-template-columns:1fr;gap:24px}.cover-wrap{width:min(250px,72vw);margin:auto}.info h2{font-size:31px}.author{font-size:21px;margin-bottom:25px}.plot{font-size:17px}.quick,.notes-grid{grid-template-columns:1fr}.panel{min-height:auto}.decor{display:none}
+    }
+  </style>
+</head>
+<body>
+  <svg class="decor stems" viewBox="0 0 150 650" aria-hidden="true">
+    <g fill="none" stroke="#b98b45" stroke-width="2">
+      <path d="M20 640 C28 510 35 390 54 260 C64 190 67 118 72 28"/>
+      <path d="M34 640 C43 540 64 420 88 320 C104 255 106 170 115 78"/>
+    </g>
+    <g fill="#d7b679" opacity=".88">
+      <circle cx="72" cy="28" r="7"/><circle cx="65" cy="60" r="6"/><circle cx="82" cy="84" r="5"/><circle cx="56" cy="111" r="6"/><circle cx="92" cy="128" r="6"/><circle cx="52" cy="157" r="5"/><circle cx="96" cy="186" r="7"/>
+      <circle cx="115" cy="78" r="6"/><circle cx="104" cy="112" r="5"/><circle cx="122" cy="139" r="6"/><circle cx="99" cy="169" r="5"/><circle cx="118" cy="205" r="7"/>
+    </g>
+  </svg>
+  <svg class="decor clips" viewBox="0 0 95 170" aria-hidden="true">
+    <g fill="none" stroke="#b88945" stroke-width="4">
+      <path d="M26 14c18-7 31 15 17 27L19 63C5 75-9 55 4 44l23-21c8-7 18 4 10 11L18 51"/>
+      <path d="M56 72c17-7 31 15 16 28l-23 21c-14 12-28-8-15-20l23-20c8-8 19 3 10 11l-19 17"/>
+    </g>
+  </svg>
+  <svg class="decor pencil" viewBox="0 0 90 650" aria-hidden="true">
+    <polygon points="45,0 25,58 65,58" fill="#d8c39c"/><polygon points="45,0 39,20 51,20" fill="#2f2721"/>
+    <rect x="25" y="58" width="40" height="520" rx="4" fill="#d89a51"/><rect x="25" y="58" width="10" height="520" fill="#e7b776" opacity=".8"/>
+    <rect x="25" y="578" width="40" height="18" fill="#c8a143"/><rect x="25" y="596" width="40" height="40" rx="5" fill="#b75c48"/>
+  </svg>
+
+  <header>
+    <div class="nav">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 70 60" width="66" height="54"><g stroke="#4c4238" stroke-width="2"><path fill="#d2a164" d="M8 12l42-7 11 8-42 8z"/><path fill="#f0cf9b" d="M10 20l41-6 10 8-42 7z"/><path fill="#c88b4b" d="M8 30l42-7 11 8-42 8z"/><path fill="#e8c18c" d="M11 39l41-7 10 8-42 8z"/></g></svg>
+        </div>
+        <h1>Libri di Carta</h1>
+      </div>
+      <nav>
+        <a class="active" href="#">⌂ Home</a><a href="#">▥ La mia libreria</a><a href="#">♧ Letti</a><a href="#">♧ Da leggere</a><a href="#">♧ Prestati</a><a href="#">♙ Autori</a><a href="#">✥ Categorie</a>
+      </nav>
+      <label class="search">⌕<input placeholder="Cerca un libro, autore…" /></label><div class="profile">♙</div>
+    </div>
+  </header>
+
+  <main>
+    <section class="book-sheet">
+      <div class="book-layout">
+        <div class="cover-wrap"><div class="tape"></div><img class="cover" src="https://covers.openlibrary.org/b/isbn/9788804679349-L.jpg" alt="Copertina del libro"></div>
+        <div class="info">
+          <h2>Stand by me - Ricordo di un’estate</h2>
+          <p class="author">Stephen King</p>
+          <span class="section-label">TRAMA</span>
+          <p class="plot">Quattro ragazzi partono per un’avventura che cambierà per sempre le loro vite. Lungo il cammino verso un luogo dimenticato dalle mappe, scopriranno il coraggio, l’amicizia e il valore dei ricordi che restano. Un racconto di formazione intenso e indimenticabile.</p>
+          <div class="quick">
+            <section class="panel"><h3>IL MIO RATING</h3><div class="stars" id="stars"><button class="star on" data-v="1">★</button><button class="star on" data-v="2">★</button><button class="star on" data-v="3">★</button><button class="star on" data-v="4">★</button><button class="star" data-v="5">☆</button></div></section>
+            <section class="panel"><h3>LETTO?</h3><label class="checkline"><input id="read" type="checkbox" checked> Sì, l’ho letto</label></section>
+            <section class="panel"><h3>PRESTATO A</h3><div class="loan-grid"><span>♙</span><input id="loanTo" value="Marco B." aria-label="Prestato a"><span>◷</span><input id="loanDate" value="12/05/2024" aria-label="Data del prestito"></div></section>
+          </div>
+        </div>
+      </div>
+      <div class="notes-grid">
+        <section class="panel notes"><span class="edit">✎</span><h3>NOTE PERSONALI</h3><textarea id="notes">Libro stupendo. Mi ha fatto tornare agli anni dell’adolescenza e al valore delle amicizie vere. Finale commovente.</textarea></section>
+        <section class="panel notes"><span class="edit">✎</span><h3>LE MIE NOTE</h3><textarea id="extraNotes" class="hint" placeholder="Scrivi qui le tue note personali…"></textarea></section>
+      </div>
+      <div class="savebar"><button class="savebtn" id="save">Salva modifiche</button></div>
+    </section>
+  </main>
+<script>
+  let rating=4;
+  const stars=[...document.querySelectorAll('.star')];
+  function paint(){stars.forEach((s,i)=>{const on=i<rating;s.classList.toggle('on',on);s.textContent=on?'★':'☆'})}
+  stars.forEach(s=>s.addEventListener('click',()=>{rating=Number(s.dataset.v);paint()}));
+  const saved=JSON.parse(localStorage.getItem('libri-di-carta-demo')||'null');
+  if(saved){rating=saved.rating||0;document.querySelector('#read').checked=!!saved.read;document.querySelector('#loanTo').value=saved.loanTo||'';document.querySelector('#loanDate').value=saved.loanDate||'';document.querySelector('#notes').value=saved.notes||'';document.querySelector('#extraNotes').value=saved.extraNotes||'';paint()}
+  document.querySelector('#save').addEventListener('click',()=>{
+    localStorage.setItem('libri-di-carta-demo',JSON.stringify({rating,read:document.querySelector('#read').checked,loanTo:document.querySelector('#loanTo').value,loanDate:document.querySelector('#loanDate').value,notes:document.querySelector('#notes').value,extraNotes:document.querySelector('#extraNotes').value}));
+    const b=document.querySelector('#save');const old=b.textContent;b.textContent='Salvato ✓';setTimeout(()=>b.textContent=old,1400)
+  });
+</script>
+</body>
+</html>
