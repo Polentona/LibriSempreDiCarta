@@ -1,45 +1,67 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000">
+<svg xmlns="http://www.w3.org/2000/svg" width="1536" height="1024" viewBox="0 0 1536 1024">
 <defs>
   <filter id="paper" x="-10%" y="-10%" width="120%" height="120%">
-    <feTurbulence type="fractalNoise" baseFrequency="0.018 0.055" numOctaves="4" seed="13" result="noise"/>
+    <feTurbulence type="fractalNoise" baseFrequency="0.55" numOctaves="4" seed="8" result="noise"/>
     <feColorMatrix in="noise" type="saturate" values="0" result="mono"/>
-    <feComponentTransfer in="mono" result="soft"><feFuncA type="table" tableValues="0 0.12"/></feComponentTransfer>
+    <feComponentTransfer in="mono" result="soft"><feFuncA type="table" tableValues="0 0.055"/></feComponentTransfer>
     <feBlend in="SourceGraphic" in2="soft" mode="multiply"/>
   </filter>
-  <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f8f0e5"/><stop offset="0.52" stop-color="#f5eadc"/><stop offset="1" stop-color="#f8f1e7"/></linearGradient>
-  <linearGradient id="pencil" x1="0" x2="1"><stop offset="0" stop-color="#e9ba72"/><stop offset=".22" stop-color="#d99b4c"/><stop offset=".78" stop-color="#c7853e"/><stop offset="1" stop-color="#e3ad63"/></linearGradient>
-  <linearGradient id="wood" x1="0" x2="1"><stop offset="0" stop-color="#ecd0a4"/><stop offset=".5" stop-color="#dfb67f"/><stop offset="1" stop-color="#c9945e"/></linearGradient>
-  <filter id="shadow" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="2" dy="4" stdDeviation="4" flood-color="#795b3c" flood-opacity=".15"/></filter>
+  <radialGradient id="bg" cx="48%" cy="40%" r="78%">
+    <stop offset="0" stop-color="#fbf6ee"/>
+    <stop offset=".6" stop-color="#f6eee3"/>
+    <stop offset="1" stop-color="#f3e7d8"/>
+  </radialGradient>
+  <linearGradient id="pencil" x1="0" x2="1"><stop offset="0" stop-color="#edbe78"/><stop offset=".18" stop-color="#db9c4f"/><stop offset=".82" stop-color="#c98740"/><stop offset="1" stop-color="#e6ad63"/></linearGradient>
+  <linearGradient id="wood" x1="0" x2="1"><stop offset="0" stop-color="#edd3aa"/><stop offset=".5" stop-color="#dfb57c"/><stop offset="1" stop-color="#c88f56"/></linearGradient>
+  <filter id="shadow" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="2" dy="5" stdDeviation="5" flood-color="#715538" flood-opacity=".14"/></filter>
 </defs>
-<rect width="1600" height="1000" fill="url(#bg)" filter="url(#paper)"/>
-<g opacity=".18" fill="none" stroke="#d6c3ad" stroke-width="1.3"><path d="M-80 180 C190 115 330 240 550 172 S920 125 1170 190 S1450 230 1690 140"/><path d="M-90 610 C180 545 340 680 590 610 S970 560 1220 630 S1470 680 1680 590"/><path d="M300 -80 C250 160 385 290 310 510 S270 820 370 1070"/><path d="M1210 -70 C1120 140 1250 310 1170 515 S1140 820 1260 1070"/></g>
-<!-- dried flowers left -->
-<g transform="translate(18 145)" stroke-linecap="round">
-  <g fill="none" stroke="#9d7538" stroke-width="2.2"><path d="M10 700 C15 540 28 390 50 245 C61 171 68 92 78 12"/><path d="M38 700 C43 555 72 410 98 292 C116 211 128 123 145 48"/><path d="M24 700 C26 598 40 512 56 435 C70 370 83 306 97 250"/></g>
-  <g fill="none" stroke="#ad874d" stroke-width="1.4"><path d="M57 201L31 170M65 152L94 119M72 105L47 79M94 303L66 273M112 216L151 179M126 135L102 108M54 436L29 409M77 338L105 304"/></g>
-  <g fill="#c99d52" stroke="#b9863d" stroke-width=".7">
-    <g transform="translate(78 12)"><circle r="8"/><circle cx="10" cy="-6" r="6"/><circle cx="-10" cy="-5" r="6"/><circle cx="8" cy="8" r="5"/><circle cx="-8" cy="8" r="5"/></g>
-    <g transform="translate(47 79)"><circle r="7"/><circle cx="8" cy="-5" r="5"/><circle cx="-7" cy="-5" r="5"/><circle cx="6" cy="7" r="4"/></g>
-    <g transform="translate(31 170)"><circle r="7"/><circle cx="8" cy="-5" r="5"/><circle cx="-8" cy="-4" r="5"/><circle cx="5" cy="7" r="4"/></g>
-    <g transform="translate(94 119)"><circle r="7"/><circle cx="8" cy="-5" r="5"/><circle cx="-7" cy="-5" r="5"/></g>
-    <g transform="translate(145 48)"><circle r="8"/><circle cx="10" cy="-6" r="6"/><circle cx="-9" cy="-5" r="6"/><circle cx="8" cy="8" r="5"/></g>
-    <g transform="translate(102 108)"><circle r="7"/><circle cx="8" cy="-5" r="5"/><circle cx="-7" cy="-4" r="5"/></g>
-    <g transform="translate(151 179)"><circle r="7"/><circle cx="8" cy="-5" r="5"/><circle cx="-7" cy="-5" r="5"/></g>
-    <g transform="translate(66 273)"><circle r="6"/><circle cx="7" cy="-4" r="4"/><circle cx="-6" cy="-4" r="4"/></g>
-    <g transform="translate(105 304)"><circle r="6"/><circle cx="7" cy="-4" r="4"/><circle cx="-6" cy="-4" r="4"/></g>
-    <g transform="translate(29 409)"><circle r="6"/><circle cx="7" cy="-4" r="4"/><circle cx="-6" cy="-4" r="4"/></g>
+
+<rect width="1536" height="1024" fill="url(#bg)"/>
+<rect width="1536" height="1024" fill="#f7efe4" opacity=".28" filter="url(#paper)"/>
+
+<!-- dried flower bouquet, copied in proportions from the approved mockup -->
+<g transform="translate(3 128)" stroke-linecap="round">
+  <g fill="none" stroke="#a57936" stroke-width="1.7">
+    <path d="M20 650 C30 535 44 420 58 315 C68 230 78 145 85 50"/>
+    <path d="M42 650 C51 548 68 449 90 355 C108 278 122 198 138 98"/>
+    <path d="M24 650 C30 563 38 485 49 414 C57 358 63 307 70 260"/>
+    <path d="M52 650 C63 561 83 479 104 400 C123 329 136 266 150 199"/>
+  </g>
+  <g fill="none" stroke="#b18853" stroke-width="1.15">
+    <path d="M82 88L55 66M82 110L112 84M73 160L42 142M69 215L99 189M61 292L34 271M91 355L66 333M109 285L140 260M127 217L154 190M137 145L113 123M49 414L28 394M104 400L133 376"/>
+  </g>
+  <g fill="#d0a35b" stroke="#bb8841" stroke-width=".5">
+    <g transform="translate(85 50)"><circle r="7"/><circle cx="8" cy="-5" r="5.2"/><circle cx="-8" cy="-4" r="5"/><circle cx="6" cy="7" r="4.5"/><circle cx="-6" cy="7" r="4.3"/></g>
+    <g transform="translate(55 66)"><circle r="6"/><circle cx="7" cy="-4" r="4.3"/><circle cx="-7" cy="-4" r="4.2"/><circle cx="5" cy="6" r="3.8"/></g>
+    <g transform="translate(112 84)"><circle r="6.4"/><circle cx="7" cy="-4" r="4.5"/><circle cx="-7" cy="-4" r="4.4"/><circle cx="5" cy="6" r="3.8"/></g>
+    <g transform="translate(42 142)"><circle r="6"/><circle cx="7" cy="-4" r="4.2"/><circle cx="-7" cy="-4" r="4.1"/></g>
+    <g transform="translate(99 189)"><circle r="6.4"/><circle cx="7" cy="-5" r="4.4"/><circle cx="-7" cy="-4" r="4.3"/><circle cx="5" cy="6" r="3.9"/></g>
+    <g transform="translate(154 190)"><circle r="6.8"/><circle cx="8" cy="-5" r="4.8"/><circle cx="-8" cy="-4" r="4.7"/><circle cx="6" cy="7" r="4.1"/></g>
+    <g transform="translate(113 123)"><circle r="5.8"/><circle cx="7" cy="-4" r="4"/><circle cx="-6" cy="-4" r="4"/></g>
+    <g transform="translate(34 271)"><circle r="5.8"/><circle cx="7" cy="-4" r="4"/><circle cx="-6" cy="-4" r="4"/></g>
+    <g transform="translate(140 260)"><circle r="6.2"/><circle cx="7" cy="-4" r="4.2"/><circle cx="-7" cy="-4" r="4.2"/></g>
+    <g transform="translate(66 333)"><circle r="5.6"/><circle cx="6" cy="-4" r="3.9"/><circle cx="-6" cy="-4" r="3.8"/></g>
+    <g transform="translate(28 394)"><circle r="5.3"/><circle cx="6" cy="-4" r="3.7"/><circle cx="-6" cy="-3" r="3.6"/></g>
+    <g transform="translate(133 376)"><circle r="5.6"/><circle cx="6" cy="-4" r="3.8"/><circle cx="-6" cy="-4" r="3.8"/></g>
   </g>
 </g>
-<!-- paper clips bottom left -->
-<g transform="translate(38 805) rotate(-10)" fill="none" stroke="#b88a45" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity=".9">
-  <path d="M30 6c21-9 39 18 21 34L20 68C3 83-15 57 3 42l29-26c10-9 22 6 12 15L19 53"/>
-  <path d="M77 64c20-8 37 18 19 34l-28 25c-17 15-34-10-17-25l27-24c10-9 22 5 12 14l-23 20"/>
-  <path d="M38 119c18-7 32 15 17 29l-24 22c-15 13-30-9-15-22l24-22c9-8 19 4 10 12l-20 18"/>
+
+<!-- three complete paper clips, bottom left -->
+<g transform="translate(43 754)" fill="none" stroke="#b48a4b" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" filter="url(#shadow)">
+  <g transform="rotate(12 28 38)"><path d="M27 3c17-7 31 15 16 28L18 54C5 66-9 46 4 35l24-22c8-7 18 4 10 11L19 42"/></g>
+  <g transform="translate(27 55) rotate(-11 30 40)"><path d="M29 4c18-8 33 16 17 30L20 58C6 71-9 49 5 37l25-23c9-8 19 4 11 12L21 45"/></g>
+  <g transform="translate(7 112) rotate(17 29 38)"><path d="M28 4c17-7 31 15 16 28L19 55C5 67-9 47 5 35l24-22c8-7 18 4 10 11L19 43"/></g>
 </g>
-<!-- pencil right -->
-<g transform="translate(1490 355) rotate(8 45 330)" filter="url(#shadow)">
-  <polygon points="45,0 22,72 68,72" fill="url(#wood)"/><polygon points="45,0 38,23 52,23" fill="#2b2520"/>
-  <rect x="22" y="72" width="46" height="500" rx="3" fill="url(#pencil)"/><path d="M31 72v500M59 72v500" stroke="#f0c586" stroke-width="1.2" opacity=".55"/>
-  <rect x="22" y="572" width="46" height="9" fill="#b4872f"/><rect x="22" y="581" width="46" height="14" fill="#dfbd69"/><rect x="22" y="595" width="46" height="44" rx="5" fill="#b85b4b"/><path d="M24 606h42" stroke="#d88878" stroke-width="2" opacity=".5"/>
+
+<!-- complete pencil at right, entirely inside viewport -->
+<g transform="translate(1400 318) rotate(8 42 340)" filter="url(#shadow)">
+  <polygon points="42,0 20,69 64,69" fill="url(#wood)"/>
+  <polygon points="42,0 36,22 49,22" fill="#2e2924"/>
+  <rect x="20" y="69" width="44" height="500" rx="3" fill="url(#pencil)"/>
+  <path d="M29 69v500M55 69v500" stroke="#f4ca8a" stroke-width="1.2" opacity=".55"/>
+  <rect x="20" y="569" width="44" height="9" fill="#b58731"/>
+  <rect x="20" y="578" width="44" height="14" fill="#e1bf6d"/>
+  <rect x="20" y="592" width="44" height="44" rx="5" fill="#b85a4b"/>
+  <path d="M22 603h40" stroke="#d98778" stroke-width="2" opacity=".45"/>
 </g>
 </svg>
