@@ -1,0 +1,116 @@
+name: Distingue saghe nominate e serie senza nome
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/strict-series-names-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Applica regole generali
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          # 1) Le relazioni prequel/sequel sono indipendenti dal nome della saga.
+          # Un nome di saga può essere inferito dai titoli composti solo se una
+          # stessa parte del titolo corrente si ripete davvero in più volumi.
+          p=Path('series-relations.js')
+          s=p.read_text(encoding='utf-8')
+          pattern=r"function inferSagaFromItems\(items,title\)\{.*?\n\}\nfunction relationFromItems"
+          replacement=r'''function inferSagaFromItems(items,title){
+  const targetParts=titleSegments(title).slice(1),allowed=new Set(targetParts.map(norm).filter(Boolean));
+  if(!allowed.size)return'';
+  const counts=new Map(),samples=new Map();
+  for(const raw of items||[]){
+    const variants=[clean(raw),...[...String(raw||'').matchAll(/\(([^()]{3,180})\)/g)].map(m=>clean(m[1]))];
+    const seen=new Set();
+    for(const variant of variants)for(const seg of titleSegments(variant).slice(1)){
+      const n=norm(seg);
+      if(!n||!allowed.has(n)||seen.has(n)||n===norm(title)||n.length<7||n.split(' ').length<2||/^(?:libro|book|volume|edizione|romanzo|novel|trilogia|saga|serie|ciclo)$/.test(n))continue;
+      seen.add(n);counts.set(n,(counts.get(n)||0)+1);if(!samples.has(n))samples.set(n,seg)
+    }
+  }
+  const best=[...counts.entries()].filter(([,count])=>count>=2).sort((a,b)=>b[1]-a[1]||a[0].length-b[0].length)[0];
+  return best?samples.get(best[0])||'':''
+}
+function relationFromItems'''
+          s2,n=re.subn(pattern,replacement,s,count=1,flags=re.S)
+          if n!=1: raise SystemExit('inferSagaFromItems non trovato')
+          p.write_text(s2,encoding='utf-8')
+
+          # 2) Il catalogo non deve inventare un nome di saga da semplici snippet.
+          # Manteniamo solo prove esplicite: campo Saga/Serie/Ciclo, una raccolta
+          # nominata o una lista esplicitamente associata a quel nome.
+          p=Path('italian-catalog-fallback-v3.js')
+          s=p.read_text(encoding='utf-8')
+          old=r'''  const groups=new Map();
+  for(const [source,text] of [['g',g],['b',b]])for(const value of searchSagaCandidates(text,rec.title,rec.author)){
+    const key=normText(value);if(!key)continue;const x=groups.get(key)||{value,count:0,sources:new Set()};x.count++;x.sources.add(source);groups.set(key,x)
+  }
+  const best=[...groups.values()].sort((a,b)=>b.sources.size-a.sources.size||b.count-a.count)[0];
+  if(best&&(best.sources.size>=2||best.count>=2)){rec.saga=best.value;rec.score=(rec.score||0)+3}
+  return rec
+}'''
+          new=r'''  // Nessun nome esplicito e verificabile: la serie può comunque avere
+  // prequel/sequel, ma il campo Saga deve restare vuoto.
+  return rec
+}'''
+          if old not in s: raise SystemExit('fallback euristico saga non trovato')
+          s=s.replace(old,new,1)
+          p.write_text(s,encoding='utf-8')
+
+          # 3) Forza un nuovo controllo dei libri già salvati nel browser.
+          p=Path('isbn-cover.js')
+          s=p.read_text(encoding='utf-8')
+          s2,n=re.subn(r'const RELATIONS_LOOKUP_VERSION=\d+', 'const RELATIONS_LOOKUP_VERSION=3', s, count=1)
+          if n!=1: raise SystemExit('RELATIONS_LOOKUP_VERSION non trovato')
+          p.write_text(s2,encoding='utf-8')
+
+          # 4) Cache bust dei tre script e del loader dello sfondo.
+          p=Path('bg/bg8.js')
+          s=p.read_text(encoding='utf-8')
+          def bump(name,text):
+            pat=re.compile(re.escape(name)+r'\?v=(\d+)')
+            m=pat.search(text)
+            if not m: raise SystemExit(f'versione {name} non trovata')
+            return text[:m.start(1)]+str(int(m.group(1))+1)+text[m.end(1):]
+          for name in ['italian-catalog-fallback-v3.js','series-relations.js','isbn-cover.js']:
+            s=bump(name,s)
+          p.write_text(s,encoding='utf-8')
+
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          m=re.search(r'bg\$\{i\}\.js\?v=(\d+)',s)
+          if not m: raise SystemExit('versione loader bg non trovata')
+          s=s[:m.start(1)]+str(int(m.group(1))+1)+s[m.end(1):]
+          p.write_text(s,encoding='utf-8')
+          PY
+
+      - name: Verifica JavaScript
+        run: |
+          node --check series-relations.js
+          node --check italian-catalog-fallback-v3.js
+          node --check isbn-cover.js
+          node --check bg/bg8.js
+
+      - name: Pubblica e pulisci
+        run: |
+          rm -f .github/workflows/strict-series-names-once.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add series-relations.js italian-catalog-fallback-v3.js isbn-cover.js bg/bg8.js index.html .github/workflows/strict-series-names-once.yml
+          git diff --cached --quiet && exit 0
+          git commit -m "Distingue saghe nominate e serie senza nome"
+          git push origin main
