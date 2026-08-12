@@ -1,0 +1,42 @@
+name: Aggiunge prequel e sequel
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/add-prequel-sequel.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Applica modifica
+        run: python tools/add_relations_ui.py
+      - name: Verifica
+        run: |
+          node --check series-relations.js
+          node --check isbn-cover.js
+          node --check bg/bg8.js
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('index.html').read_text(encoding='utf-8')
+          assert 'relationsMarkup' in s
+          assert 'bg${i}.js?v=12' in s
+          assert 'editPrequel' in Path('isbn-cover.js').read_text(encoding='utf-8')
+          assert 'series-relations.js?v=1' in Path('bg/bg8.js').read_text(encoding='utf-8')
+          PY
+      - name: Pubblica e pulisci
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -f tools/add_relations_ui.py .github/workflows/add-prequel-sequel.yml
+          git add -A
+          git diff --cached --quiet && exit 0
+          git commit -m "Aggiunge prequel e sequel a tutti i libri"
+          git push origin main
