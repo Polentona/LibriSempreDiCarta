@@ -107,10 +107,20 @@ function boot(){
   const VERIFIED_UI_COVERS={'9788854147317':'assets/covers/9788854147317.jpg','8854147311':'assets/covers/9788854147317.jpg'};
   const VERIFIED_BOOK_METADATA={
     '9788854150706':{title:'Sarà per sempre',saga:'Baciata da un angelo',author:'Elizabeth Chandler'},
-    '8854150703':{title:'Sarà per sempre',saga:'Baciata da un angelo',author:'Elizabeth Chandler'}
+    '8854150703':{title:'Sarà per sempre',saga:'Baciata da un angelo',author:'Elizabeth Chandler'},
+    '9788854147317':{title:"L'amore e l'odio",saga:'Baciata da un angelo',author:'Elizabeth Chandler'},
+    '8854147311':{title:"L'amore e l'odio",saga:'Baciata da un angelo',author:'Elizabeth Chandler'}
   };
   function verifiedUiCover(code){const u=VERIFIED_UI_COVERS[normalizeLoose(code)];return u?absoluteCoverUrl(u):''}
   function verifiedBookMetadata(code){return VERIFIED_BOOK_METADATA[normalizeLoose(code)]||null}
+  function migrateVerifiedSavedBooks(){
+    let changed=false;
+    for(const b of books){
+      const meta=verifiedBookMetadata(b.code||b.isbn||'');if(!meta)continue;
+      for(const [k,v] of Object.entries(meta)){if(v&&b[k]!==v){b[k]=v;changed=true}}
+    }
+    if(changed){saveBooks();render()}
+  }
   function stripHtml(s){const d=document.createElement('div');d.innerHTML=String(s||'');return d.textContent||d.innerText||''}
   function setStatus(msg,kind=''){const el=$x('lookupStatus');if(!el)return;if(kind==='busy'){el.innerHTML='<span class="lookup-book-spinner" aria-hidden="true">📖</span>';el.className='lookup-status lookup-busy';el.setAttribute('aria-label','Ricerca dati in corso');return}el.removeAttribute('aria-label');el.textContent=msg;el.className=`lookup-status ${kind}`.trim()}
   function clearLookupStatus(){const el=$x('lookupStatus');if(!el)return;el.removeAttribute('aria-label');el.textContent='';el.className='lookup-status'}
@@ -334,4 +344,5 @@ function boot(){
 }
 
 boot();
+migrateVerifiedSavedBooks();
 })();
