@@ -1,0 +1,37 @@
+name: Corregge sintassi rilevamento saga
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/fix-v3-syntax.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Corregge e valida JavaScript
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('italian-catalog-fallback-v3.js')
+          s=p.read_text(encoding='utf-8')
+          old="for(const part of parts){const e=escapeRe(part);if(new RegExp('(?:saga|serie|ciclo)\\\\s+[\"“”\\\\']?'+e+'(?:[\"“”\\\\']|\\\\b)','i').test(p))return part}"
+          new="for(const part of parts){const e=escapeRe(part);if(new RegExp('(?:saga|serie|ciclo)\\\\s+'+e+'(?:\\\\b|\\\\s|\\\\.)','i').test(p))return part}"
+          if old not in s:
+              raise SystemExit('riga saga non trovata')
+          p.write_text(s.replace(old,new,1),encoding='utf-8')
+          PY
+          node --check italian-catalog-fallback-v3.js
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add italian-catalog-fallback-v3.js
+          git commit -m "Corregge sintassi rilevamento saga"
+          git push origin main
