@@ -1,0 +1,66 @@
+name: Correzione bozza copertina una tantum
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/fix-cover-draft-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  fix-cover-draft:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Corregge inserimento copertina nella bozza
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          p = Path('isbn-cover.js')
+          s = p.read_text(encoding='utf-8')
+
+          old = "function secureUrl(u){return String(u||'').replace(/^http:/i,'https:')}"
+          new = "function secureUrl(u){return String(u||'').replace(/^http:/i,'https:')}\n  function absoluteCoverUrl(u){try{return new URL(secureUrl(u),document.baseURI).href}catch(e){return secureUrl(u)}}\n  const VERIFIED_UI_COVERS={'9788854147317':'assets/covers/9788854147317.jpg','8854147311':'assets/covers/9788854147317.jpg'};\n  function verifiedUiCover(code){const u=VERIFIED_UI_COVERS[normalizeLoose(code)];return u?absoluteCoverUrl(u):''}"
+          if old not in s:
+              raise SystemExit('Punto secureUrl non trovato')
+          s = s.replace(old, new, 1)
+
+          old = "function setDraftCover(url,automatic=true){$x('editCover').value=secureUrl(url);draftCoverWasAuto=automatic;if(automatic)autoFields.add('editCover');showPreview($x('editCover').value)}"
+          new = "function setDraftCover(url,automatic=true){const resolved=absoluteCoverUrl(url);$x('editCover').value=resolved;draftCoverWasAuto=automatic;if(automatic)autoFields.add('editCover');showPreview(resolved)}"
+          if old not in s:
+              raise SystemExit('Punto setDraftCover non trovato')
+          s = s.replace(old, new, 1)
+
+          old = "setAutoField('editTitle',candidate.title);setAutoField('editAuthor',candidate.author);setAutoField('editPlot',candidate.description);setAutoField('editCategory',candidate.category);setAutoField('editPublisher',candidate.publisher);setAutoField('editPublishedDate',candidate.publishedDate);\n    const coverAlready=$x('editCover').value.trim()&&!autoFields.has('editCover');"
+          new = "setAutoField('editTitle',candidate.title);setAutoField('editAuthor',candidate.author);setAutoField('editPlot',candidate.description);setAutoField('editCategory',candidate.category);setAutoField('editPublisher',candidate.publisher);setAutoField('editPublishedDate',candidate.publishedDate);\n    const forcedCover=verifiedUiCover(code);if(forcedCover&&(!$x('editCover').value.trim()||autoFields.has('editCover')))setDraftCover(forcedCover,true);\n    const coverAlready=$x('editCover').value.trim()&&!autoFields.has('editCover');"
+          if old not in s:
+              raise SystemExit('Punto applyCandidate non trovato')
+          s = s.replace(old, new, 1)
+          p.write_text(s, encoding='utf-8')
+
+          p = Path('bg/bg8.js')
+          s = p.read_text(encoding='utf-8')
+          if "isbn-cover.js?v=4" not in s:
+              raise SystemExit('Versione isbn-cover non trovata in bg8')
+          s = s.replace("isbn-cover.js?v=4", "isbn-cover.js?v=5", 1)
+          p.write_text(s, encoding='utf-8')
+
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+          if "bg${i}.js?v=5" not in s:
+              raise SystemExit('Versione bg non trovata in index')
+          s = s.replace("bg${i}.js?v=5", "bg${i}.js?v=6", 1)
+          p.write_text(s, encoding='utf-8')
+          PY
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add isbn-cover.js bg/bg8.js index.html
+          git commit -m "Inserisce sempre la copertina verificata nella bozza"
+          git push
