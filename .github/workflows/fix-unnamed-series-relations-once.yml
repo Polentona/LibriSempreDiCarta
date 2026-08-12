@@ -17,75 +17,8 @@ jobs:
         with:
           ref: main
 
-      - name: Applica correzione generale
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          import re
-
-          p=Path('series-relations.js')
-          s=p.read_text(encoding='utf-8')
-
-          marker='function cleanNeighbor(v){'
-          if marker not in s:
-            raise SystemExit('punto di inserimento relazioni non trovato')
-
-          helper=r'''function chronologicalTitle(v){
-  let x=clean(v)
-    .replace(/^(?:il\s+suo\s+romanzo|il\s+romanzo|il\s+libro|un\s+romanzo|romanzo|libro)\s+/i,'')
-    .replace(/^(?:sono\s+poi\s+seguit[ie]|sono\s+seguit[ie]|seguono)\s+/i,'')
-    .replace(/,\s+(?:il|un)\s+romanzo\b.*$/i,'')
-    .replace(/\s+(?:pubblicato|edito|uscito)\b.*$/i,'')
-    .trim();
-  return cleanRelatedTitle(x)
-}
-function parseChronologicalOrder(text,title,source,relations,baseScore=8){
-  const p=clean(text);let m;
-  const first=/(?:il\s+suo\s+romanzo|il\s+romanzo|il\s+libro|un\s+romanzo|romanzo|libro)\s+([^()]{3,180}?)\s*\((?:pubblicato(?:\s+in\s+[^()]{1,45})?\s+nel\s+)?((?:18|19|20)\d{2})\)[^.]{0,700}?(?:sono\s+poi\s+seguit[ie]|sono\s+seguit[ie]|seguono)\s+([^()]{3,180}?)\s*\(((?:18|19|20)\d{2})\)\s+(?:e|,)\s+([^()]{3,180}?)\s*\(((?:18|19|20)\d{2})\)/gi;
-  while((m=first.exec(p))){
-    const items=[chronologicalTitle(m[1]),chronologicalTitle(m[3]),chronologicalTitle(m[5])].filter(Boolean);
-    const rel=relationFromItems(items,title,source,baseScore+4);if(rel)relations.push(rel)
-  }
-  const second=/([A-ZÀ-ÖØ-Ý][^.!?]{3,180}?)\.\s*A questo\s+(?:è|e)\s+seguito\s+([^.!?]{3,180}?)\.\s*Del\s+(?:18|19|20)\d{2}\s+(?:è|e)\s+([^.!?]{3,180}?)(?:\.|$)/gi;
-  while((m=second.exec(p))){
-    const items=[chronologicalTitle(m[1]),chronologicalTitle(m[2]),chronologicalTitle(m[3])].filter(Boolean);
-    const rel=relationFromItems(items,title,source,baseScore+3);if(rel)relations.push(rel)
-  }
-  const third=/Dopo\s+["“”']?([^"“”']{3,180})["“”']?\s+e\s+["“”']?([^"“”']{3,180})["“”']?[^.]{0,260}?(?:terzo|3[°º]|ultimo)\s+(?:capitolo|volume|libro)[^.]{0,140}?["“”']?([^"“”'.]{3,180})/gi;
-  while((m=third.exec(p))){
-    const items=[chronologicalTitle(m[1]),chronologicalTitle(m[2]),chronologicalTitle(m[3])].filter(Boolean);
-    const rel=relationFromItems(items,title,source,baseScore+3);if(rel)relations.push(rel)
-  }
-}
-'''
-          s=s.replace(marker,helper+marker,1)
-
-          old="function parseEvidence(text,title,source,score=7){const relations=[],sagas=[];parseExplicitSeries(text,title,source,relations,sagas,score);parseNarrativeTriples(text,title,source,relations,score);parseExplicitNeighbors(text,title,source,relations,score);return {relations,sagas}}"
-          new="function parseEvidence(text,title,source,score=7){const relations=[],sagas=[];parseExplicitSeries(text,title,source,relations,sagas,score);parseNarrativeTriples(text,title,source,relations,score);parseChronologicalOrder(text,title,source,relations,score);parseExplicitNeighbors(text,title,source,relations,score);return {relations,sagas}}"
-          if old not in s:
-            raise SystemExit('parseEvidence non trovato')
-          s=s.replace(old,new,1)
-
-          old="const queries=[`\"${base}\" \"${author}\" trilogia saga serie`,`\"${base}\" \"${author}\" sequel prequel seguito preceduto`,...extra.map(v=>`\"${base}\" \"${v}\" \"${author}\" saga`)];"
-          new="const queries=[`\"${base}\" \"${author}\" trilogia saga serie`,`\"${base}\" \"${author}\" sequel prequel seguito preceduto`,`\"${base}\" \"${author}\" \"sono poi seguiti\"`,`\"${base}\" \"${author}\" \"A questo è seguito\"`,...extra.map(v=>`\"${base}\" \"${v}\" \"${author}\" saga`)];"
-          if old not in s:
-            raise SystemExit('query relazioni non trovate')
-          s=s.replace(old,new,1)
-          s=s.replace("norm(hint),'v4'", "norm(hint),'v5'",1)
-          p.write_text(s,encoding='utf-8')
-
-          p=Path('bg/bg8.js')
-          s=p.read_text(encoding='utf-8')
-          s,n=re.subn(r'series-relations\.js\?v=4', 'series-relations.js?v=5', s, count=1)
-          if n!=1: raise SystemExit('versione series-relations non trovata')
-          p.write_text(s,encoding='utf-8')
-
-          p=Path('isbn-cover.js')
-          s=p.read_text(encoding='utf-8')
-          s,n=re.subn(r'RELATIONS_LOOKUP_VERSION=4', 'RELATIONS_LOOKUP_VERSION=5', s, count=1)
-          if n!=1: raise SystemExit('RELATIONS_LOOKUP_VERSION non trovato')
-          p.write_text(s,encoding='utf-8')
-          PY
+      - name: Applica patch
+        run: python _fix_unnamed_relations.py
 
       - name: Verifica JavaScript
         run: |
@@ -98,10 +31,10 @@ function parseChronologicalOrder(text,title,source,relations,baseScore=8){
 
       - name: Pubblica e pulisci
         run: |
-          rm -f .github/workflows/fix-unnamed-series-relations-once.yml
+          rm -f .github/workflows/fix-unnamed-series-relations-once.yml _fix_unnamed_relations.py
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add series-relations.js isbn-cover.js bg/bg8.js .github/workflows/fix-unnamed-series-relations-once.yml
+          git add series-relations.js isbn-cover.js bg/bg8.js .github/workflows/fix-unnamed-series-relations-once.yml _fix_unnamed_relations.py
           git diff --cached --quiet && exit 0
           git commit -m "Rileva prequel e sequel anche nelle serie senza nome"
           git push origin main
