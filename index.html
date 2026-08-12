@@ -175,4 +175,5 @@ $('prevPage').onclick=()=>{if(currentPage>1){currentPage--;render();scrollTo({to
 $('nextPage').onclick=()=>{const pages=Math.max(1,Math.ceil(getFilteredBooks().length/PAGE_SIZE));if(currentPage<pages){currentPage++;render();scrollTo({top:0,behavior:'smooth'})}};
 render();
 </script>
+<script src="series-relations-direct-v7.js?v=1"></script>
 </body></html>
