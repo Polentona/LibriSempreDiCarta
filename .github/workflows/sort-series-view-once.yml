@@ -1,0 +1,58 @@
+name: Ordina Saghe e trilogie
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/sort-series-view-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Aggiorna ordinamento
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          old="""    f=[...f].sort((a,b)=>
+      authorSurname(a.author).localeCompare(authorSurname(b.author),'it',{sensitivity:'base'})||
+      String(a.author||'').localeCompare(String(b.author||''),'it',{sensitivity:'base'})||
+      publicationSortValue(a)-publicationSortValue(b)||
+      String(a.title||'').localeCompare(String(b.title||''),'it',{sensitivity:'base'})
+    );
+"""
+          new="""    f=[...f].sort((a,b)=>
+      authorSurname(a.author).localeCompare(authorSurname(b.author),'it',{sensitivity:'base'})||
+      String(a.saga||'').localeCompare(String(b.saga||''),'it',{sensitivity:'base'})||
+      publicationSortValue(a)-publicationSortValue(b)||
+      String(a.title||'').localeCompare(String(b.title||''),'it',{sensitivity:'base'})
+    );
+"""
+          if old not in s:
+            raise SystemExit('blocco ordinamento Saghe e trilogie non trovato')
+          s=s.replace(old,new,1)
+          s=s.replace("series:['Saghe e trilogie','I libri appartenenti a saghe e trilogie, ordinati per cognome dell’autore e poi per pubblicazione.']", "series:['Saghe e trilogie','I libri appartenenti a saghe e trilogie, ordinati per cognome dell’autore, nome della saga e pubblicazione.']",1)
+          p.write_text(s,encoding='utf-8')
+          PY
+
+      - name: Verifica
+        run: |
+          grep -q "String(a.saga||'').localeCompare" index.html
+
+      - name: Pubblica e pulisci
+        run: |
+          rm -f .github/workflows/sort-series-view-once.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html .github/workflows/sort-series-view-once.yml
+          git commit -m "Ordina Saghe e trilogie per autore saga e pubblicazione"
+          git push origin main
