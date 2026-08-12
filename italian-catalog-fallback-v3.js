@@ -55,17 +55,33 @@ function titleFrom(text,code){
   }
   return best
 }
+function validAuthor(v){
+  const a=cleanLine(v).replace(/\s*\(Autore\).*$/i,'').replace(/^di\s+/i,'').trim(),n=normText(a);
+  if(!a||a.length>100||/\d|€|%|@|https?:|www\./i.test(a))return false;
+  if(/\b(milano|monza|brianza|lodi|roma|torino|napoli|bologna|firenze|genova|venezia|provincia|regione|comune|lombardia|lazio|piemonte|italia|spedizione|consegna|negozio|libreria|magazzino|disponibile|carrello|cookie|assistenza|ritiro|punti vendita)\b/i.test(n))return false;
+  const w=a.split(/\s+/).filter(Boolean);return w.length>=1&&w.length<=6&&/^[A-Za-zÀ-ÿ'’.-]+(?:\s+[A-Za-zÀ-ÿ'’.-]+){0,5}$/.test(a)
+}
 function authorFrom(text,title=''){
-  const labeled=fieldAfter(text,['Autore','Autori']);if(labeled)return labeled.replace(/\s*\(Autore\).*$/i,'').trim();
+  const labeled=fieldAfter(text,['Autore','Autori']);if(validAuthor(labeled))return cleanLine(labeled).replace(/\s*\(Autore\).*$/i,'').trim();
   const p=plain(text);
-  for(const re of [/\bUn libro di\s+([^\n|]{3,100})/i,/\bLibro di\s+([^\n|]{3,100})/i,/\bdi\s+([A-ZÀ-ÖØ-Ý][A-Za-zÀ-ÿ'’.-]+(?:\s+[A-ZÀ-ÖØ-Ý][A-Za-zÀ-ÿ'’.-]+){1,4})\b/]){const m=p.match(re);if(m){const a=cleanLine(m[1]).replace(/\s+(edito|editore|sconto|isbn|ean)\b.*$/i,'').trim();if(a.length<100)return a}}
-  const lines=String(text||'').split(/\n/),nt=normText(title);let ti=-1;
-  if(nt)for(let i=0;i<lines.length;i++)if(normText(cleanLine(lines[i])).includes(nt.slice(0,Math.min(nt.length,45)))){ti=i;break}
-  if(ti>=0)for(let i=ti+1;i<Math.min(lines.length,ti+8);i++){
-    const a=cleanLine(lines[i]);if(!a||/^(zoom|libro di|un libro di|recensioni|scrivi|pronto|nuovo|usato|prezzo|image)/i.test(a)||/\d|€|%/.test(a))continue;
-    if(/^[A-Za-zÀ-ÿ'’.-]+(?:\s+[A-Za-zÀ-ÿ'’.-]+){1,4}$/.test(a)&&a.length<80)return a
-  }
+  for(const re of [/\bUn libro di\s+([^\n|]{3,100})/i,/\bLibro di\s+([^\n|]{3,100})/i,/\bdi\s+([A-ZÀ-ÖØ-Ý][A-Za-zÀ-ÿ'’.-]+(?:\s+[A-ZÀ-ÖØ-Ý][A-Za-zÀ-ÿ'’.-]+){0,4})\b/]){const m=p.match(re);if(m){const a=cleanLine(m[1]).replace(/\s+(edito|editore|sconto|isbn|ean)\b.*$/i,'').trim();if(validAuthor(a))return a}}
+  const lines=String(text||'').split(/\n/),nt=normText(title);let ti=-1;if(nt)for(let i=0;i<lines.length;i++)if(normText(cleanLine(lines[i])).includes(nt.slice(0,Math.min(nt.length,45)))){ti=i;break}
+  if(ti>=0)for(let i=ti+1;i<Math.min(lines.length,ti+10);i++){const a=cleanLine(lines[i]);if(!a||/^(zoom|libro di|un libro di|recensioni|scrivi|pronto|nuovo|usato|prezzo|image)/i.test(a))continue;if(validAuthor(a))return a}
   return''
+}
+function escapeRe(v){return String(v||'').replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}
+function sagaFrom(text,title){
+  const direct=fieldAfter(text,['Saga','Serie','Ciclo']);if(direct&&direct.length<90&&!/^(vertigo|narrativa|libri|romanzo)$/i.test(cleanLine(direct)))return cleanLine(direct);
+  const p=plain(text),parts=String(title||'').split(/\s*(?:\.|\s[-–—]\s|:)\s*/).map(cleanLine).filter(x=>x.length>2);
+  const re=/(?:la\s+)?(?:saga|serie|ciclo)\s+["“”']?([^"“”'()\n]{2,90})["“”']?\s*\(([^)]{3,900})\)/gi;let m;
+  while((m=re.exec(p))){const name=cleanLine(m[1]),list=normText(m[2]);if(parts.some(x=>list.includes(normText(x))))return name}
+  for(const part of parts){const e=escapeRe(part);if(new RegExp('(?:saga|serie|ciclo)\\s+["“”\\']?'+e+'(?:["“”\\']|\\b)','i').test(p))return part}
+  return''
+}
+function splitTitleSaga(title,text){
+  let t=cleanLine(title),saga=sagaFrom(text,t);if(!saga)return {title:t,saga:''};const e=escapeRe(saga);
+  t=t.replace(new RegExp('^'+e+'\\s*(?:[.:-]|[-–—])\\s*','i'),'').replace(new RegExp('\\s*(?:[.:-]|[-–—])\\s*'+e+'$','i'),'').trim();
+  return {title:t||cleanLine(title),saga}
 }
 function yearFrom(text){const labeled=fieldAfter(text,['Anno edizione','Anno pubblicazione','Anno di pubblicazione','Data di Pubblicazione','Data pubblicazione','Pubblicazione']);const m=String(labeled||text).match(/\b(18|19|20)\d{2}\b/);return m?m[0]:''}
 function publisherFrom(text){return fieldAfter(text,['Editore','Publisher','Casa editrice']).replace(/^[:|\s-]+/,'').trim()}
@@ -95,10 +111,10 @@ function bestCover(text,title,pageUrl){
 }
 function inspectText(text,url,code){
   if(!text||!codeAppears(text,code))return null;
-  const title=titleFrom(text,code),author=authorFrom(text,title),publisher=publisherFrom(text),year=yearFrom(text),description=descriptionFrom(text),category=categoryFrom(text,title),cover=bestCover(text,title,url);
+  const rawTitle=titleFrom(text,code),split=splitTitleSaga(rawTitle,text),title=split.title,saga=split.saga,author=authorFrom(text,rawTitle),publisher=publisherFrom(text),year=yearFrom(text),description=descriptionFrom(text),category=categoryFrom(text,rawTitle),cover=bestCover(text,rawTitle,url);
   if(!title)return null;
-  let score=4+(author?4:0)+(publisher?2:0)+(year?1:0)+(description?4:0)+(category?2:0)+(cover?2:0);if(sourceName(url)==='Libraccio'||sourceName(url)==='Libreria Universitaria'||sourceName(url)==='Unilibro')score+=1;
-  return {title,author,publisher,year,description,category,cover,source:sourceName(url),score}
+  let score=4+(author?4:0)+(publisher?2:0)+(year?1:0)+(description?4:0)+(category?2:0)+(cover?2:0)+(saga?3:0);if(['Libraccio','Libreria Universitaria','Unilibro','IBS'].includes(sourceName(url)))score+=1;
+  return {title,saga,author,publisher,year,description,category,cover,source:sourceName(url),score}
 }
 async function findCatalog(code){
   const key=norm(code);if(cache.has(key))return cache.get(key);
@@ -115,7 +131,7 @@ async function findCatalog(code){
 }
 function makeGoogleItem(rec,code){
   const ids=aliases(code).map(id=>({type:id.length===10?'ISBN_10':'ISBN_13',identifier:id}));
-  const v={title:rec.title,authors:rec.author?[rec.author]:[],publisher:rec.publisher||'',publishedDate:rec.year||'',language:'it',industryIdentifiers:ids,description:rec.description||'',categories:rec.category?[rec.category]:[]};
+  const v={title:rec.title,seriesName:rec.saga||'',authors:rec.author?[rec.author]:[],publisher:rec.publisher||'',publishedDate:rec.year||'',language:'it',industryIdentifiers:ids,description:rec.description||'',categories:rec.category?[rec.category]:[]};
   if(rec.cover)v.imageLinks={extraLarge:rec.cover,large:rec.cover,medium:rec.cover,thumbnail:rec.cover,smallThumbnail:rec.cover};
   return {id:'catalog-v3-'+norm(code),volumeInfo:v}
 }
