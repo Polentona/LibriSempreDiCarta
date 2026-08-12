@@ -32,7 +32,7 @@ function boot(){
   .cover-preview{width:95px;aspect-ratio:2/3;object-fit:cover;border-radius:5px;background:#ddcbb8;box-shadow:0 3px 9px rgba(82,56,35,.14)}
   .cover-preview-empty{width:95px;aspect-ratio:2/3;display:grid;place-items:center;text-align:center;padding:8px;border-radius:5px;background:#ddcbb8;color:#806f60;font-size:9px}
   .cover-draft strong{display:block;font-size:11px;font-weight:500;margin-bottom:5px}.lookup-status{font-size:10px;line-height:1.5;color:#75685d}.lookup-status.busy{color:#8a643a}.lookup-status.ok{color:#4f7148}.lookup-status.warn{color:#8a5a36}
-  .metadata-overlay{position:fixed;inset:0;z-index:10000;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(50,39,30,.42);backdrop-filter:blur(3px)}.metadata-overlay.open{display:flex}
+  .metadata-overlay{position:fixed;inset:0;width:100vw;height:100vh;max-width:none;max-height:none;margin:0;border:0;z-index:10000;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(50,39,30,.42);backdrop-filter:blur(3px)}.metadata-overlay[open]{display:flex}.metadata-overlay::backdrop{background:transparent}
   .metadata-picker{width:min(860px,100%);max-height:88vh;overflow:auto;background:#fbf4e9;border:1px solid #d6bea5;border-radius:15px;box-shadow:0 24px 70px rgba(55,38,26,.34);padding:20px;color:#2d251f;font-family:"Segoe Print","Bradley Hand","Comic Sans MS",cursive}
   .metadata-picker h3{font-size:20px;font-weight:500;margin:0 0 5px}.metadata-picker>p{font-size:11px;color:#75685d;margin:0 0 14px;line-height:1.5}.metadata-choice-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
   .metadata-choice{border:1px solid #d7c1aa;border-radius:10px;background:#fff9f0;padding:10px;cursor:pointer;font:inherit;color:#2d251f;text-align:left;display:grid;grid-template-columns:82px 1fr;gap:10px;min-height:135px}.metadata-choice:hover{transform:translateY(-1px);box-shadow:0 6px 14px rgba(82,56,35,.12)}
@@ -71,13 +71,18 @@ function boot(){
   dateField.innerHTML=`<label for="editPublishedDate">Pubblicazione</label><input id="editPublishedDate" placeholder="Anno o data di pubblicazione">`;
   publisherField.insertAdjacentElement('afterend',dateField);
 
+  const sagaField=document.createElement('div');
+  sagaField.className='edit-field';
+  sagaField.innerHTML=`<label for="editSaga">Saga</label><input id="editSaga" placeholder="Nome della saga, se presente">`;
+  dateField.insertAdjacentElement('afterend',sagaField);
+
   const coverField=$x('editCover').closest('.edit-field');
   const previewField=document.createElement('div');
   previewField.className='edit-field full';
   previewField.innerHTML=`<div class="cover-draft"><div id="coverPreviewBox"><div class="cover-preview-empty">Nessuna copertina</div></div><div><strong>Bozza del libro</strong><div class="lookup-status" id="lookupStatus">Inserisci un codice: i dati verranno cercati automaticamente.</div></div></div>`;
   coverField.insertAdjacentElement('afterend',previewField);
 
-  const overlay=document.createElement('div');
+  const overlay=document.createElement('dialog');
   overlay.className='metadata-overlay';overlay.id='metadataOverlay';overlay.setAttribute('aria-hidden','true');
   overlay.innerHTML=`<section class="metadata-picker" role="dialog" aria-modal="true" aria-labelledby="metadataPickerTitle"><h3 id="metadataPickerTitle">Scegli il risultato corretto</h3><p id="metadataPickerText"></p><div id="metadataChoices"></div><div class="metadata-actions"><button class="dialog-btn" id="closeMetadataPicker" type="button">Chiudi senza scegliere</button></div></section>`;
   document.body.appendChild(overlay);
@@ -115,8 +120,8 @@ function boot(){
     const el=$x(id);if(!el)return;
     if(!el.value.trim()||autoFields.has(id)){el.value=value;autoFields.add(id)}
   }
-  function hidePicker(){overlay.classList.remove('open');overlay.setAttribute('aria-hidden','true');$x('metadataChoices').innerHTML=''}
-  function openPicker(title,text){$x('metadataPickerTitle').textContent=title;$x('metadataPickerText').textContent=text;overlay.classList.add('open');overlay.setAttribute('aria-hidden','false')}
+  function hidePicker(){if(overlay.open)overlay.close();overlay.setAttribute('aria-hidden','true');$x('metadataChoices').innerHTML=''}
+  function openPicker(title,text){$x('metadataPickerTitle').textContent=title;$x('metadataPickerText').textContent=text;overlay.setAttribute('aria-hidden','false');if(!overlay.open)overlay.showModal()}
   function imageWorks(url){return new Promise(resolve=>{const img=new Image();let done=false;const finish=v=>{if(done)return;done=true;clearTimeout(t);resolve(v)};const t=setTimeout(()=>finish(false),4200);img.onload=()=>finish(img.naturalWidth>20&&img.naturalHeight>20);img.onerror=()=>finish(false);img.src=url})}
   async function usableCovers(covers){
     const seen=new Set(),list=[];
@@ -169,7 +174,7 @@ function boot(){
       const r=await fetch(url);if(!r.ok)return[];const data=await r.json();
       return (data.items||[]).map(item=>{
         const v=item.volumeInfo||{},cover=getGoogleCover(v.imageLinks||{}),ids=identifiersFromGoogle(v);
-        return {title:joinTitle(v.title,v.subtitle),author:(v.authors||[]).join(', '),description:stripHtml(v.description||''),category:(v.categories||[]).slice(0,4).join(', '),publisher:v.publisher||'',publishedDate:v.publishedDate||'',covers:cover?[{url:cover,source:'Google Books'}]:[],source:'Google Books',identifiers:ids,exact:type==='isbn'?ids.includes(normalizeLoose(code)):false,sourceId:item.id||''}
+        return {title:joinTitle(v.title,v.subtitle),saga:String(v.seriesName||'').trim(),author:(v.authors||[]).join(', '),description:stripHtml(v.description||''),category:(v.categories||[]).slice(0,4).join(', '),publisher:v.publisher||'',publishedDate:v.publishedDate||'',covers:cover?[{url:cover,source:'Google Books'}]:[],source:'Google Books',identifiers:ids,exact:type==='isbn'?ids.includes(normalizeLoose(code)):false,sourceId:item.id||''}
       }).filter(c=>c.title)
     }catch(e){return[]}
   }
@@ -181,7 +186,7 @@ function boot(){
       const r=await fetch(`https://openlibrary.org/search.json?q=${encodeURIComponent(query)}&fields=${encodeURIComponent(fields)}&limit=20`);if(!r.ok)return[];const data=await r.json();
       return (data.docs||[]).map(d=>{
         const ids=(d.isbn||[]).map(normalizeLoose),cover=d.cover_i?`https://covers.openlibrary.org/b/id/${d.cover_i}-L.jpg`:'';
-        return {title:joinTitle(d.title,d.subtitle),author:(d.author_name||[]).join(', '),description:'',category:(d.subject||[]).slice(0,4).join(', '),publisher:(d.publisher||[])[0]||'',publishedDate:String(d.first_publish_year||(d.publish_date||[])[0]||''),covers:cover?[{url:cover,source:'Open Library'}]:[],source:'Open Library',identifiers:ids,exact:type==='isbn'?ids.includes(normalizeLoose(code)):false,workKey:d.key||''}
+        return {title:joinTitle(d.title,d.subtitle),saga:'',author:(d.author_name||[]).join(', '),description:'',category:(d.subject||[]).slice(0,4).join(', '),publisher:(d.publisher||[])[0]||'',publishedDate:String(d.first_publish_year||(d.publish_date||[])[0]||''),covers:cover?[{url:cover,source:'Open Library'}]:[],source:'Open Library',identifiers:ids,exact:type==='isbn'?ids.includes(normalizeLoose(code)):false,workKey:d.key||''}
       }).filter(c=>c.title)
     }catch(e){return[]}
   }
@@ -199,7 +204,7 @@ function boot(){
     for(const c of input){
       const key=[normalizeText(c.title),normalizeText(c.author),normalizeText(c.publisher),normalizeText(c.publishedDate)].join('|');
       if(!map.has(key)){map.set(key,{...c,covers:[...(c.covers||[])],sources:new Set([c.source])});continue}
-      const x=map.get(key);x.description=x.description||c.description;x.category=x.category||c.category;x.publisher=x.publisher||c.publisher;x.publishedDate=x.publishedDate||c.publishedDate;x.exact=x.exact||c.exact;x.serialLevel=x.serialLevel||c.serialLevel;x.workKey=x.workKey||c.workKey;x.sources.add(c.source);
+      const x=map.get(key);x.description=x.description||c.description;x.saga=x.saga||c.saga;x.category=x.category||c.category;x.publisher=x.publisher||c.publisher;x.publishedDate=x.publishedDate||c.publishedDate;x.exact=x.exact||c.exact;x.serialLevel=x.serialLevel||c.serialLevel;x.workKey=x.workKey||c.workKey;x.sources.add(c.source);
       const seen=new Set(x.covers.map(z=>secureUrl(z.url)));for(const z of c.covers||[]){if(!seen.has(secureUrl(z.url))){x.covers.push(z);seen.add(secureUrl(z.url))}}
     }
     return [...map.values()].map(x=>({...x,source:[...x.sources].join(' + ')})).sort((a,b)=>Number(b.exact)-Number(a.exact)||Number(!!b.covers.length)-Number(!!a.covers.length))
@@ -229,7 +234,7 @@ function boot(){
 
   async function applyCandidate(candidate,code,type){
     candidate=await enrichOpenLibrary(candidate);
-    setAutoField('editTitle',candidate.title);setAutoField('editAuthor',candidate.author);setAutoField('editPlot',candidate.description);setAutoField('editCategory',candidate.category);setAutoField('editPublisher',candidate.publisher);setAutoField('editPublishedDate',candidate.publishedDate);
+    setAutoField('editTitle',candidate.title);setAutoField('editSaga',candidate.saga);setAutoField('editAuthor',candidate.author);setAutoField('editPlot',candidate.description);setAutoField('editCategory',candidate.category);setAutoField('editPublisher',candidate.publisher);setAutoField('editPublishedDate',candidate.publishedDate);
     const forcedCover=verifiedUiCover(code);if(forcedCover&&(!$x('editCover').value.trim()||autoFields.has('editCover')))setDraftCover(forcedCover,true);
     const coverAlready=$x('editCover').value.trim()&&!autoFields.has('editCover');
     if(type==='isbn'&&!coverAlready){const retail=await retailerCoversForIsbn(code,candidate.title||'',candidate.author||'');candidate.covers=mergeCoverOptions(candidate.covers,retail)}
@@ -280,11 +285,11 @@ function boot(){
   const originalFillDialog=fillDialog;
   fillDialog=function(b={}){
     originalFillDialog(b);autoFields.clear();draftCoverWasAuto=false;lastSearchKey='';searchToken++;
-    const oldCode=b.code||b.isbn||'';$x('editCode').value=oldCode;$x('editCodeType').value=b.codeType||(b.isbn?'isbn':'auto');$x('editCategory').value=b.category||'';$x('editPublisher').value=b.publisher||'';$x('editPublishedDate').value=b.publishedDate||'';showPreview(b.cover||'');
+    const oldCode=b.code||b.isbn||'';$x('editCode').value=oldCode;$x('editCodeType').value=b.codeType||(b.isbn?'isbn':'auto');$x('editCategory').value=b.category||'';$x('editPublisher').value=b.publisher||'';$x('editPublishedDate').value=b.publishedDate||'';$x('editSaga').value=b.saga||'';showPreview(b.cover||'');
     setStatus(dialogMode==='add'?'Inserisci un codice: i dati verranno cercati automaticamente.':'Puoi cambiare il codice e premere “Cerca dati” per recuperare eventuali informazioni mancanti.')
   };
 
-  ['editTitle','editAuthor','editPlot','editCategory','editPublisher','editPublishedDate'].forEach(id=>$x(id).addEventListener('input',()=>autoFields.delete(id)));
+  ['editTitle','editSaga','editAuthor','editPlot','editCategory','editPublisher','editPublishedDate'].forEach(id=>$x(id).addEventListener('input',()=>autoFields.delete(id)));
   $x('editCover').addEventListener('input',()=>{searchToken++;draftCoverWasAuto=false;autoFields.delete('editCover');showPreview($x('editCover').value.trim());if($x('editCover').value.trim())setStatus('Copertina inserita manualmente: non verrà sostituita dalla ricerca automatica.')});
 
   function scheduleLookup(){
@@ -308,7 +313,7 @@ function boot(){
       const result=await lookupMetadata(true);if(result.kind==='multiple')return
     }
     originalSubmit.call($x('editForm'),e);
-    const extras={code,codeType,category:$x('editCategory').value.trim(),publisher:$x('editPublisher').value.trim(),publishedDate:$x('editPublishedDate').value.trim(),isbn:codeType==='isbn'?code:''};
+    const extras={code,codeType,category:$x('editCategory').value.trim(),publisher:$x('editPublisher').value.trim(),publishedDate:$x('editPublishedDate').value.trim(),saga:$x('editSaga').value.trim(),isbn:codeType==='isbn'?code:''};
     if(modeBefore==='add'){
       if(books[0]){Object.assign(books[0],extras);saveBooks();render()}
     }else{
