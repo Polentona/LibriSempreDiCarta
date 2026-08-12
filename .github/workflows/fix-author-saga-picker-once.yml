@@ -1,0 +1,163 @@
+name: Corregge autore saga e selettore copertine
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/fix-author-saga-picker-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Applica correzioni generali
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          # --- italian-catalog-fallback-v3.js ---
+          p = Path('italian-catalog-fallback-v3.js')
+          s = p.read_text(encoding='utf-8')
+
+          old = """function authorFrom(text,title=''){
+  const labeled=fieldAfter(text,['Autore','Autori']);if(labeled)return labeled.replace(/\\s*\\(Autore\\).*$/i,'').trim();
+  const p=plain(text);
+  for(const re of [/\\bUn libro di\\s+([^\\n|]{3,100})/i,/\\bLibro di\\s+([^\\n|]{3,100})/i,/\\bdi\\s+([A-ZÀ-ÖØ-Ý][A-Za-zÀ-ÿ'’.-]+(?:\\s+[A-ZÀ-ÖØ-Ý][A-Za-zÀ-ÿ'’.-]+){1,4})\\b/]){const m=p.match(re);if(m){const a=cleanLine(m[1]).replace(/\\s+(edito|editore|sconto|isbn|ean)\\b.*$/i,'').trim();if(a.length<100)return a}}
+  const lines=String(text||'').split(/\\n/),nt=normText(title);let ti=-1;
+  if(nt)for(let i=0;i<lines.length;i++)if(normText(cleanLine(lines[i])).includes(nt.slice(0,Math.min(nt.length,45)))){ti=i;break}
+  if(ti>=0)for(let i=ti+1;i<Math.min(lines.length,ti+8);i++){
+    const a=cleanLine(lines[i]);if(!a||/^(zoom|libro di|un libro di|recensioni|scrivi|pronto|nuovo|usato|prezzo|image)/i.test(a)||/\\d|€|%/.test(a))continue;
+    if(/^[A-Za-zÀ-ÿ'’.-]+(?:\\s+[A-Za-zÀ-ÿ'’.-]+){1,4}$/.test(a)&&a.length<80)return a
+  }
+  return''
+}
+"""
+          new = """function validAuthor(v){
+  const a=cleanLine(v).replace(/\\s*\\(Autore\\).*$/i,'').replace(/^di\\s+/i,'').trim(),n=normText(a);
+  if(!a||a.length>100||/\\d|€|%|@|https?:|www\\./i.test(a))return false;
+  if(/\\b(milano|monza|brianza|lodi|roma|torino|napoli|bologna|firenze|genova|venezia|provincia|regione|comune|lombardia|lazio|piemonte|italia|spedizione|consegna|negozio|libreria|magazzino|disponibile|carrello|cookie|assistenza|ritiro|punti vendita)\\b/i.test(n))return false;
+  const w=a.split(/\\s+/).filter(Boolean);if(w.length<1||w.length>6)return false;
+  return /^[A-Za-zÀ-ÿ'’.-]+(?:\\s+[A-Za-zÀ-ÿ'’.-]+){0,5}$/.test(a)
+}
+function authorFrom(text,title=''){
+  const labeled=fieldAfter(text,['Autore','Autori']);if(validAuthor(labeled))return cleanLine(labeled).replace(/\\s*\\(Autore\\).*$/i,'').trim();
+  const p=plain(text);
+  for(const re of [/\\bUn libro di\\s+([^\\n|]{3,100})/i,/\\bLibro di\\s+([^\\n|]{3,100})/i,/\\bdi\\s+([A-ZÀ-ÖØ-Ý][A-Za-zÀ-ÿ'’.-]+(?:\\s+[A-ZÀ-ÖØ-Ý][A-Za-zÀ-ÿ'’.-]+){0,4})\\b/]){const m=p.match(re);if(m){const a=cleanLine(m[1]).replace(/\\s+(edito|editore|sconto|isbn|ean)\\b.*$/i,'').trim();if(validAuthor(a))return a}}
+  const lines=String(text||'').split(/\\n/),nt=normText(title);let ti=-1;
+  if(nt)for(let i=0;i<lines.length;i++)if(normText(cleanLine(lines[i])).includes(nt.slice(0,Math.min(nt.length,45)))){ti=i;break}
+  if(ti>=0)for(let i=ti+1;i<Math.min(lines.length,ti+10);i++){
+    const a=cleanLine(lines[i]);if(!a||/^(zoom|libro di|un libro di|recensioni|scrivi|pronto|nuovo|usato|prezzo|image)/i.test(a))continue;
+    if(validAuthor(a))return a
+  }
+  return''
+}
+function escapeRe(v){return String(v||'').replace(/[.*+?^${}()|[\\]\\\\]/g,'\\\\$&')}
+function sagaFrom(text,title){
+  const direct=fieldAfter(text,['Saga','Serie','Ciclo']);if(direct&&direct.length<90&&!/^(vertigo|narrativa|libri|romanzo)$/i.test(cleanLine(direct)))return cleanLine(direct);
+  const p=plain(text),parts=String(title||'').split(/\\s*(?:\\.|\\s[-–—]\\s|:)\\s*/).map(cleanLine).filter(x=>x.length>2);
+  const re=/(?:la\\s+)?(?:saga|serie|ciclo)\\s+[\"“”']?([^\"“”'()\\n]{2,90})[\"“”']?\\s*\\(([^)]{3,900})\\)/gi;let m;
+  while((m=re.exec(p))){const name=cleanLine(m[1]),list=normText(m[2]);if(parts.some(x=>list.includes(normText(x))))return name}
+  for(const part of parts){const e=escapeRe(part);if(new RegExp('(?:saga|serie|ciclo)\\\\s+[\"“”\\']?'+e+'(?:[\"“”\\']|\\\\b)','i').test(p))return part}
+  return''
+}
+function splitTitleSaga(title,text){
+  let t=cleanLine(title),saga=sagaFrom(text,t);if(!saga)return {title:t,saga:''};
+  const esc=escapeRe(saga);
+  t=t.replace(new RegExp('^'+esc+'\\\\s*(?:[.:-]|[-–—])\\\\s*','i'),'').replace(new RegExp('\\\\s*(?:[.:-]|[-–—])\\\\s*'+esc+'$','i'),'').trim();
+  return {title:t||cleanLine(title),saga}
+}
+"""
+          if old not in s:
+              raise SystemExit('Blocco authorFrom non trovato')
+          s = s.replace(old, new)
+
+          old = """function inspectText(text,url,code){
+  if(!text||!codeAppears(text,code))return null;
+  const title=titleFrom(text,code),author=authorFrom(text,title),publisher=publisherFrom(text),year=yearFrom(text),description=descriptionFrom(text),category=categoryFrom(text,title),cover=bestCover(text,title,url);
+  if(!title)return null;
+  let score=4+(author?4:0)+(publisher?2:0)+(year?1:0)+(description?4:0)+(category?2:0)+(cover?2:0);if(sourceName(url)==='Libraccio'||sourceName(url)==='Libreria Universitaria'||sourceName(url)==='Unilibro')score+=1;
+  return {title,author,publisher,year,description,category,cover,source:sourceName(url),score}
+}
+"""
+          new = """function inspectText(text,url,code){
+  if(!text||!codeAppears(text,code))return null;
+  const rawTitle=titleFrom(text,code),split=splitTitleSaga(rawTitle,text),title=split.title,saga=split.saga,author=authorFrom(text,rawTitle),publisher=publisherFrom(text),year=yearFrom(text),description=descriptionFrom(text),category=categoryFrom(text,rawTitle),cover=bestCover(text,rawTitle,url);
+  if(!title)return null;
+  let score=4+(author?4:0)+(publisher?2:0)+(year?1:0)+(description?4:0)+(category?2:0)+(cover?2:0)+(saga?3:0);if(sourceName(url)==='Libraccio'||sourceName(url)==='Libreria Universitaria'||sourceName(url)==='Unilibro'||sourceName(url)==='IBS')score+=1;
+  return {title,saga,author,publisher,year,description,category,cover,source:sourceName(url),score}
+}
+"""
+          if old not in s:
+              raise SystemExit('Blocco inspectText non trovato')
+          s = s.replace(old, new)
+
+          old = """  const v={title:rec.title,authors:rec.author?[rec.author]:[],publisher:rec.publisher||'',publishedDate:rec.year||'',language:'it',industryIdentifiers:ids,description:rec.description||'',categories:rec.category?[rec.category]:[]};
+"""
+          new = """  const v={title:rec.title,seriesName:rec.saga||'',authors:rec.author?[rec.author]:[],publisher:rec.publisher||'',publishedDate:rec.year||'',language:'it',industryIdentifiers:ids,description:rec.description||'',categories:rec.category?[rec.category]:[]};
+"""
+          if old not in s:
+              raise SystemExit('Blocco makeGoogleItem non trovato')
+          s = s.replace(old, new)
+          p.write_text(s, encoding='utf-8')
+
+          # --- isbn-cover.js ---
+          p = Path('isbn-cover.js')
+          s = p.read_text(encoding='utf-8')
+
+          s = s.replace(".metadata-overlay{position:fixed;inset:0;z-index:10000;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(50,39,30,.42);backdrop-filter:blur(3px)}.metadata-overlay.open{display:flex}", ".metadata-overlay{position:fixed;inset:0;width:100vw;height:100vh;max-width:none;max-height:none;margin:0;border:0;z-index:10000;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(50,39,30,.42);backdrop-filter:blur(3px)}.metadata-overlay[open]{display:flex}.metadata-overlay::backdrop{background:transparent}")
+          s = s.replace("const overlay=document.createElement('div');", "const overlay=document.createElement('dialog');")
+          s = s.replace("function hidePicker(){overlay.classList.remove('open');overlay.setAttribute('aria-hidden','true');$x('metadataChoices').innerHTML=''}", "function hidePicker(){if(overlay.open)overlay.close();overlay.setAttribute('aria-hidden','true');$x('metadataChoices').innerHTML=''}")
+          s = s.replace("function openPicker(title,text){$x('metadataPickerTitle').textContent=title;$x('metadataPickerText').textContent=text;overlay.classList.add('open');overlay.setAttribute('aria-hidden','false')}", "function openPicker(title,text){$x('metadataPickerTitle').textContent=title;$x('metadataPickerText').textContent=text;overlay.setAttribute('aria-hidden','false');if(!overlay.open)overlay.showModal()}")
+
+          anchor = """  const dateField=document.createElement('div');
+  dateField.className='edit-field';
+  dateField.innerHTML=`<label for=\"editPublishedDate\">Pubblicazione</label><input id=\"editPublishedDate\" placeholder=\"Anno o data di pubblicazione\">`;
+  publisherField.insertAdjacentElement('afterend',dateField);
+"""
+          add = anchor + """
+  const sagaField=document.createElement('div');
+  sagaField.className='edit-field';
+  sagaField.innerHTML=`<label for=\"editSaga\">Saga</label><input id=\"editSaga\" placeholder=\"Nome della saga, se presente\">`;
+  dateField.insertAdjacentElement('afterend',sagaField);
+"""
+          if anchor not in s:
+              raise SystemExit('Blocco Pubblicazione non trovato')
+          s = s.replace(anchor, add)
+
+          old = """return {title:joinTitle(v.title,v.subtitle),author:(v.authors||[]).join(', '),description:stripHtml(v.description||''),category:(v.categories||[]).slice(0,4).join(', '),publisher:v.publisher||'',publishedDate:v.publishedDate||'',covers:cover?[{url:cover,source:'Google Books'}]:[],source:'Google Books',identifiers:ids,exact:type==='isbn'?ids.includes(normalizeLoose(code)):false,sourceId:item.id||''}"""
+          new = """return {title:joinTitle(v.title,v.subtitle),saga:String(v.seriesName||'').trim(),author:(v.authors||[]).join(', '),description:stripHtml(v.description||''),category:(v.categories||[]).slice(0,4).join(', '),publisher:v.publisher||'',publishedDate:v.publishedDate||'',covers:cover?[{url:cover,source:'Google Books'}]:[],source:'Google Books',identifiers:ids,exact:type==='isbn'?ids.includes(normalizeLoose(code)):false,sourceId:item.id||''}"""
+          if old not in s:
+              raise SystemExit('Candidate Google non trovato')
+          s = s.replace(old, new)
+
+          s = s.replace("return {title:joinTitle(d.title,d.subtitle),author:", "return {title:joinTitle(d.title,d.subtitle),saga:'',author:")
+          s = s.replace("x.description=x.description||c.description;x.category=x.category||c.category;", "x.description=x.description||c.description;x.saga=x.saga||c.saga;x.category=x.category||c.category;")
+          s = s.replace("setAutoField('editTitle',candidate.title);setAutoField('editAuthor',candidate.author);", "setAutoField('editTitle',candidate.title);setAutoField('editSaga',candidate.saga);setAutoField('editAuthor',candidate.author);")
+          s = s.replace("$x('editPublishedDate').value=b.publishedDate||'';showPreview", "$x('editPublishedDate').value=b.publishedDate||'';$x('editSaga').value=b.saga||'';showPreview")
+          s = s.replace("['editTitle','editAuthor','editPlot','editCategory','editPublisher','editPublishedDate']", "['editTitle','editSaga','editAuthor','editPlot','editCategory','editPublisher','editPublishedDate']")
+          s = s.replace("publishedDate:$x('editPublishedDate').value.trim(),isbn:", "publishedDate:$x('editPublishedDate').value.trim(),saga:$x('editSaga').value.trim(),isbn:")
+          p.write_text(s, encoding='utf-8')
+
+          # --- bump cache in bg8 loader ---
+          p = Path('bg/bg8.js')
+          s = p.read_text(encoding='utf-8')
+          s = s.replace("italian-metadata.js?v=8", "italian-metadata.js?v=9")
+          s = s.replace("isbn-cover.js?v=6", "isbn-cover.js?v=7")
+          s = s.replace("italian-catalog-fallback-v3.js?v=1", "italian-catalog-fallback-v3.js?v=2")
+          p.write_text(s, encoding='utf-8')
+          PY
+
+          git rm .github/workflows/fix-author-saga-picker-once.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add italian-catalog-fallback-v3.js isbn-cover.js bg/bg8.js
+          git commit -m "Corregge autore, saga e selettore copertine"
+          git push origin main
