@@ -5,12 +5,13 @@ window.__LIB_ITALIAN_RETAILER_FALLBACK_V2=true;
 const STORES=['libraccio.it','ibs.it','mondadoristore.it','amazon.it','giunti.it'];
 const STORE_NAMES={'libraccio.it':'Libraccio','ibs.it':'IBS','mondadoristore.it':'Mondadori Store','amazon.it':'Amazon Italia','giunti.it':'Giunti'};
 let timer=null,runToken=0,lastKey='';
-
 const $=id=>document.getElementById(id);
+
 function normCode(v){return String(v||'').replace(/[^0-9Xx]/g,'').toUpperCase()}
 function clean(v){return String(v||'').replace(/\r/g,'').replace(/[ \t]+/g,' ').replace(/\n{3,}/g,'\n\n').trim()}
 function plain(v){return clean(String(v||'').replace(/!\[[^\]]*\]\([^)]*\)/g,' ').replace(/\[([^\]]+)\]\([^)]*\)/g,'$1').replace(/[*_`#|]/g,' '))}
-function slug(v){return String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/&/g,' e ').replace(/[’']/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').replace(/-{2,}/g,'-')}
+function normText(v){return String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim()}
+function slug(v){return normText(v).replace(/\s+/g,'-')}
 function domainOf(u){try{const h=new URL(u).hostname.replace(/^www\./,'');return STORES.find(d=>h===d||h.endsWith('.'+d))||''}catch(e){return''}}
 function storeName(u){return STORE_NAMES[domainOf(u)]||'store italiano'}
 function isbn13to10(v){const n=normCode(v);if(!/^978\d{10}$/.test(n))return'';const core=n.slice(3,12);let s=0;for(let i=0;i<9;i++)s+=Number(core[i])*(10-i);const c=(11-(s%11))%11;return core+(c===10?'X':String(c))}
@@ -18,7 +19,7 @@ function codeAppears(text,code){return normCode(text).includes(normCode(code))}
 function explicitlyForeign(text){const p=plain(text).toLowerCase();return /testo\s+in\s+(english|inglese|francese|français|tedesco|deutsch|spagnolo|español)/i.test(p)||/lingua\s*[:|]?\s*(english|inglese|francese|tedesco|spagnolo)/i.test(p)}
 function italianScore(text){
   const t=' '+plain(text).toLowerCase()+' ';
-  const ita=[' il ',' lo ',' la ',' gli ',' le ',' un ',' una ',' che ',' di ',' del ',' della ',' delle ',' dei ',' e ',' è ',' per ',' con ',' nel ',' nella ',' non ',' si ',' al ',' alla ',' tra ',' quando ',' libro ',' romanzo ',' storia ',' edizione ',' descrizione ',' autore ',' editore ',' persone ',' viene ',' sono ',' dopo ',' nella '];
+  const ita=[' il ',' lo ',' la ',' gli ',' le ',' un ',' una ',' che ',' di ',' del ',' della ',' delle ',' dei ',' e ',' è ',' per ',' con ',' nel ',' nella ',' non ',' si ',' al ',' alla ',' tra ',' quando ',' libro ',' romanzo ',' storia ',' edizione ',' descrizione ',' autore ',' editore ',' persone ',' viene ',' sono ',' dopo '];
   const eng=[' the ',' and ',' of ',' to ',' in ',' is ',' with ',' for ',' from ',' book ',' novel ',' story ',' edition ',' description ',' author ',' publisher ',' people ',' after ',' are '];
   let a=0,b=0;for(const w of ita)if(t.includes(w))a++;for(const w of eng)if(t.includes(w))b++;return a-b
 }
@@ -57,18 +58,24 @@ function extractPlot(text){
 function cleanCategory(v){
   let s=plain(v).replace(/^[:\-–|\s]+/,'').replace(/\s{2,}/g,' ').trim();
   s=s.replace(/^Italiano\.\s*/i,'').replace(/^Libri\s*[-–>]\s*/i,'').trim();
-  if(!s||s.length>120)return'';
-  if(/gialli|thriller|mystery|detective/i.test(s))return 'Gialli e thriller';
-  if(/narrativa/i.test(s))return s.includes(' - ')?s:'Narrativa';
+  if(!s||s.length>140)return'';
+  if(/mystery|detective|gialli|thriller|crime|suspense/i.test(s))return 'Gialli e thriller';
+  if(/^fiction$/i.test(s)||/narrativa/i.test(s))return 'Narrativa';
+  if(/science fiction|fantascienza/i.test(s))return 'Fantascienza';
+  if(/fantasy/i.test(s))return 'Fantasy';
+  if(/horror/i.test(s))return 'Horror';
+  if(/biograph/i.test(s))return 'Biografie';
+  if(/history|storia/i.test(s))return 'Storia';
+  if(/poetry|poesia/i.test(s))return 'Poesia';
   return s
 }
 function extractCategory(text){
   const raw=String(text||''),p=plain(raw);
-  const patterns=[/(?:^|\n)\s*Genere\s*(?:\n|:|\|)+\s*([^\n]{2,120})/i,/(?:^|\n)\s*Categoria\s*(?:\n|:|\|)+\s*([^\n]{2,120})/i,/(?:^|\n)\s*Materia\s*(?:\n|:|\|)+\s*([^\n]{2,120})/i,/(?:^|\n)\s*Reparto\s*(?:\n|:|\|)+\s*([^\n]{2,120})/i,/Home\s*>\s*([^>\n]{2,80})\s*>/i];
+  const patterns=[/(?:^|\n)\s*Genere\s*(?:\n|:|\|)+\s*([^\n]{2,140})/i,/(?:^|\n)\s*Categoria\s*(?:\n|:|\|)+\s*([^\n]{2,140})/i,/(?:^|\n)\s*Materia\s*(?:\n|:|\|)+\s*([^\n]{2,140})/i,/(?:^|\n)\s*Reparto\s*(?:\n|:|\|)+\s*([^\n]{2,140})/i,/Home\s*>\s*([^>\n]{2,80})\s*>/i];
   for(const re of patterns){const m=raw.match(re)||p.match(re);if(m){const c=cleanCategory(m[1]);if(c&&!/home|libri|ebook|audiolibri|catalogo/i.test(c))return c}}
   return''
 }
-function categoryScore(v){const s=String(v||'').toLowerCase();if(!s)return 0;if(/gialli|thriller|mystery|detective/.test(s))return 5;if(/fantascienza|fantasy|horror|rosa|romance|storico|biograf|saggistica|poesia|fumetti/.test(s))return 4;if(/narrativa/.test(s))return 2;return 3}
+function categoryScore(v){const s=String(v||'').toLowerCase();if(!s)return 0;if(/gialli|thriller/.test(s))return 6;if(/fantascienza|fantasy|horror|biograf|storia|poesia/.test(s))return 5;if(/narrativa/.test(s))return 3;return 4}
 async function reader(url,timeout=11500){
   const ctrl=new AbortController(),t=setTimeout(()=>ctrl.abort(),timeout);
   try{const r=await fetch('https://r.jina.ai/'+url,{signal:ctrl.signal,headers:{Accept:'text/plain'}});if(!r.ok)return'';return await r.text()}catch(e){return''}finally{clearTimeout(t)}
@@ -86,6 +93,17 @@ async function inspect(url,code){
   const text=await reader(url);if(!text||!codeAppears(text,code))return null;
   return {url,source:storeName(url),plot:extractPlot(text),category:extractCategory(text)}
 }
+function titleMatch(a,b){const x=normText(a),y=normText(b);if(!x||!y)return 0;if(x===y)return 6;if(x.includes(y)||y.includes(x))return 5;const xs=new Set(x.split(' ')),ys=y.split(' '),common=ys.filter(w=>w.length>2&&xs.has(w)).length;return common/Math.max(1,ys.filter(w=>w.length>2).length)}
+async function googleItalianWork(title,author){
+  if(!title)return null;
+  const q=`intitle:${JSON.stringify(title)}${author?` inauthor:${JSON.stringify(author)}`:''}`;
+  try{
+    const r=await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=20&projection=full&printType=books&langRestrict=it`);if(!r.ok)return null;const data=await r.json();
+    const out=[];
+    for(const item of data.items||[]){const v=item.volumeInfo||{};if(String(v.language||'').toLowerCase()!=='it')continue;const tm=titleMatch(v.title,title);if(tm<.55)continue;const a=(v.authors||[]).join(', ');if(author&&a&&titleMatch(a,author)<.4)continue;const plot=looksItalian(v.description||'')?trimPlot(v.description):'';const cats=(v.categories||[]).map(cleanCategory).filter(Boolean);const category=cats.sort((x,y)=>categoryScore(y)-categoryScore(x))[0]||'';if(plot||category)out.push({plot,category,source:'Google Books · edizione italiana correlata',score:tm+(plot?2:0)+categoryScore(category)})}
+    return out.sort((a,b)=>b.score-a.score)[0]||null
+  }catch(e){return null}
+}
 function setStatus(msg,kind='ok'){const el=$('lookupStatus');if(el){el.textContent=msg;el.className=`lookup-status ${kind}`.trim()}}
 async function run(force=false){
   const code=normCode($('editCode')?.value),plot=$('editPlot'),cat=$('editCategory'),title=$('editTitle')?.value.trim(),author=$('editAuthor')?.value.trim();
@@ -94,14 +112,15 @@ async function run(force=false){
   const needPlot=!plot.value.trim(),needCat=!cat.value.trim();if(!force&&!needPlot&&!needCat)return;
   const key=[code,needPlot?'p':'',needCat?'c':'',title,author].join('|');if(!force&&key===lastKey)return;lastKey=key;
   const token=++runToken;setStatus('Sto completando trama e categoria consultando Libraccio, IBS, Mondadori Store, Amazon Italia e Giunti…','busy');
-  const results=(await Promise.all(candidateUrls(code,title,author).map(u=>inspect(u,code)))).filter(Boolean);if(token!==runToken)return;
-  const plots=results.filter(x=>x.plot&&looksItalian(x.plot)).sort((a,b)=>b.plot.length-a.plot.length);
-  const cats=results.filter(x=>x.category).sort((a,b)=>categoryScore(b.category)-categoryScore(a.category));
+  const [storeResults,googleWork]=await Promise.all([Promise.all(candidateUrls(code,title,author).map(u=>inspect(u,code))),googleItalianWork(title,author)]);if(token!==runToken)return;
+  const results=storeResults.filter(Boolean);
+  const plots=results.filter(x=>x.plot&&looksItalian(x.plot)).sort((a,b)=>b.plot.length-a.plot.length);if(googleWork?.plot)plots.push(googleWork);
+  const cats=results.filter(x=>x.category);if(googleWork?.category)cats.push(googleWork);cats.sort((a,b)=>categoryScore(b.category)-categoryScore(a.category));
   const used=[];
   if((needPlot||force)&&plots[0]){plot.value=plots[0].plot;plot.dispatchEvent(new Event('input',{bubbles:true}));used.push(`trama da ${plots[0].source}`)}
   if((needCat||force)&&cats[0]){cat.value=cats[0].category;cat.dispatchEvent(new Event('input',{bubbles:true}));used.push(`categoria da ${cats[0].source}`)}
   if(used.length)setStatus(`Dati italiani completati: ${used.join(' e ')}. Controlla la bozza prima di salvare.`,'ok');
-  else setStatus('Ho controllato gli store italiani disponibili, ma non ho trovato altri dati affidabili per completare i campi mancanti.','warn')
+  else setStatus('Ho controllato gli store italiani e le edizioni italiane correlate, ma non ho trovato altri dati affidabili per completare i campi mancanti.','warn')
 }
 function schedule(force=false,delay=450){clearTimeout(timer);timer=setTimeout(()=>run(force),delay)}
 function boot(){
