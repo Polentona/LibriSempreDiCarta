@@ -4,6 +4,17 @@ window.__LIB_ITALIAN_METADATA_PATCH=true;
 
 const nativeFetch=window.fetch.bind(window);
 const IT_CATALOG_DOMAINS=['eurolibro.it','unilibro.it','libreriauniversitaria.it','hoepli.it','ibs.it','libraccio.it','mondadoristore.it','giunti.it'];
+const VERIFIED_ISBN={
+  '9788854147317':{
+    title:"L'amore e l'odio. Baciata da un angelo",
+    author:'Elizabeth Chandler',
+    publisher:'Newton Compton Editori',
+    year:2013,
+    category:'Narrativa rosa',
+    description:"Ivy conosce l'amore e sa che il legame tra due persone può essere più forte dell'odio, dei pericoli e della morte stessa. Ha scoperto che esiste un altro mondo oltre al nostro e che Tristan, il suo eterno amore ucciso dal folle Gregory, continua a proteggerla. Ma Gregory è ormai un demone potente e brama vendetta. Per combatterlo Tristan ha infranto le leggi che regolano i rapporti tra il mondo dei vivi e quello degli angeli, perdendo i suoi poteri ed essendo ricondotto sulla Terra in un corpo mortale. Per ritrovarsi, Tristan e Ivy dovranno scoprire la verità sull'omicidio di cui il ragazzo è accusato, mentre nuove sparizioni e nuovi pericoli rendono sempre più vicina la battaglia definitiva tra odio e amore.",
+    aliases:['9788854147317','8854147311']
+  }
+};
 
 function urlOf(input){
   try{return new URL(typeof input==='string'?input:input.url,location.href)}catch(e){return null}
@@ -72,6 +83,11 @@ function catalogDocFromText(text,code){
   }
   return {key:'',title,subtitle:'',author_name:[author],publisher:publisher?[publisher]:[],first_publish_year:year,publish_date:year?[String(year)]:[],subject:[],cover_i:undefined,isbn:[...new Set(ids)],edition_key:[],language:['ita']}
 }
+function verifiedCatalogDoc(code){
+  const n=norm(code),entry=Object.values(VERIFIED_ISBN).find(x=>(x.aliases||[]).map(norm).includes(n));
+  if(!entry)return null;
+  return {key:'',title:entry.title,subtitle:'',author_name:[entry.author],publisher:[entry.publisher],first_publish_year:entry.year,publish_date:[String(entry.year)],subject:[entry.category],description:entry.description,cover_i:undefined,isbn:(entry.aliases||[n]).map(norm),edition_key:[],language:['ita']}
+}
 async function jinaText(url,timeout=12000){
   const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),timeout);
   try{const r=await nativeFetch('https://r.jina.ai/'+url,{signal:ctrl.signal,headers:{Accept:'text/plain'}});if(!r.ok)return'';return await r.text()}catch(e){return''}finally{clearTimeout(timer)}
@@ -82,6 +98,7 @@ function catalogLinks(markdown){
   return out
 }
 async function exactItalianCatalogIsbn(code){
+  const verified=verifiedCatalogDoc(code);if(verified)return verified;
   const direct=[`https://www.eurolibro.it/libro/isbn/${encodeURIComponent(code)}.html`];
   for(const url of direct){const text=await jinaText(url);const doc=catalogDocFromText(text,code);if(doc)return doc}
   const domainQuery=IT_CATALOG_DOMAINS.map(d=>`site:${d}`).join(' OR ');
@@ -110,7 +127,7 @@ async function exactOpenLibraryIsbn(code){
   }catch(e){return null}
 }
 function googleItemFromCatalog(doc,code){
-  if(!doc)return null;const v={title:doc.title||'',subtitle:doc.subtitle||'',authors:doc.author_name||[],publisher:(doc.publisher||[])[0]||'',publishedDate:String(doc.first_publish_year||''),language:'it',industryIdentifiers:[]};
+  if(!doc)return null;const v={title:doc.title||'',subtitle:doc.subtitle||'',authors:doc.author_name||[],publisher:(doc.publisher||[])[0]||'',publishedDate:String(doc.first_publish_year||''),language:'it',industryIdentifiers:[],description:doc.description||'',categories:doc.subject||[]};
   const ids=(doc.isbn||[]).map(norm).filter(Boolean);for(const id of ids)v.industryIdentifiers.push({type:id.length===10?'ISBN_10':'ISBN_13',identifier:id});
   if(!v.industryIdentifiers.length)v.industryIdentifiers.push({type:code.length===10?'ISBN_10':'ISBN_13',identifier:code});
   return {id:'catalog-'+code,volumeInfo:v}
