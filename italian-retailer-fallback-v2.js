@@ -7,6 +7,21 @@ const STORE_NAMES={'libraccio.it':'Libraccio','ibs.it':'IBS','mondadoristore.it'
 let timer=null,runToken=0,lastKey='';
 const $=id=>document.getElementById(id);
 
+function ensureCompletionStyle(){
+  if(document.getElementById('libraryCompletionStyle'))return;
+  const style=document.createElement('style');style.id='libraryCompletionStyle';
+  style.textContent=`.lookup-status.completing{display:flex;align-items:center;gap:9px}.lookup-status.completion-hidden{display:none!important}.completion-book{display:inline-block;font-size:19px;line-height:1;animation:libraryBookSpin .9s linear infinite;transform-origin:center}@keyframes libraryBookSpin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`;
+  document.head.appendChild(style)
+}
+function showCompleting(){
+  ensureCompletionStyle();const el=$('lookupStatus');if(!el)return;
+  el.className='lookup-status completing';el.innerHTML='<span class="completion-book" aria-hidden="true">📖</span><span>Completamento…</span>'
+}
+function hideCompleting(){
+  const el=$('lookupStatus');if(!el)return;
+  el.textContent='';el.className='lookup-status completion-hidden'
+}
+
 function normCode(v){return String(v||'').replace(/[^0-9Xx]/g,'').toUpperCase()}
 function clean(v){return String(v||'').replace(/\r/g,'').replace(/[ \t]+/g,' ').replace(/\n{3,}/g,'\n\n').trim()}
 function plain(v){return clean(String(v||'').replace(/!\[[^\]]*\]\([^)]*\)/g,' ').replace(/\[([^\]]+)\]\([^)]*\)/g,'$1').replace(/[*_`#|]/g,' '))}
@@ -104,26 +119,24 @@ async function googleItalianWork(title,author){
     return out.sort((a,b)=>b.score-a.score)[0]||null
   }catch(e){return null}
 }
-function setStatus(msg,kind='ok'){const el=$('lookupStatus');if(el){el.textContent=msg;el.className=`lookup-status ${kind}`.trim()}}
 async function run(force=false){
   const code=normCode($('editCode')?.value),plot=$('editPlot'),cat=$('editCategory'),title=$('editTitle')?.value.trim(),author=$('editAuthor')?.value.trim();
   if(!code||code.length<10||!plot||!cat||!title)return;
   const type=$('editCodeType')?.value||'auto';if(type==='issn')return;
   const needPlot=!plot.value.trim(),needCat=!cat.value.trim();if(!force&&!needPlot&&!needCat)return;
   const key=[code,needPlot?'p':'',needCat?'c':'',title,author].join('|');if(!force&&key===lastKey)return;lastKey=key;
-  const token=++runToken;setStatus('Sto completando trama e categoria consultando Libraccio, IBS, Mondadori Store, Amazon Italia e Giunti…','busy');
+  const token=++runToken;showCompleting();
   const [storeResults,googleWork]=await Promise.all([Promise.all(candidateUrls(code,title,author).map(u=>inspect(u,code))),googleItalianWork(title,author)]);if(token!==runToken)return;
   const results=storeResults.filter(Boolean);
   const plots=results.filter(x=>x.plot&&looksItalian(x.plot)).sort((a,b)=>b.plot.length-a.plot.length);if(googleWork?.plot)plots.push(googleWork);
   const cats=results.filter(x=>x.category);if(googleWork?.category)cats.push(googleWork);cats.sort((a,b)=>categoryScore(b.category)-categoryScore(a.category));
-  const used=[];
-  if((needPlot||force)&&plots[0]){plot.value=plots[0].plot;plot.dispatchEvent(new Event('input',{bubbles:true}));used.push(`trama da ${plots[0].source}`)}
-  if((needCat||force)&&cats[0]){cat.value=cats[0].category;cat.dispatchEvent(new Event('input',{bubbles:true}));used.push(`categoria da ${cats[0].source}`)}
-  if(used.length)setStatus(`Dati italiani completati: ${used.join(' e ')}. Controlla la bozza prima di salvare.`,'ok');
-  else setStatus('Ho controllato gli store italiani e le edizioni italiane correlate, ma non ho trovato altri dati affidabili per completare i campi mancanti.','warn')
+  if((needPlot||force)&&plots[0]){plot.value=plots[0].plot;plot.dispatchEvent(new Event('input',{bubbles:true}))}
+  if((needCat||force)&&cats[0]){cat.value=cats[0].category;cat.dispatchEvent(new Event('input',{bubbles:true}))}
+  hideCompleting()
 }
 function schedule(force=false,delay=450){clearTimeout(timer);timer=setTimeout(()=>run(force),delay)}
 function boot(){
+  ensureCompletionStyle();
   const code=$('editCode'),status=$('lookupStatus'),btn=$('lookupMetadataBtn');if(!code||!status||!btn){setTimeout(boot,120);return}
   const obs=new MutationObserver(()=>{const t=status.textContent.toLowerCase();if(t.includes('dati trovati')||t.includes('copertina corretta')||t.includes('controlla la bozza'))schedule(false,250)});obs.observe(status,{childList:true,subtree:true,characterData:true});
   btn.addEventListener('click',()=>{lastKey='';runToken++;schedule(false,1400)});
