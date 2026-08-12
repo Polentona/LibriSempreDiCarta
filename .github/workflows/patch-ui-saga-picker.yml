@@ -1,0 +1,62 @@
+name: Patch UI saga e copertine
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/patch-ui-saga-picker.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Aggiorna modulo e selettore
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('isbn-cover.js')
+          s=p.read_text(encoding='utf-8')
+          pairs=[
+          (".metadata-overlay{position:fixed;inset:0;z-index:10000;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(50,39,30,.42);backdrop-filter:blur(3px)}.metadata-overlay.open{display:flex}",
+           ".metadata-overlay{position:fixed;inset:0;width:100vw;height:100vh;max-width:none;max-height:none;margin:0;border:0;z-index:10000;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(50,39,30,.42);backdrop-filter:blur(3px)}.metadata-overlay[open]{display:flex}.metadata-overlay::backdrop{background:transparent}"),
+          ("const overlay=document.createElement('div');","const overlay=document.createElement('dialog');"),
+          ("function hidePicker(){overlay.classList.remove('open');overlay.setAttribute('aria-hidden','true');$x('metadataChoices').innerHTML=''}","function hidePicker(){if(overlay.open)overlay.close();overlay.setAttribute('aria-hidden','true');$x('metadataChoices').innerHTML=''}"),
+          ("function openPicker(title,text){$x('metadataPickerTitle').textContent=title;$x('metadataPickerText').textContent=text;overlay.classList.add('open');overlay.setAttribute('aria-hidden','false')}","function openPicker(title,text){$x('metadataPickerTitle').textContent=title;$x('metadataPickerText').textContent=text;overlay.setAttribute('aria-hidden','false');if(!overlay.open)overlay.showModal()}"),
+          ("return {title:joinTitle(v.title,v.subtitle),author:(v.authors||[]).join(', '),description:","return {title:joinTitle(v.title,v.subtitle),saga:String(v.seriesName||'').trim(),author:(v.authors||[]).join(', '),description:"),
+          ("return {title:joinTitle(d.title,d.subtitle),author:(d.author_name||[]).join(', '),description:","return {title:joinTitle(d.title,d.subtitle),saga:'',author:(d.author_name||[]).join(', '),description:"),
+          ("x.description=x.description||c.description;x.category=x.category||c.category;","x.description=x.description||c.description;x.saga=x.saga||c.saga;x.category=x.category||c.category;"),
+          ("setAutoField('editTitle',candidate.title);setAutoField('editAuthor',candidate.author);","setAutoField('editTitle',candidate.title);setAutoField('editSaga',candidate.saga);setAutoField('editAuthor',candidate.author);"),
+          ("$x('editPublishedDate').value=b.publishedDate||'';showPreview(b.cover||'');","$x('editPublishedDate').value=b.publishedDate||'';$x('editSaga').value=b.saga||'';showPreview(b.cover||'');"),
+          ("['editTitle','editAuthor','editPlot','editCategory','editPublisher','editPublishedDate']","['editTitle','editSaga','editAuthor','editPlot','editCategory','editPublisher','editPublishedDate']"),
+          ("publishedDate:$x('editPublishedDate').value.trim(),isbn:","publishedDate:$x('editPublishedDate').value.trim(),saga:$x('editSaga').value.trim(),isbn:")
+          ]
+          for old,new in pairs:
+            if old not in s: raise SystemExit('pattern missing: '+old[:80])
+            s=s.replace(old,new,1)
+          anchor="""  const dateField=document.createElement('div');
+            dateField.className='edit-field';
+            dateField.innerHTML=`<label for="editPublishedDate">Pubblicazione</label><input id="editPublishedDate" placeholder="Anno o data di pubblicazione">`;
+            publisherField.insertAdjacentElement('afterend',dateField);
+          """
+          saga=anchor+"""
+            const sagaField=document.createElement('div');
+            sagaField.className='edit-field';
+            sagaField.innerHTML=`<label for="editSaga">Saga</label><input id="editSaga" placeholder="Nome della saga, se presente">`;
+            dateField.insertAdjacentElement('afterend',sagaField);
+          """
+          if anchor not in s: raise SystemExit('publication field anchor missing')
+          s=s.replace(anchor,saga,1)
+          p.write_text(s,encoding='utf-8')
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add isbn-cover.js
+          git commit -m "Aggiunge saga e porta il selettore copertine in primo piano"
+          git push origin main
