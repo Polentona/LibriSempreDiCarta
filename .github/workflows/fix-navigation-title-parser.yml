@@ -20,95 +20,46 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
-
-          title_block = r'''function titleFrom(text,code){
-  const labeled=fieldAfter(text,['Titolo','Title']);
-  if(labeled){
-    const cleaned=labeled.replace(new RegExp('\\s*[-–—]?\\s*'+norm(code)+'\\s*$'),'').trim();
-    if(cleaned&&!isNavigationTitle(cleaned))return cleaned
-  }
-  const lines=String(text||'').split(/\n/);
-  let best='',bestScore=-99;
-  for(let i=0;i<lines.length;i++){
-    const raw=lines[i];if(!/^\s*#{1,3}\s+/.test(raw))continue;
-    let h=cleanLine(raw);if(!h||h.length<2||h.length>190||isNavigationTitle(h))continue;
-    const stripped=h.replace(new RegExp('\\s*[-–—|]?\\s*'+norm(code)+'\\s*$','i'),'').trim();if(stripped.length>=2)h=stripped;
-    if(isNavigationTitle(h))continue;
-    const around=plain(lines.slice(Math.max(0,i-5),i+10).join('\n'));
-    let score=2;
-    if(codeAppears(h,code))score+=6;
-    if(codeAppears(around,code))score+=5;
-    if(/\\((?:Autore|Autrice|Author)\\)|\\b(?:Autore|Autrice|Author|Editore|Publisher|ISBN|EAN)\\b/i.test(around))score+=3;
-    if(/\\b(?:copertina flessibile|copertina rigida|formato kindle|paperback|hardcover)\\b/i.test(around))score+=2;
-    if(/^.{2,90}$/.test(h))score+=1;
-    if(score>bestScore){best=h;bestScore=score}
-  }
-  return best
-}
-function isNavigationTitle(v){
-  const n=normText(v);
-  if(!n)return true;
-  return /^(?:skip to(?: .*)?|salta a(?: .*)?|main content|contenuto principale|keyboard shortcuts?|scorciatoie da tastiera|search|cerca|cart|carrello|navigation|navigazione|menu|home|libri|ricerca|risultati|descrizione|sinossi|trama|dettagli|informazioni|recensioni|libro di|un libro di|back to top|torna su|select your cookie preferences|cookie preferences|accessibility|accessibilita|amazon|amazon it|account e liste|resi e ordini|tutte le categorie|tutto|buy now|acquista ora|aggiungi al carrello)$/i.test(n)
-}
-'''
-
           p=Path('italian-catalog-fallback-v3.js')
           s=p.read_text(encoding='utf-8')
           start=s.index('function titleFrom(text,code){')
           end=s.index('function cleanAuthorCandidate(v){',start)
-          s=s[:start]+title_block+s[end:]
+          block=r'''function titleFrom(text,code){
+            const labeled=fieldAfter(text,['Titolo','Title']);
+            if(labeled){
+              const cleaned=labeled.replace(new RegExp('\\s*[-–—]?\\s*'+norm(code)+'\\s*$'),'').trim();
+              if(cleaned&&!isNavigationTitle(cleaned))return cleaned
+            }
+            const lines=String(text||'').split(/\n/);
+            let best='',bestScore=-99;
+            for(let i=0;i<lines.length;i++){
+              const raw=lines[i];if(!/^\s*#{1,3}\s+/.test(raw))continue;
+              let h=cleanLine(raw);if(!h||h.length<2||h.length>190||isNavigationTitle(h))continue;
+              const stripped=h.replace(new RegExp('\\s*[-–—|]?\\s*'+norm(code)+'\\s*$','i'),'').trim();if(stripped.length>=2)h=stripped;
+              if(isNavigationTitle(h))continue;
+              const around=plain(lines.slice(Math.max(0,i-5),i+10).join('\n'));
+              let score=2;
+              if(codeAppears(h,code))score+=6;
+              if(codeAppears(around,code))score+=5;
+              if(/\((?:Autore|Autrice|Author)\)|\b(?:Autore|Autrice|Author|Editore|Publisher|ISBN|EAN)\b/i.test(around))score+=3;
+              if(/\b(?:copertina flessibile|copertina rigida|formato kindle|paperback|hardcover)\b/i.test(around))score+=2;
+              if(/^.{2,90}$/.test(h))score+=1;
+              if(score>bestScore){best=h;bestScore=score}
+            }
+            return best
+          }
+          function isNavigationTitle(v){
+            const n=normText(v);
+            if(!n)return true;
+            return /^(?:skip to(?: .*)?|salta a(?: .*)?|main content|contenuto principale|keyboard shortcuts?|scorciatoie da tastiera|search|cerca|cart|carrello|navigation|navigazione|menu|home|libri|ricerca|risultati|descrizione|sinossi|trama|dettagli|informazioni|recensioni|libro di|un libro di|back to top|torna su|select your cookie preferences|cookie preferences|accessibility|accessibilita|amazon|amazon it|account e liste|resi e ordini|tutte le categorie|tutto|buy now|acquista ora|aggiungi al carrello)$/i.test(n)
+          }
+          '''
+          # Rimuove l'indentazione introdotta dal workflow senza toccare il JS interno.
+          import textwrap
+          block=textwrap.dedent(block)
+          s=s[:start]+block+s[end:]
           p.write_text(s,encoding='utf-8')
 
-          # Mantieni la stessa regola anche nelle future rigenerazioni del parser.
-          p=Path('tools/generalize_book_metadata_rules.py')
-          s=p.read_text(encoding='utf-8')
-          marker='# GENERAL_TITLE_NAVIGATION_FILTER_V1'
-          if marker not in s:
-            addition = r'''
-
-# GENERAL_TITLE_NAVIGATION_FILTER_V1
-# Evita che intestazioni di navigazione Amazon (es. "Skip to") diventino il titolo del libro.
-p = Path('italian-catalog-fallback-v3.js')
-s = p.read_text(encoding='utf-8')
-title_block = r'''function titleFrom(text,code){
-  const labeled=fieldAfter(text,['Titolo','Title']);
-  if(labeled){
-    const cleaned=labeled.replace(new RegExp('\\s*[-–—]?\\s*'+norm(code)+'\\s*$'),'').trim();
-    if(cleaned&&!isNavigationTitle(cleaned))return cleaned
-  }
-  const lines=String(text||'').split(/\\n/);
-  let best='',bestScore=-99;
-  for(let i=0;i<lines.length;i++){
-    const raw=lines[i];if(!/^\\s*#{1,3}\\s+/.test(raw))continue;
-    let h=cleanLine(raw);if(!h||h.length<2||h.length>190||isNavigationTitle(h))continue;
-    const stripped=h.replace(new RegExp('\\\\s*[-–—|]?\\\\s*'+norm(code)+'\\\\s*$','i'),'').trim();if(stripped.length>=2)h=stripped;
-    if(isNavigationTitle(h))continue;
-    const around=plain(lines.slice(Math.max(0,i-5),i+10).join('\\n'));
-    let score=2;
-    if(codeAppears(h,code))score+=6;
-    if(codeAppears(around,code))score+=5;
-    if(/\\\\((?:Autore|Autrice|Author)\\\\)|\\\\b(?:Autore|Autrice|Author|Editore|Publisher|ISBN|EAN)\\\\b/i.test(around))score+=3;
-    if(/\\\\b(?:copertina flessibile|copertina rigida|formato kindle|paperback|hardcover)\\\\b/i.test(around))score+=2;
-    if(/^.{2,90}$/.test(h))score+=1;
-    if(score>bestScore){best=h;bestScore=score}
-  }
-  return best
-}
-function isNavigationTitle(v){
-  const n=normText(v);
-  if(!n)return true;
-  return /^(?:skip to(?: .*)?|salta a(?: .*)?|main content|contenuto principale|keyboard shortcuts?|scorciatoie da tastiera|search|cerca|cart|carrello|navigation|navigazione|menu|home|libri|ricerca|risultati|descrizione|sinossi|trama|dettagli|informazioni|recensioni|libro di|un libro di|back to top|torna su|select your cookie preferences|cookie preferences|accessibility|accessibilita|amazon|amazon it|account e liste|resi e ordini|tutte le categorie|tutto|buy now|acquista ora|aggiungi al carrello)$/i.test(n)
-}
-'''
-start = s.index('function titleFrom(text,code){')
-end = s.index('function cleanAuthorCandidate(v){', start)
-s = s[:start] + title_block + s[end:]
-p.write_text(s, encoding='utf-8')
-'''
-            s += addition
-            p.write_text(s,encoding='utf-8')
-
-          # Forza il browser a caricare il parser nuovo.
           p=Path('bg/bg8.js')
           s=p.read_text(encoding='utf-8').replace("italian-catalog-fallback-v3.js?v=6","italian-catalog-fallback-v3.js?v=7")
           p.write_text(s,encoding='utf-8')
@@ -121,7 +72,7 @@ p.write_text(s, encoding='utf-8')
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add italian-catalog-fallback-v3.js tools/generalize_book_metadata_rules.py bg/bg8.js
+          git add italian-catalog-fallback-v3.js bg/bg8.js
           git diff --cached --quiet && exit 0
           git commit -m "Scarta intestazioni di navigazione dai titoli"
           git push origin main
