@@ -1,0 +1,34 @@
+name: Corregge titoli saga e relazioni
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/fix-composite-series-relations.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Applica correzioni
+        run: python tools/fix_composite_series_relations.py
+      - name: Verifica JavaScript
+        run: |
+          node --check series-relations.js
+          node --check isbn-cover.js
+          node --check bg/bg8.js
+      - name: Pubblica e pulisci
+        run: |
+          rm -f tools/fix_composite_series_relations.py .github/workflows/fix-composite-series-relations.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add series-relations.js isbn-cover.js bg/bg8.js index.html tools/fix_composite_series_relations.py .github/workflows/fix-composite-series-relations.yml
+          git diff --cached --quiet && exit 0
+          git commit -m "Corregge titoli composti e relazioni delle saghe"
+          git push origin main
