@@ -53,16 +53,33 @@ function fieldAfter(text,labels){
   return''
 }
 function titleFrom(text,code){
-  const labeled=fieldAfter(text,['Titolo']);if(labeled)return labeled.replace(new RegExp('\\s*[-–—]?\\s*'+norm(code)+'\\s*$'),'').trim();
-  const lines=String(text||'').split(/\n/),bad=/^(home|libri|ricerca|risultati|descrizione|sinossi|trama|dettagli|informazioni|recensioni|libro di|un libro di)$/i;
+  const labeled=fieldAfter(text,['Titolo','Title']);
+  if(labeled){
+    const cleaned=labeled.replace(new RegExp('\\s*[-–—]?\\s*'+norm(code)+'\\s*$'),'').trim();
+    if(cleaned&&!isNavigationTitle(cleaned))return cleaned
+  }
+  const lines=String(text||'').split(/\n/);
   let best='',bestScore=-99;
   for(let i=0;i<lines.length;i++){
-    const raw=lines[i];if(!/^\s*#{1,3}\s+/.test(raw))continue;let h=cleanLine(raw);if(!h||bad.test(h)||h.length<3||h.length>190)continue;
-    let score=2;if(codeAppears(h,code))score+=4;const stripped=h.replace(new RegExp('\\s*[-–—|]?\\s*'+norm(code)+'\\s*$','i'),'').trim();if(stripped.length>=3)h=stripped;
-    const around=plain(lines.slice(Math.max(0,i-3),i+7).join('\n'));if(codeAppears(around,code))score+=3;if(/carrello|cookie|newsletter|assistenza|spedizione/i.test(h))score-=8;
+    const raw=lines[i];if(!/^\s*#{1,3}\s+/.test(raw))continue;
+    let h=cleanLine(raw);if(!h||h.length<2||h.length>190||isNavigationTitle(h))continue;
+    const stripped=h.replace(new RegExp('\\s*[-–—|]?\\s*'+norm(code)+'\\s*$','i'),'').trim();if(stripped.length>=2)h=stripped;
+    if(isNavigationTitle(h))continue;
+    const around=plain(lines.slice(Math.max(0,i-5),i+10).join('\n'));
+    let score=2;
+    if(codeAppears(h,code))score+=6;
+    if(codeAppears(around,code))score+=5;
+    if(/\((?:Autore|Autrice|Author)\)|\b(?:Autore|Autrice|Author|Editore|Publisher|ISBN|EAN)\b/i.test(around))score+=3;
+    if(/\b(?:copertina flessibile|copertina rigida|formato kindle|paperback|hardcover)\b/i.test(around))score+=2;
+    if(/^.{2,90}$/.test(h))score+=1;
     if(score>bestScore){best=h;bestScore=score}
   }
   return best
+}
+function isNavigationTitle(v){
+  const n=normText(v);
+  if(!n)return true;
+  return /^(?:skip to(?: .*)?|salta a(?: .*)?|main content|contenuto principale|keyboard shortcuts?|scorciatoie da tastiera|search|cerca|cart|carrello|navigation|navigazione|menu|home|libri|ricerca|risultati|descrizione|sinossi|trama|dettagli|informazioni|recensioni|libro di|un libro di|back to top|torna su|select your cookie preferences|cookie preferences|accessibility|accessibilita|amazon|amazon it|account e liste|resi e ordini|tutte le categorie|tutto|buy now|acquista ora|aggiungi al carrello)$/i.test(n)
 }
 function cleanAuthorCandidate(v){
   let a=cleanLine(v)
