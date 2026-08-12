@@ -251,68 +251,111 @@ function searchSagaCandidates(text,title,author){
   while((m=fwd.exec(p)))add(m[1]);
   return out
 }
+function seriesListItems(list){
+  const raw=cleanLine(list).replace(/\s+(?:e|and)\s+/gi,', ');
+  let items=raw.split(/\s*[,;•·|/]\s*/).map(cleanLine).filter(Boolean);
+  if(items.length<2&&/[–—-]/.test(raw))items=raw.split(/\s*[–—-]\s*/).map(cleanLine).filter(Boolean);
+  return items
+}
+function seriesListContainsTitle(list,title){
+  const target=normText(title);if(!target)return false;
+  return seriesListItems(list).some(item=>{const n=normText(item);return n===target||(n.length>4&&target.startsWith(n+' '))||(target.length>4&&n.startsWith(target+' '))})
+}
+function cleanSagaName(v){
+  let x=cleanLine(v).replace(/^[\"“”'\s:;|•·–—-]+|[\"“”'\s:;|•·–—-]+$/g,'').trim();
+  x=x.replace(/^(?:la|il|the)\s+/i,'').trim();
+  if(!x||x.length<2||x.length>70||/^(?:trilogia|saga|serie|ciclo|series|trilogy)$/i.test(x))return'';
+  return x
+}
 function explicitListedSeriesFromText(text,title){
-  const p=plain(text),target=normText(title),out=[];
-  if(!target)return out;
+  const p=plain(text),out=[];if(!normText(title))return out;
   const add=(name,list)=>{
-    const saga=cleanLine(name).replace(/^["“”'\s:;|•·–—-]+|["“”'\s:;|•·–—-]+$/g,'').trim();
-    const listed=cleanLine(list),nl=normText(listed);
-    if(!saga||saga.length<2||saga.length>70||!nl.includes(target))return;
-    const items=listed.split(/\s*[,;•·|/]\s*/).map(normText).filter(Boolean);
-    if(items.length<2)return;
+    const saga=cleanSagaName(name);if(!saga||!seriesListContainsTitle(list,title))return;
+    const items=seriesListItems(list);if(items.length<2)return;
     if(!out.some(x=>normText(x)===normText(saga)))out.push(saga)
   };
   let m;
-  const italian=/(?:la\s+)?(?:trilogia|saga|serie|ciclo)\s+di\s+["“”']?([^:"“”'\n|]{2,70})["“”']?\s*:\s*([^\n]{3,320})/gi;
-  while((m=italian.exec(p)))add(m[1],m[2]);
-  const english=/["“”']?([^:"“”'\n|]{2,70})["“”']?\s+(?:trilogy|series)\s*:\s*([^\n]{3,320})/gi;
+  const namedItalian=/(?:la\s+)?(?:trilogia|saga|serie|ciclo)\s+(?:di|del|della|dei|degli|delle)\s+[\"“”']?([^:\"“”'\n|]{2,70})[\"“”']?\s*:\s*([^\n]{3,360})/gi;
+  while((m=namedItalian.exec(p)))add(m[1],m[2]);
+  const namedItalianNoDi=/(?:la\s+)?(?:trilogia|saga|serie|ciclo)\s+[\"“”']?([^:\"“”'\n|]{2,70})[\"“”']?\s*:\s*([^\n]{3,360})/gi;
+  while((m=namedItalianNoDi.exec(p)))add(m[1],m[2]);
+  const english=/[\"“”']?([^:\"“”'\n|]{2,70})[\"“”']?\s+(?:trilogy|series)\s*:\s*([^\n]{3,360})/gi;
   while((m=english.exec(p)))add(m[1],m[2]);
   return out
 }
+function sagaFromCompilationTitle(title,targetTitle){
+  const t=cleanLine(title);let m;
+  m=t.match(/^(?:La\s+)?(?:trilogia|saga|serie|ciclo)\s+(?:di\s+)?([^:]{2,70})\s*:\s*(.+)$/i);
+  if(m&&seriesListContainsTitle(m[2],targetTitle))return cleanSagaName(m[1]);
+  m=t.match(/^([^:]{2,70})\s+(?:trilogy|series)\s*:\s*(.+)$/i);
+  if(m&&seriesListContainsTitle(m[2],targetTitle))return cleanSagaName(m[1]);
+  return''
+}
 async function googleBooksListedSeries(rec){
   if(!rec?.title||!rec?.author)return'';
-  const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),9000);
-  try{
-    const q=`inauthor:${rec.author}`;
-    const url=`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&langRestrict=it&maxResults=40`;
-    const r=await baseFetch(url,{signal:ctrl.signal});if(!r.ok)return'';
-    const data=await r.json();
-    const target=normText(rec.title);
-    for(const item of data.items||[]){
-      const v=item.volumeInfo||{},blob=[v.title,v.subtitle,v.description,(v.categories||[]).join(' ')].filter(Boolean).join('\n');
-      const candidates=explicitListedSeriesFromText(blob,rec.title);if(candidates.length)return candidates[0];
-      const t=String(v.title||'');
-      const m=t.match(/^(?:La\s+)?(?:trilogia|saga|serie|ciclo)\s+di\s+([^:]{2,70})\s*:\s*(.+)$/i);
-      if(m&&normText(m[2]).includes(target))return cleanLine(m[1])
-    }
-  }catch(e){}finally{clearTimeout(timer)}
+  const queries=[
+    `inauthor:"${rec.author}" intitle:"trilogia"`,
+    `inauthor:"${rec.author}" intitle:"saga"`,
+    `inauthor:"${rec.author}" intitle:"serie"`,
+    `"${rec.title}" inauthor:"${rec.author}"`,
+    `inauthor:"${rec.author}"`
+  ];
+  const seen=new Set();
+  for(const q of queries){
+    const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),8500);
+    try{
+      const url=`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&langRestrict=it&maxResults=40`;
+      const r=await baseFetch(url,{signal:ctrl.signal});if(!r.ok)continue;
+      const data=await r.json();
+      for(const item of data.items||[]){
+        if(item?.id&&seen.has(item.id))continue;if(item?.id)seen.add(item.id);
+        const v=item.volumeInfo||{};
+        const byTitle=sagaFromCompilationTitle(v.title||'',rec.title);if(byTitle)return byTitle;
+        const bySubtitle=sagaFromCompilationTitle(v.subtitle||'',rec.title);if(bySubtitle)return bySubtitle;
+        const blob=[v.title,v.subtitle,v.description,(v.categories||[]).join(' ')].filter(Boolean).join('\n');
+        const candidates=explicitListedSeriesFromText(blob,rec.title);if(candidates.length)return candidates[0]
+      }
+    }catch(e){}finally{clearTimeout(timer)}
+  }
+  return''
+}
+async function libraccioAuthorSeries(rec){
+  if(!rec?.title||!rec?.author)return'';
+  const slug=normText(rec.author).replace(/\s+/g,'-');if(!slug)return'';
+  const text=await reader(`https://www.libraccio.it/autore/${encodeURIComponent(slug)}/libri.html`,12000);
+  if(!text)return'';
+  const explicit=explicitListedSeriesFromText(text,rec.title);if(explicit.length)return explicit[0];
+  const lines=String(text).split(/\n/);
+  for(const line of lines){const saga=sagaFromCompilationTitle(line,rec.title);if(saga)return saga}
   return''
 }
 async function confirmStandaloneSaga(rec){
   if(!rec||rec.saga||!rec.title||!rec.author)return rec;
   const q=`"${rec.title}" "${rec.author}" trilogia saga serie`;
-  const [g,b,gbSaga]=await Promise.all([
+  const [g,b,gbSaga,libraccioSaga]=await Promise.all([
     reader(`https://www.google.com/search?hl=it&num=12&q=${encodeURIComponent(q)}`,11000),
     reader(`https://www.bing.com/search?setlang=it-IT&q=${encodeURIComponent(q)}`,11000),
-    googleBooksListedSeries(rec)
+    googleBooksListedSeries(rec),
+    libraccioAuthorSeries(rec)
   ]);
 
-  if(gbSaga){rec.saga=gbSaga;rec.score=(rec.score||0)+6;return rec}
+  const direct=[gbSaga,libraccioSaga].filter(Boolean);
+  if(direct.length){
+    const groups=new Map();for(const value of direct){const key=normText(value),x=groups.get(key)||{value,count:0};x.count++;groups.set(key,x)}
+    const best=[...groups.values()].sort((a,b)=>b.count-a.count)[0];
+    if(best){rec.saga=best.value;rec.score=(rec.score||0)+(best.count>1?8:6);return rec}
+  }
 
   const explicit=[...explicitListedSeriesFromText(g,rec.title),...explicitListedSeriesFromText(b,rec.title)];
   if(explicit.length){
-    const groups=new Map();
-    for(const value of explicit){
-      const key=normText(value),x=groups.get(key)||{value,count:0};x.count++;groups.set(key,x)
-    }
+    const groups=new Map();for(const value of explicit){const key=normText(value),x=groups.get(key)||{value,count:0};x.count++;groups.set(key,x)}
     const best=[...groups.values()].sort((a,b)=>b.count-a.count)[0];
     if(best){rec.saga=best.value;rec.score=(rec.score||0)+(best.count>1?6:5);return rec}
   }
 
   const groups=new Map();
   for(const [source,text] of [['g',g],['b',b]])for(const value of searchSagaCandidates(text,rec.title,rec.author)){
-    const key=normText(value);if(!key)continue;
-    const x=groups.get(key)||{value,count:0,sources:new Set()};x.count++;x.sources.add(source);groups.set(key,x)
+    const key=normText(value);if(!key)continue;const x=groups.get(key)||{value,count:0,sources:new Set()};x.count++;x.sources.add(source);groups.set(key,x)
   }
   const best=[...groups.values()].sort((a,b)=>b.sources.size-a.sources.size||b.count-a.count)[0];
   if(best&&(best.sources.size>=2||best.count>=2)){rec.saga=best.value;rec.score=(rec.score||0)+3}
