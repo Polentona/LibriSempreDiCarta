@@ -9,36 +9,42 @@
 *{box-sizing:border-box}html{scroll-behavior:smooth}html,body{margin:0;min-height:100%}
 body{min-height:100vh;color:var(--ink);font-family:"Segoe Print","Bradley Hand","Comic Sans MS",cursive;background:#f6eee3;overflow-x:hidden}
 .library-wall{position:fixed;inset:0;z-index:-1;pointer-events:none;background-color:#f6eee3;background-position:center center;background-size:cover;background-repeat:no-repeat;image-rendering:auto}
-header{position:sticky;top:0;z-index:10;padding:18px 0;background:transparent}.nav{max-width:1180px;margin:auto;min-height:54px;padding:0 18px;display:flex;align-items:center;gap:26px;background:rgba(250,241,229,.93);border:1px solid rgba(178,145,109,.22);border-radius:14px;box-shadow:0 3px 14px rgba(86,58,34,.08)}.brand{display:flex;align-items:center;gap:10px;min-width:210px}.brand .books{font-size:31px}.brand strong{font-size:22px;font-weight:500}.links{display:flex;gap:21px;flex:1;justify-content:center;white-space:nowrap}.links a{text-decoration:none;color:var(--ink);font-size:13px;padding-bottom:2px}.links a.active{border-bottom:1px solid var(--ink);font-weight:600}.search{background:#fff8;border:1px solid #ddcab8;border-radius:10px;padding:7px 11px;display:flex;gap:7px;min-width:220px}.search input{border:0;background:transparent;outline:0;width:100%;font:inherit;font-size:12px}
-main{position:relative;z-index:2;max-width:1040px;margin:8px auto 70px;padding:0 18px}.intro{margin:0 0 13px}.intro h1{font-size:29px;font-weight:500;margin:0 0 3px}.intro p{margin:0;color:var(--muted);font-size:13px}.pagination{display:grid;grid-template-columns:62px 1fr 62px;align-items:center;gap:16px;margin:0 0 20px}.page-arrow{height:42px;border:1px solid #d4bea7;background:rgba(248,237,220,.96);border-radius:9px;box-shadow:0 5px 12px rgba(82,56,35,.13);font-size:24px;color:var(--ink);cursor:pointer}.page-arrow:disabled{opacity:.32;cursor:default}.page-status{text-align:center;font-size:13px;color:var(--muted);line-height:1.65}.page-status strong{color:var(--ink);font-size:15px;font-weight:500}
-.book{background:rgba(252,247,239,.94);border:1px solid rgba(170,130,90,.18);border-radius:15px;box-shadow:0 9px 22px rgba(82,56,35,.12);padding:20px 25px;margin:0 0 14px;display:grid;grid-template-columns:150px 1fr;gap:26px;position:relative;overflow:hidden}.cover-wrap{position:relative;padding:8px;background:#f8eee1;border-radius:5px;box-shadow:0 4px 10px #5a3b2522;align-self:start}.tape{position:absolute;width:67px;height:18px;background:#e6c99aaa;top:-9px;left:50%;transform:translateX(-50%) rotate(-1deg)}.cover{width:100%;aspect-ratio:2/3;object-fit:cover;display:block;background:#d7c1aa}.info{padding-right:37px}.title{font-size:22px;font-weight:400;margin:0 0 2px;border-bottom:1px solid #928277;display:inline-block;padding-bottom:3px}.author{font-size:14px;margin:2px 0 12px}.label{font-size:10px;border-bottom:1px solid #928277;display:inline-block;margin-bottom:4px}.plot{font-size:11px;line-height:1.55;margin:0 0 12px}.meta{display:grid;grid-template-columns:.65fr .7fr 1.5fr;gap:10px;margin-top:8px}.panel,.notes{border:1px solid var(--line);border-radius:8px;padding:9px 11px;background:rgba(255,255,255,.13);min-height:70px}.panel h3{font-size:10px;font-weight:400;margin:0 0 7px;border-bottom:1px solid #928277;display:inline-block}.stars{display:flex;gap:1px}.star{border:0;background:transparent;color:#b3aaa2;font-size:20px;padding:0;cursor:pointer}.star.on{color:var(--gold)}.loan{font-size:11px;line-height:1.5}.loan input{font:inherit;border:0;border-bottom:1px dashed #bca995;background:transparent;outline:0;width:100%}.notes textarea{width:100%;min-height:45px;resize:vertical;border:0;background:transparent;outline:0;font:inherit;font-size:11px;line-height:1.45;color:var(--ink)}.read-corner{position:absolute;right:18px;top:14px;z-index:4;cursor:pointer}.read-corner input{position:absolute;opacity:0}.read-box{width:25px;height:25px;border:2px solid #5f554c;border-radius:3px;background:#fffaf2;display:grid;place-items:center;font-family:Arial,sans-serif;font-size:18px;font-weight:bold;color:#fff}.read-corner input:checked+.read-box{background:#607e56;border-color:#607e56}.read-corner input:checked+.read-box:after{content:"✓"}
+header{position:sticky;top:0;z-index:10;padding:18px 0;background:transparent}
+.nav{max-width:1180px;margin:auto;min-height:54px;padding:0 18px;display:flex;align-items:center;gap:18px;background:rgba(250,241,229,.93);border:1px solid rgba(178,145,109,.22);border-radius:14px;box-shadow:0 3px 14px rgba(86,58,34,.08)}
+.brand{display:flex;align-items:center;gap:10px;min-width:195px}.brand .books{font-size:31px}.brand strong{font-size:22px;font-weight:500}
+.links{display:flex;gap:17px;flex:1;justify-content:center;white-space:nowrap}.links a{text-decoration:none;color:var(--ink);font-size:13px;padding-bottom:2px}.links a.active{border-bottom:1px solid var(--ink);font-weight:600}
+.search{background:#fff8;border:1px solid #ddcab8;border-radius:10px;padding:7px 11px;display:flex;gap:7px;min-width:205px}.search input{border:0;background:transparent;outline:0;width:100%;font:inherit;font-size:12px}
+.add-book-btn{flex:0 0 auto;border:1px solid #bfa58a;background:#f3e4d1;color:var(--ink);border-radius:10px;padding:8px 12px;font:inherit;font-size:11px;cursor:pointer;box-shadow:0 2px 6px rgba(82,56,35,.08);white-space:nowrap}.add-book-btn:hover{background:#ead7bf}.add-book-btn .plus{font-family:Arial,sans-serif;font-size:16px;vertical-align:-1px;margin-right:3px}
+main{position:relative;z-index:2;max-width:1040px;margin:8px auto 70px;padding:0 18px}.intro{margin:0 0 13px}.intro h1{font-size:29px;font-weight:500;margin:0 0 3px}.intro p{margin:0;color:var(--muted);font-size:13px}
+.pagination{display:grid;grid-template-columns:62px 1fr 62px;align-items:center;gap:16px;margin:0 0 20px}.page-arrow{height:42px;border:1px solid #d4bea7;background:rgba(248,237,220,.96);border-radius:9px;box-shadow:0 5px 12px rgba(82,56,35,.13);font-size:24px;color:var(--ink);cursor:pointer}.page-arrow:disabled{opacity:.32;cursor:default}.page-status{text-align:center;font-size:13px;color:var(--muted);line-height:1.65}.page-status strong{color:var(--ink);font-size:15px;font-weight:500}
+.book{background:rgba(252,247,239,.94);border:1px solid rgba(170,130,90,.18);border-radius:15px;box-shadow:0 9px 22px rgba(82,56,35,.12);padding:20px 25px;margin:0 0 14px;display:grid;grid-template-columns:150px 1fr;gap:26px;position:relative;overflow:hidden}.cover-wrap{position:relative;padding:8px;background:#f8eee1;border-radius:5px;box-shadow:0 4px 10px #5a3b2522;align-self:start}.tape{position:absolute;width:67px;height:18px;background:#e6c99aaa;top:-9px;left:50%;transform:translateX(-50%) rotate(-1deg)}.cover{width:100%;aspect-ratio:2/3;object-fit:cover;display:block;background:#d7c1aa}.cover-empty{display:grid;place-items:center;text-align:center;padding:10px;color:#8a7766;font-size:10px;background:#ddcbb8}.info{padding-right:37px}.title{font-size:22px;font-weight:400;margin:0 0 2px;border-bottom:1px solid #928277;display:inline-block;padding-bottom:3px}.author{font-size:14px;margin:2px 0 12px}.label{font-size:10px;border-bottom:1px solid #928277;display:inline-block;margin-bottom:4px}.plot{font-size:11px;line-height:1.55;margin:0 0 12px}.meta{display:grid;grid-template-columns:.65fr .7fr 1.5fr;gap:10px;margin-top:8px}.panel,.notes{border:1px solid var(--line);border-radius:8px;padding:9px 11px;background:rgba(255,255,255,.13);min-height:70px}.panel h3{font-size:10px;font-weight:400;margin:0 0 7px;border-bottom:1px solid #928277;display:inline-block}.stars{display:flex;gap:1px}.star{border:0;background:transparent;color:#b3aaa2;font-size:20px;padding:0;cursor:pointer}.star.on{color:var(--gold)}.loan{font-size:11px;line-height:1.5}.loan input{font:inherit;border:0;border-bottom:1px dashed #bca995;background:transparent;outline:0;width:100%}.notes textarea{width:100%;min-height:45px;resize:vertical;border:0;background:transparent;outline:0;font:inherit;font-size:11px;line-height:1.45;color:var(--ink)}.read-corner{position:absolute;right:18px;top:14px;z-index:4;cursor:pointer}.read-corner input{position:absolute;opacity:0}.read-box{width:25px;height:25px;border:2px solid #5f554c;border-radius:3px;background:#fffaf2;display:grid;place-items:center;font-family:Arial,sans-serif;font-size:18px;font-weight:bold;color:#fff}.read-corner input:checked+.read-box{background:#607e56;border-color:#607e56}.read-corner input:checked+.read-box:after{content:"✓"}
 .book-manage{display:flex;justify-content:flex-end;gap:8px;margin-top:10px}.manage-btn{border:1px solid #cdb79f;background:rgba(250,241,229,.78);color:var(--ink);border-radius:7px;padding:5px 10px;font:inherit;font-size:10px;cursor:pointer;box-shadow:0 2px 5px rgba(82,56,35,.06)}.manage-btn:hover{background:#f3e4d1}.manage-btn.delete{border-color:#d7aaa1;color:#8a3e35}.manage-btn.delete:hover{background:#f6e0dc}
 .empty-state{background:rgba(252,247,239,.9);border:1px solid rgba(170,130,90,.18);border-radius:15px;padding:36px;text-align:center;color:var(--muted);box-shadow:0 9px 22px rgba(82,56,35,.08)}
 .edit-dialog{width:min(680px,calc(100vw - 28px));max-height:90vh;overflow:auto;border:1px solid #d6bea5;border-radius:16px;padding:0;background:#fbf4e9;color:var(--ink);box-shadow:0 22px 60px rgba(63,42,28,.28);font-family:inherit}.edit-dialog::backdrop{background:rgba(49,38,29,.38);backdrop-filter:blur(2px)}.edit-form{padding:23px}.edit-form h2{margin:0 0 17px;font-size:24px;font-weight:500}.edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.edit-field{display:flex;flex-direction:column;gap:5px}.edit-field.full{grid-column:1/-1}.edit-field label{font-size:11px;color:#5d5046}.edit-field input,.edit-field textarea,.edit-field select{width:100%;border:1px solid #d9c6b3;border-radius:8px;background:#fffaf3;color:var(--ink);padding:8px 10px;font:inherit;font-size:12px;outline:none}.edit-field textarea{min-height:80px;resize:vertical}.edit-check{display:flex;align-items:center;gap:8px;font-size:12px;padding-top:23px}.edit-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:18px}.dialog-btn{border:1px solid #cdb79f;background:#f6e8d6;border-radius:8px;padding:8px 14px;font:inherit;font-size:12px;cursor:pointer}.dialog-btn.primary{background:#607e56;border-color:#607e56;color:white}
-@media(max-width:1050px){.links{display:none}.brand{min-width:auto}.search{margin-left:auto}.book{grid-template-columns:130px 1fr}.meta{grid-template-columns:1fr 1fr}.notes{grid-column:1/-1}}
-@media(max-width:620px){header{padding:8px 0}.nav{margin:0 8px}.brand strong{font-size:19px}.brand .books{font-size:27px}.search{min-width:0}.book{grid-template-columns:1fr;padding:18px 15px}.cover-wrap{width:150px;margin:auto}.info{padding-right:0}.title{font-size:20px;padding-right:30px}.meta{grid-template-columns:1fr}.notes{grid-column:auto}.pagination{grid-template-columns:46px 1fr 46px}.page-arrow{height:38px}.read-corner{right:12px;top:12px}.edit-grid{grid-template-columns:1fr}.edit-field.full{grid-column:auto}.edit-check{padding-top:0}}
+@media(max-width:1120px){.links{display:none}.brand{min-width:auto}.search{margin-left:auto}}
+@media(max-width:620px){header{padding:8px 0}.nav{margin:0 8px;gap:8px;padding:0 10px}.brand strong{font-size:19px}.brand .books{font-size:27px}.search{display:none}.add-book-btn{padding:7px 9px;font-size:10px}.book{grid-template-columns:1fr;padding:18px 15px}.cover-wrap{width:150px;margin:auto}.info{padding-right:0}.title{font-size:20px;padding-right:30px}.meta{grid-template-columns:1fr}.notes{grid-column:auto}.pagination{grid-template-columns:46px 1fr 46px}.page-arrow{height:38px}.read-corner{right:12px;top:12px}.edit-grid{grid-template-columns:1fr}.edit-field.full{grid-column:auto}.edit-check{padding-top:0}}
 </style>
 </head>
 <body>
 <div class="library-wall" id="libraryWall" aria-hidden="true"></div>
-<header><div class="nav"><div class="brand"><span class="books">📚</span><strong>Libri di Carta</strong></div><div class="links"><a href="#" data-view="home">Home</a><a href="#" data-view="library" class="active">La mia libreria</a><a href="#" data-view="read">Letti</a><a href="#" data-view="unread">Da leggere</a><a href="#" data-view="loaned">Prestati</a><a href="#" data-view="authors">Autori</a><a href="#" data-view="categories">Categorie</a></div><label class="search">⌕<input id="search" placeholder="Cerca un libro, autore…"></label></div></header>
+<header><div class="nav"><div class="brand"><span class="books">📚</span><strong>Libri di Carta</strong></div><div class="links"><a href="#" data-view="home">Home</a><a href="#" data-view="library" class="active">La mia libreria</a><a href="#" data-view="read">Letti</a><a href="#" data-view="unread">Da leggere</a><a href="#" data-view="loaned">Prestati</a><a href="#" data-view="authors">Autori</a><a href="#" data-view="categories">Categorie</a></div><label class="search">⌕<input id="search" placeholder="Cerca un libro, autore…"></label><button class="add-book-btn" id="addBookBtn" type="button"><span class="plus">＋</span>Aggiungi libro</button></div></header>
 <main><div class="intro"><h1 id="viewTitle">La mia libreria</h1><p id="viewSubtitle">Tutti i libri, uno sotto l’altro.</p></div><div class="pagination"><button class="page-arrow" id="prevPage">←</button><div class="page-status" id="pageStatus"></div><button class="page-arrow" id="nextPage">→</button></div><div id="list"></div></main>
 
 <dialog class="edit-dialog" id="editDialog">
 <form class="edit-form" id="editForm">
-<h2>Modifica libro</h2>
+<h2 id="dialogTitle">Modifica libro</h2>
 <div class="edit-grid">
 <div class="edit-field full"><label for="editTitle">Titolo</label><input id="editTitle" required></div>
 <div class="edit-field"><label for="editAuthor">Autore</label><input id="editAuthor" required></div>
 <div class="edit-field"><label for="editRating">Il mio rating</label><select id="editRating"><option value="0">Nessuna stella</option><option value="1">1 stella</option><option value="2">2 stelle</option><option value="3">3 stelle</option><option value="4">4 stelle</option><option value="5">5 stelle</option></select></div>
-<div class="edit-field full"><label for="editCover">URL copertina</label><input id="editCover" type="url"></div>
+<div class="edit-field full"><label for="editCover">URL copertina</label><input id="editCover" type="url" placeholder="https://..."></div>
 <div class="edit-field full"><label for="editPlot">Trama</label><textarea id="editPlot"></textarea></div>
 <div class="edit-field"><label for="editLoanTo">Prestato a</label><input id="editLoanTo" placeholder="Nessuno"></div>
 <div class="edit-field"><label for="editLoanDate">Data prestito</label><input id="editLoanDate" placeholder="gg/mm/aaaa"></div>
 <div class="edit-field full"><label for="editNotes">Le mie note</label><textarea id="editNotes"></textarea></div>
 <label class="edit-check"><input id="editRead" type="checkbox"> Libro letto</label>
 </div>
-<div class="edit-actions"><button class="dialog-btn" type="button" id="cancelEdit">Annulla</button><button class="dialog-btn primary" type="submit">Salva modifiche</button></div>
+<div class="edit-actions"><button class="dialog-btn" type="button" id="cancelEdit">Annulla</button><button class="dialog-btn primary" id="saveDialogBtn" type="submit">Salva modifiche</button></div>
 </form>
 </dialog>
 
@@ -55,7 +61,7 @@ let books;
 try{const saved=JSON.parse(localStorage.getItem(STORAGE_KEY));books=Array.isArray(saved)?saved:defaultBooks.map(b=>({...b}))}catch(e){books=defaultBooks.map(b=>({...b}))}
 function saveBooks(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(books))}catch(e){console.error('Impossibile salvare i libri',e)}}
 
-const PAGE_SIZE=50;let currentPage=1;let currentView='library';let editingId=null;const $=id=>document.getElementById(id);
+const PAGE_SIZE=50;let currentPage=1;let currentView='library';let editingId=null;let dialogMode='edit';const $=id=>document.getElementById(id);
 const viewInfo={
 home:['Home','Tutti i libri della tua raccolta.'],
 library:['La mia libreria','Tutti i libri, uno sotto l’altro.'],
@@ -66,7 +72,7 @@ authors:['Autori','I libri ordinati per autore.'],
 categories:['Categorie','Le categorie saranno mostrate quando verranno associate ai libri.']
 };
 function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-function stars(n,id){return [1,2,3,4,5].map(v=>`<button class="star ${v<=n?'on':''}" data-id="${id}" data-v="${v}" title="${v} stelle">★</button>`).join('')}
+function stars(n,id){return [1,2,3,4,5].map(v=>`<button class="star ${v<=n?'on':''}" data-id="${id}" data-v="${v}" type="button">★</button>`).join('')}
 function getFilteredBooks(){
   const q=$('search').value.toLowerCase().trim();
   let f=books.filter(b=>`${b.title} ${b.author}`.toLowerCase().includes(q));
@@ -83,27 +89,35 @@ function setView(view){
   document.querySelectorAll('.links a[data-view]').forEach(a=>a.classList.toggle('active',a.dataset.view===view));
   render();
 }
+function coverMarkup(b){return b.cover?`<img class="cover" src="${esc(b.cover)}" alt="Copertina di ${esc(b.title)}" onerror="this.style.display='none';this.nextElementSibling.style.display='grid'"><div class="cover cover-empty" style="display:none">Nessuna copertina</div>`:`<div class="cover cover-empty">Nessuna copertina</div>`}
 function render(){
   const f=getFilteredBooks();const pages=Math.max(1,Math.ceil(f.length/PAGE_SIZE));if(currentPage>pages)currentPage=pages;
   const start=(currentPage-1)*PAGE_SIZE;const vis=f.slice(start,start+PAGE_SIZE);
   $('list').innerHTML=vis.length?vis.map(b=>`<section class="book">
   <label class="read-corner" title="Segna come letto"><input type="checkbox" data-read="${b.id}" ${b.read?'checked':''}><span class="read-box"></span></label>
-  <div class="cover-wrap"><div class="tape"></div><img class="cover" src="${esc(b.cover)}" alt="Copertina di ${esc(b.title)}"></div>
+  <div class="cover-wrap"><div class="tape"></div>${coverMarkup(b)}</div>
   <div class="info"><h2 class="title">${esc(b.title)}</h2><p class="author">${esc(b.author)}</p><span class="label">TRAMA</span><p class="plot">${esc(b.plot)}</p>
   <div class="meta"><div class="panel"><h3>IL MIO RATING</h3><div class="stars">${stars(b.rating,b.id)}</div></div>
   <div class="panel"><h3>PRESTATO A</h3><div class="loan"><input data-loan="${b.id}" value="${esc(b.loanTo)}" placeholder="Nessuno">${b.loanDate?`<div>Dal ${esc(b.loanDate)}</div>`:''}</div></div>
   <div class="notes"><span class="label">LE MIE NOTE</span><textarea data-notes="${b.id}">${esc(b.notes)}</textarea></div></div>
-  <div class="book-manage"><button class="manage-btn" data-edit="${b.id}">✎ Modifica</button><button class="manage-btn delete" data-delete="${b.id}">Elimina</button></div>
+  <div class="book-manage"><button class="manage-btn" data-edit="${b.id}" type="button">✎ Modifica</button><button class="manage-btn delete" data-delete="${b.id}" type="button">Elimina</button></div>
   </div></section>`).join(''):`<div class="empty-state">Nessun libro da mostrare in questa sezione.</div>`;
   const from=f.length?start+1:0,to=Math.min(start+PAGE_SIZE,f.length);
   $('pageStatus').innerHTML=`<strong>Pagina ${currentPage} di ${pages}</strong><br>Mostra ${from}–${to} di ${f.length} libri (50 per pagina)`;
   $('prevPage').disabled=currentPage<=1;$('nextPage').disabled=currentPage>=pages;bind();
 }
-function openEdit(id){
-  const b=books.find(x=>x.id==id);if(!b)return;editingId=b.id;
+function fillDialog(b={}){
   $('editTitle').value=b.title||'';$('editAuthor').value=b.author||'';$('editCover').value=b.cover||'';$('editPlot').value=b.plot||'';
   $('editRating').value=String(Number(b.rating)||0);$('editLoanTo').value=b.loanTo||'';$('editLoanDate').value=b.loanDate||'';$('editNotes').value=b.notes||'';$('editRead').checked=!!b.read;
-  $('editDialog').showModal();
+}
+function openEdit(id){
+  const b=books.find(x=>x.id==id);if(!b)return;dialogMode='edit';editingId=b.id;fillDialog(b);
+  $('dialogTitle').textContent='Modifica libro';$('saveDialogBtn').textContent='Salva modifiche';$('editDialog').showModal();
+}
+function openAdd(){
+  dialogMode='add';editingId=null;fillDialog({rating:0,read:false});
+  $('dialogTitle').textContent='Aggiungi un nuovo libro';$('saveDialogBtn').textContent='Aggiungi libro';$('editDialog').showModal();
+  setTimeout(()=>$('editTitle').focus(),0);
 }
 function deleteBook(id){
   const b=books.find(x=>x.id==id);if(!b)return;
@@ -118,13 +132,19 @@ function bind(){
   document.querySelectorAll('[data-delete]').forEach(btn=>btn.onclick=()=>deleteBook(btn.dataset.delete));
 }
 $('editForm').onsubmit=e=>{
-  e.preventDefault();const b=books.find(x=>x.id==editingId);if(!b)return;
-  b.title=$('editTitle').value.trim();b.author=$('editAuthor').value.trim();b.cover=$('editCover').value.trim();b.plot=$('editPlot').value.trim();
-  b.rating=+$('editRating').value;b.loanTo=$('editLoanTo').value.trim();b.loanDate=$('editLoanDate').value.trim();b.notes=$('editNotes').value;b.read=$('editRead').checked;
-  saveBooks();$('editDialog').close();editingId=null;render();
+  e.preventDefault();
+  const data={title:$('editTitle').value.trim(),author:$('editAuthor').value.trim(),cover:$('editCover').value.trim(),plot:$('editPlot').value.trim(),rating:+$('editRating').value,loanTo:$('editLoanTo').value.trim(),loanDate:$('editLoanDate').value.trim(),notes:$('editNotes').value,read:$('editRead').checked};
+  if(dialogMode==='add'){
+    const nextId=books.reduce((m,b)=>Math.max(m,Number(b.id)||0),0)+1;
+    books.unshift({id:nextId,...data});saveBooks();$('editDialog').close();setView('library');
+  }else{
+    const b=books.find(x=>x.id==editingId);if(!b)return;Object.assign(b,data);saveBooks();$('editDialog').close();editingId=null;render();
+  }
 };
-$('cancelEdit').onclick=()=>{$('editDialog').close();editingId=null};
-$('editDialog').addEventListener('click',e=>{if(e.target===$('editDialog')){$('editDialog').close();editingId=null}});
+function closeDialog(){if($('editDialog').open)$('editDialog').close();editingId=null;dialogMode='edit'}
+$('cancelEdit').onclick=closeDialog;
+$('editDialog').addEventListener('click',e=>{if(e.target===$('editDialog'))closeDialog()});
+$('addBookBtn').onclick=openAdd;
 document.querySelectorAll('.links a[data-view]').forEach(a=>a.onclick=e=>{e.preventDefault();setView(a.dataset.view)});
 $('search').oninput=()=>{currentPage=1;render()};
 $('prevPage').onclick=()=>{if(currentPage>1){currentPage--;render();scrollTo({top:0,behavior:'smooth'})}};
