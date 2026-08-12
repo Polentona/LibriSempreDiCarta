@@ -37,13 +37,8 @@ if old not in s:
     raise SystemExit('verifiedBookMetadata anchor missing')
 s = s.replace(old, new, 1)
 
-old = """boot();
-})();
-"""
-new = """boot();
-migrateVerifiedSavedBooks();
-})();
-"""
+old = "\nboot();\n})();"
+new = "\nboot();\nmigrateVerifiedSavedBooks();\n})();"
 if old not in s:
     raise SystemExit('boot anchor missing')
 s = s.replace(old, new, 1)
