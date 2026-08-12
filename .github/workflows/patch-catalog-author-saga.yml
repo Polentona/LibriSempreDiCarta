@@ -53,7 +53,7 @@ jobs:
             return {title:t||cleanLine(title),saga}
           }
           '''
-          s,n=re.subn(r"function authorFrom\(text,title=''\)\{.*?\n\}\n(?=function yearFrom)",new_author,s,flags=re.S)
+          s,n=re.subn(r"function authorFrom\(text,title=''\)\{.*?\n\}\n(?=function yearFrom)",lambda m:new_author,s,flags=re.S)
           if n!=1: raise SystemExit(f'authorFrom replacements={n}')
           new_inspect=r'''function inspectText(text,url,code){
             if(!text||!codeAppears(text,code))return null;
@@ -63,7 +63,7 @@ jobs:
             return {title,saga,author,publisher,year,description,category,cover,source:sourceName(url),score}
           }
           '''
-          s,n=re.subn(r"function inspectText\(text,url,code\)\{.*?\n\}\n(?=async function findCatalog)",new_inspect,s,flags=re.S)
+          s,n=re.subn(r"function inspectText\(text,url,code\)\{.*?\n\}\n(?=async function findCatalog)",lambda m:new_inspect,s,flags=re.S)
           if n!=1: raise SystemExit(f'inspectText replacements={n}')
           old="const v={title:rec.title,authors:rec.author?[rec.author]:[],publisher:rec.publisher||'',publishedDate:rec.year||'',language:'it',industryIdentifiers:ids,description:rec.description||'',categories:rec.category?[rec.category]:[]};"
           new="const v={title:rec.title,seriesName:rec.saga||'',authors:rec.author?[rec.author]:[],publisher:rec.publisher||'',publishedDate:rec.year||'',language:'it',industryIdentifiers:ids,description:rec.description||'',categories:rec.category?[rec.category]:[]};"
