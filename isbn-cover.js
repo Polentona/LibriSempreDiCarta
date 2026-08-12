@@ -160,9 +160,10 @@ function boot(){
     img.onerror=()=>{box.innerHTML='<div class="cover-preview-empty">Copertina non disponibile</div>'};box.appendChild(img);
   }
   function setDraftCover(url,automatic=true){const resolved=absoluteCoverUrl(url);$x('editCover').value=resolved;draftCoverWasAuto=automatic;if(automatic)autoFields.add('editCover');showPreview(resolved)}
-  function setAutoField(id,value){
-    value=String(value||'').trim();if(!value)return;
+  function setAutoField(id,value,allowEmpty=false){
+    value=String(value||'').trim();
     const el=$x(id);if(!el)return;
+    if(!value&&!allowEmpty)return;
     if(!el.value.trim()||autoFields.has(id)){el.value=value;autoFields.add(id)}
   }
   function hidePicker(){if(overlay.open)overlay.close();overlay.setAttribute('aria-hidden','true');$x('metadataChoices').innerHTML=''}
@@ -283,7 +284,21 @@ function boot(){
     const verifiedMeta=verifiedBookMetadata(code);if(verifiedMeta)candidate=normalizeCandidateMetadata({...candidate,...verifiedMeta});
     setAutoField('editTitle',candidate.title);setAutoField('editSaga',candidate.saga);setAutoField('editAuthor',candidate.author);setAutoField('editPlot',candidate.description);setAutoField('editCategory',candidate.category);setAutoField('editPublisher',candidate.publisher);setAutoField('editPublishedDate',candidate.publishedDate);setAutoField('editPrequel',candidate.prequel);setAutoField('editSequel',candidate.sequel);
     if(type==='isbn'&&typeof window.__LIB_FIND_RELATIONS==='function'&&candidate.title&&candidate.author){
-      try{const rel=await window.__LIB_FIND_RELATIONS({code,title:candidate.title,author:candidate.author,saga:candidate.saga});if(rel?.saga&&!candidate.saga){candidate.saga=rel.saga;setAutoField('editSaga',rel.saga);const cleanedTitle=stripSagaFromTitle(candidate.title,rel.saga);if(cleanedTitle&&cleanedTitle!==candidate.title){candidate.title=cleanedTitle;setAutoField('editTitle',cleanedTitle)}}setAutoField('editPrequel',rel?.prequel);setAutoField('editSequel',rel?.sequel)}catch(e){console.warn('Relazioni serie non disponibili',e)}
+      try{
+        const rel=await window.__LIB_FIND_RELATIONS({code,title:candidate.title,author:candidate.author,saga:candidate.saga});
+        if(rel?.sagaChecked){
+          candidate.saga=String(rel.saga||'').trim();
+          setAutoField('editSaga',candidate.saga,true);
+          if(candidate.saga){
+            const cleanedTitle=stripSagaFromTitle(candidate.title,candidate.saga);
+            if(cleanedTitle&&cleanedTitle!==candidate.title){candidate.title=cleanedTitle;setAutoField('editTitle',cleanedTitle)}
+          }
+        }
+        candidate.prequel=String(rel?.prequel||'').trim();
+        candidate.sequel=String(rel?.sequel||'').trim();
+        setAutoField('editPrequel',candidate.prequel,true);
+        setAutoField('editSequel',candidate.sequel,true);
+      }catch(e){console.warn('Relazioni serie non disponibili',e)}
     }
     const forcedCover=verifiedUiCover(code);if(forcedCover&&(!$x('editCover').value.trim()||autoFields.has('editCover')))setDraftCover(forcedCover,true);
     const coverAlready=$x('editCover').value.trim()&&!autoFields.has('editCover');
@@ -374,10 +389,18 @@ function boot(){
 
   async function enrichSavedRelations(){
     if(typeof window.__LIB_FIND_RELATIONS!=='function')return;
-    const RELATIONS_LOOKUP_VERSION=3,now=Date.now(),week=7*24*60*60*1000;
+    const RELATIONS_LOOKUP_VERSION=4,now=Date.now(),week=7*24*60*60*1000;
     const pending=books.filter(b=>{const code=normalizeLoose(b.code||b.isbn||'');return code&&b.title&&b.author&&(Number(b.relationsLookupVersion||0)!==RELATIONS_LOOKUP_VERSION||!b.relationsLookupAt||now-Number(b.relationsLookupAt)>week)&&(!b.prequel||!b.sequel||Number(b.relationsLookupVersion||0)!==RELATIONS_LOOKUP_VERSION)}).slice(0,8);
     for(const b of pending){
-      try{const rel=await window.__LIB_FIND_RELATIONS({code:b.code||b.isbn||'',title:b.title,author:b.author,saga:b.saga||''});let changed=false;if(rel?.saga&&!b.saga){b.saga=rel.saga;changed=true}const effectiveSaga=rel?.saga||b.saga||'';if(effectiveSaga){const cleanedTitle=stripSagaFromTitle(b.title,effectiveSaga);if(cleanedTitle&&cleanedTitle!==b.title){b.title=cleanedTitle;changed=true}}if(rel?.prequel&&b.prequel!==rel.prequel){b.prequel=rel.prequel;changed=true}if(rel?.sequel&&b.sequel!==rel.sequel){b.sequel=rel.sequel;changed=true}b.relationsLookupAt=now;b.relationsLookupVersion=RELATIONS_LOOKUP_VERSION;saveBooks();if(changed)render()}catch(e){}
+      try{
+        const rel=await window.__LIB_FIND_RELATIONS({code:b.code||b.isbn||'',title:b.title,author:b.author,saga:b.saga||''});let changed=false;
+        if(rel?.sagaChecked){const nextSaga=String(rel.saga||'').trim();if(String(b.saga||'').trim()!==nextSaga){b.saga=nextSaga;changed=true}}
+        const effectiveSaga=rel?.sagaChecked?String(rel.saga||'').trim():String(b.saga||'').trim();
+        if(effectiveSaga){const cleanedTitle=stripSagaFromTitle(b.title,effectiveSaga);if(cleanedTitle&&cleanedTitle!==b.title){b.title=cleanedTitle;changed=true}}
+        if(rel?.prequel&&b.prequel!==rel.prequel){b.prequel=rel.prequel;changed=true}
+        if(rel?.sequel&&b.sequel!==rel.sequel){b.sequel=rel.sequel;changed=true}
+        b.relationsLookupAt=now;b.relationsLookupVersion=RELATIONS_LOOKUP_VERSION;saveBooks();if(changed)render()
+      }catch(e){}
     }
   }
   setTimeout(enrichSavedRelations,900);
