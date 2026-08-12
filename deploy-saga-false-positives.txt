@@ -1,0 +1,1 @@
+Deploy correzione riconoscimento saghe: evita frasi narrative scambiate per nomi di saga.
