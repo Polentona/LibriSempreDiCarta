@@ -58,7 +58,8 @@ function titleFrom(text,code){
 function validAuthor(v){
   const a=cleanLine(v).replace(/\s*\(Autore\).*$/i,'').replace(/^di\s+/i,'').trim(),n=normText(a);
   if(!a||a.length>100||/\d|€|%|@|https?:|www\./i.test(a))return false;
-  if(/\b(milano|monza|brianza|lodi|roma|torino|napoli|bologna|firenze|genova|venezia|provincia|regione|comune|lombardia|lazio|piemonte|italia|spedizione|consegna|negozio|libreria|magazzino|disponibile|carrello|cookie|assistenza|ritiro|punti vendita)\b/i.test(n))return false;
+  if(/\b(milano|monza|brianza|lodi|roma|torino|napoli|bologna|firenze|genova|venezia|provincia|regione|comune|lombardia|lazio|piemonte|italia|spedizione|consegna|negozio|libreria|magazzino|disponibile|carrello|cookie|assistenza|ritiro|punti vendita|iva|ean|isbn|eur|euro|sku|codice|prezzo|sconto|traduttore|collana|pagine|formato|dati)\b/i.test(n))return false;
+  if(/^[A-ZÀ-Ý]{2,4}$/.test(a))return false;
   const w=a.split(/\s+/).filter(Boolean);return w.length>=1&&w.length<=6&&/^[A-Za-zÀ-ÿ'’.-]+(?:\s+[A-Za-zÀ-ÿ'’.-]+){0,5}$/.test(a)
 }
 function authorFrom(text,title=''){
@@ -122,15 +123,16 @@ async function confirmCompositeSaga(rec){
   if(parts.length<2)return rec;
   const novel=parts[0],possible=parts.slice(1).filter(x=>x.length>=3&&x.length<=90);
   for(const candidate of possible){
-    const q=`"${candidate}" "${novel}" ${rec.author||''} saga serie`;
+    const q=`"${candidate}" "${novel}" ${rec.author||''}`;
     const [g,b]=await Promise.all([
       reader(`https://www.google.com/search?hl=it&num=10&q=${encodeURIComponent(q)}`,11000),
       reader(`https://www.bing.com/search?setlang=it-IT&q=${encodeURIComponent(q)}`,11000)
     ]);
     const hay=normText(g+' '+b),c=normText(candidate),n=normText(novel);
-    const evidence=[`saga ${c}`,`serie ${c}`,`ciclo ${c}`,`${c} saga`,`${c} serie`].some(x=>hay.includes(x));
+    const ce=c.replace(/[.*+?^${}()|[\]\\]/g,'\\$&').replace(/\s+/g,'\\s+');
+    const evidence=new RegExp(`(?:saga|serie|ciclo)(?:\\s+[a-z0-9]+){0,10}\\s+${ce}|${ce}(?:\\s+[a-z0-9]+){0,10}\\s+(?:saga|serie|ciclo)`,'i').test(hay);
     const both=hay.includes(c)&&hay.includes(n);
-    if(evidence&&both){rec.saga=candidate;rec.title=novel;rec.score=(rec.score||0)+3;return rec}
+    if(evidence&&both){rec.saga=candidate;rec.title=novel;rec.score=(rec.score||0)+5;return rec}
   }
   return rec
 }
@@ -161,9 +163,23 @@ window.fetch=async function(input,init){
   if(!(u.hostname==='www.googleapis.com'&&u.pathname.includes('/books/v1/volumes')))return r;
   const q=u.searchParams.get('q')||'',m=q.match(/^isbn:([0-9Xx-]+)/i);if(!m)return r;
   try{
-    const data=await r.clone().json();if((data.items||[]).length)return r;
-    const code=norm(m[1]),rec=await findCatalog(code);if(!rec)return r;
-    data.items=[makeGoogleItem(rec,code)];data.totalItems=1;return jsonResponse(r,data)
+    const data=await r.clone().json(),code=norm(m[1]),rec=await findCatalog(code);if(!rec)return r;
+    const verified=makeGoogleItem(rec,code),vv=verified.volumeInfo||{};
+    if(!(data.items||[]).length){data.items=[verified];data.totalItems=1;return jsonResponse(r,data)}
+    const first=data.items[0],v=first.volumeInfo=first.volumeInfo||{};
+    if(rec.saga){v.title=rec.title||v.title;v.subtitle='';v.seriesName=rec.saga}
+    else if(rec.title&&!v.title)v.title=rec.title;
+    if(rec.author)v.authors=[rec.author];
+    if(rec.publisher&&!v.publisher)v.publisher=rec.publisher;
+    if(rec.year&&!v.publishedDate)v.publishedDate=rec.year;
+    if(rec.description&&!v.description)v.description=rec.description;
+    if(rec.category&&!(v.categories||[]).length)v.categories=[rec.category];
+    if(rec.cover&&!Object.keys(v.imageLinks||{}).length)v.imageLinks=vv.imageLinks;
+    const ids=aliases(code).map(id=>({type:id.length===10?'ISBN_10':'ISBN_13',identifier:id}));
+    const current=(v.industryIdentifiers||[]).map(x=>norm(x.identifier));
+    for(const id of ids)if(!current.includes(norm(id.identifier)))v.industryIdentifiers=(v.industryIdentifiers||[]).concat(id);
+    first.__italianCatalogVerified=true;
+    return jsonResponse(r,data)
   }catch(e){return r}
 };
 })();

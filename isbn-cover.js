@@ -31,7 +31,7 @@ function boot(){
   .cover-draft{display:grid;grid-template-columns:105px 1fr;gap:14px;align-items:center;border:1px dashed #d3bda5;border-radius:10px;padding:11px;background:rgba(255,255,255,.18)}
   .cover-preview{width:95px;aspect-ratio:2/3;object-fit:cover;border-radius:5px;background:#ddcbb8;box-shadow:0 3px 9px rgba(82,56,35,.14)}
   .cover-preview-empty{width:95px;aspect-ratio:2/3;display:grid;place-items:center;text-align:center;padding:8px;border-radius:5px;background:#ddcbb8;color:#806f60;font-size:9px}
-  .cover-draft strong{display:block;font-size:11px;font-weight:500;margin-bottom:5px}.lookup-status{font-size:10px;line-height:1.5;color:#75685d}.lookup-status.busy{color:#8a643a}.lookup-status.ok{color:#4f7148}.lookup-status.warn{color:#8a5a36}
+  .cover-draft strong{display:block;font-size:11px;font-weight:500;margin-bottom:5px}.lookup-status{font-size:10px;line-height:1.5;color:#75685d}.lookup-status.busy{color:#8a643a}.lookup-status.ok{color:#4f7148}.lookup-status.warn{color:#8a5a36}.lookup-status.lookup-busy{display:flex;align-items:center;min-height:24px}.lookup-book-spinner{display:inline-block;font-size:20px;line-height:1;transform-origin:center;animation:lookupBookSpin .85s linear infinite}@keyframes lookupBookSpin{to{transform:rotate(360deg)}}
   .metadata-overlay{position:fixed;inset:0;width:100vw;height:100vh;max-width:none;max-height:none;margin:0;border:0;z-index:10000;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(50,39,30,.42);backdrop-filter:blur(3px)}.metadata-overlay[open]{display:flex}.metadata-overlay::backdrop{background:transparent}
   .metadata-picker{width:min(860px,100%);max-height:88vh;overflow:auto;background:#fbf4e9;border:1px solid #d6bea5;border-radius:15px;box-shadow:0 24px 70px rgba(55,38,26,.34);padding:20px;color:#2d251f;font-family:"Segoe Print","Bradley Hand","Comic Sans MS",cursive}
   .metadata-picker h3{font-size:20px;font-weight:500;margin:0 0 5px}.metadata-picker>p{font-size:11px;color:#75685d;margin:0 0 14px;line-height:1.5}.metadata-choice-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
@@ -107,7 +107,8 @@ function boot(){
   const VERIFIED_UI_COVERS={'9788854147317':'assets/covers/9788854147317.jpg','8854147311':'assets/covers/9788854147317.jpg'};
   function verifiedUiCover(code){const u=VERIFIED_UI_COVERS[normalizeLoose(code)];return u?absoluteCoverUrl(u):''}
   function stripHtml(s){const d=document.createElement('div');d.innerHTML=String(s||'');return d.textContent||d.innerText||''}
-  function setStatus(msg,kind=''){const el=$x('lookupStatus');el.textContent=msg;el.className=`lookup-status ${kind}`.trim()}
+  function setStatus(msg,kind=''){const el=$x('lookupStatus');if(!el)return;if(kind==='busy'){el.innerHTML='<span class="lookup-book-spinner" aria-hidden="true">📖</span>';el.className='lookup-status lookup-busy';el.setAttribute('aria-label','Ricerca dati in corso');return}el.removeAttribute('aria-label');el.textContent=msg;el.className=`lookup-status ${kind}`.trim()}
+  function clearLookupStatus(){const el=$x('lookupStatus');if(!el)return;el.removeAttribute('aria-label');el.textContent='';el.className='lookup-status'}
   function showPreview(url){
     const box=$x('coverPreviewBox');box.innerHTML='';
     if(!url){box.innerHTML='<div class="cover-preview-empty">Nessuna copertina</div>';return}
@@ -228,8 +229,8 @@ function boot(){
     const usable=await usableCovers(covers);if(!usable.length)return false;
     if(usable.length===1){setDraftCover(usable[0].url,true);return false}
     const box=$x('metadataChoices');box.className='cover-choice-grid';box.innerHTML='';
-    usable.forEach((c,i)=>{const btn=document.createElement('button');btn.type='button';btn.className='cover-choice';btn.innerHTML=`<img src="${c.url}" alt="Copertina ${i+1}"><span>${escapeHtml(c.source)}</span>`;btn.onclick=()=>{setDraftCover(c.url,true);setStatus('Dati trovati. Hai scelto la copertina corretta e ora compare nella bozza del libro.','ok');hidePicker()};box.appendChild(btn)});
-    openPicker('Scegli la copertina',`Ho trovato ${usable.length} copertine per ${code}. Seleziona quella della tua edizione.`);return true
+    usable.forEach((c,i)=>{const btn=document.createElement('button');btn.type='button';btn.className='cover-choice';btn.innerHTML=`<img src="${c.url}" alt="Copertina ${i+1}"><span>${escapeHtml(c.source)}</span>`;btn.onclick=()=>{setDraftCover(c.url,true);clearLookupStatus();hidePicker()};box.appendChild(btn)});
+    clearLookupStatus();openPicker('Scegli la copertina',`Ho trovato ${usable.length} copertine per ${code}. Seleziona quella della tua edizione.`);return true
   }
 
   async function applyCandidate(candidate,code,type){
@@ -240,7 +241,7 @@ function boot(){
     if(type==='isbn'&&!coverAlready){const retail=await retailerCoversForIsbn(code,candidate.title||'',candidate.author||'');candidate.covers=mergeCoverOptions(candidate.covers,retail)}
     let pickerOpened=false;if(!coverAlready&&candidate.covers?.length)pickerOpened=await showCoverPicker(candidate.covers,code);
     if(candidate.serialLevel)setStatus(`ISSN riconosciuto. Ho compilato i dati della testata; ricorda che l'ISSN identifica il periodico, non necessariamente il singolo numero. Controlla titolo e numero dell'uscita.`,'warn');
-    else if(!pickerOpened)setStatus(`Dati trovati automaticamente tramite ${typeLabel(type)}. Controlla la bozza e completa solo ciò che manca.`,'ok');
+    else if(!pickerOpened)clearLookupStatus();
   }
 
   async function showMetadataPicker(candidates,code,type){
@@ -253,7 +254,8 @@ function boot(){
     const tasks=[googleCandidates(code,type),openLibraryCandidates(code,type)];if(type==='issn')tasks.push(crossrefIssnCandidate(code));
     const groups=await Promise.all(tasks);let candidates=mergeCandidates(groups.flat());
     if(type==='isbn'&&candidates.length){
-      const exact=candidates.filter(c=>c.exact);if(exact.length)candidates=exact
+      const exact=candidates.filter(c=>c.exact);if(exact.length)candidates=exact;
+      const seriesVerified=candidates.filter(c=>c.saga&&c.author&&!/^(IVA|EAN|ISBN|EUR|SKU)$/i.test(c.author.trim()));if(seriesVerified.length)candidates=seriesVerified
     }
     if(type==='isbn'&&!candidates.some(c=>c.covers?.length)){
       const direct=`https://covers.openlibrary.org/b/isbn/${encodeURIComponent(code)}-L.jpg?default=false`;
@@ -279,7 +281,7 @@ function boot(){
       return {kind:'none'}
     }
     if(candidates.length===1){await applyCandidate(candidates[0],code,type);return {kind:'single',count:1}}
-    setStatus(`Ho trovato ${candidates.length} risultati. Scegli quello corretto nel riquadro aperto sopra la pagina.`,'warn');await showMetadataPicker(candidates,code,type);return {kind:'multiple',count:candidates.length}
+    clearLookupStatus();await showMetadataPicker(candidates,code,type);return {kind:'multiple',count:candidates.length}
   }
 
   const originalFillDialog=fillDialog;
