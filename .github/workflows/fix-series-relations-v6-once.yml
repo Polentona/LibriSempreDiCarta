@@ -1,0 +1,101 @@
+name: Corregge relazioni prequel sequel v6
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/fix-series-relations-v6-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Corregge ricerca e parsing relazioni
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          p=Path('series-relations.js')
+          s=p.read_text(encoding='utf-8')
+
+          old="""function chronologicalTitle(v){
+  let x=clean(v)
+    .replace(/^(?:il\\s+suo\\s+romanzo|il\\s+romanzo|il\\s+libro|un\\s+romanzo|romanzo|libro)\\s+/i,'')
+    .replace(/^(?:sono\\s+poi\\s+seguit[ie]|sono\\s+seguit[ie]|seguono)\\s+/i,'')
+    .replace(/,\\s+(?:il|un)\\s+romanzo\\b.*$/i,'')
+    .replace(/\\s+(?:pubblicato|edito|uscito)\\b.*$/i,'')
+    .trim();
+  return cleanRelatedTitle(x)
+}
+"""
+          new="""function chronologicalTitle(v){
+  let x=clean(v)
+    .replace(/^(?:il\\s+suo\\s+romanzo|il\\s+romanzo|il\\s+libro|un\\s+romanzo|romanzo|libro)\\s+/i,'')
+    .replace(/^(?:sono\\s+poi\\s+seguit[ie]|sono\\s+seguit[ie]|seguono)\\s+/i,'')
+    .replace(/,\\s+(?:il|un)\\s+romanzo\\b.*$/i,'')
+    .replace(/\\s+(?:pubblicato|edito|uscito)\\b.*$/i,'')
+    .replace(/\\s*\\([^)]*(?:(?:18|19|20)\\d{2}|Baldini|Bompiani|Giunti|Mondadori|Newton|Nord|TEA|Dalai|Editore)[^)]*\\)\\s*$/i,'')
+    .trim();
+  return cleanRelatedTitle(x)
+}
+"""
+          if old not in s: raise SystemExit('chronologicalTitle non trovato')
+          s=s.replace(old,new,1)
+
+          old_re=r"const first=/\(\?:il\\s\+suo\\s\+romanzo\|il\\s\+romanzo\|il\\s\+libro\|un\\s\+romanzo\|romanzo\|libro\).*?/gi;"
+          m=re.search(old_re,s)
+          if not m: raise SystemExit('regex cronologica principale non trovata')
+          new_first="const first=/(?:il\\s+suo\\s+romanzo|il\\s+romanzo|il\\s+libro|un\\s+romanzo|romanzo|libro)\\s+([^()]{3,180}?)\\s*\\((?:pubblicato(?:\\s+in\\s+[^()]{1,45})?\\s+nel\\s+)?((?:18|19|20)\\d{2})\\).{0,1600}?(?:sono\\s+poi\\s+seguit[ie]|sono\\s+seguit[ie]|seguono)\\s+([^()]{3,180}?)\\s*\\(((?:18|19|20)\\d{2})\\)\\s+(?:e|,)\\s+([^()]{3,180}?)\\s*\\(((?:18|19|20)\\d{2})\\)/gi;"
+          s=s[:m.start()]+new_first+s[m.end():]
+
+          old="""    const variants=titleVariants(title),base=variants.length>1?variants[1]:variants[0],extra=variants.slice(2,4);
+    const queries=[`\"${base}\" \"${author}\" trilogia saga serie`,`\"${base}\" \"${author}\" sequel prequel seguito preceduto`,`\"${base}\" \"${author}\" \"sono poi seguiti\"`,`\"${base}\" \"${author}\" \"A questo è seguito\"`,...extra.map(v=>`\"${base}\" \"${v}\" \"${author}\" saga`)];
+    const searchJobs=[];for(const q of queries.slice(0,4)){searchJobs.push(reader(`https://www.google.com/search?hl=it&num=15&q=${encodeURIComponent(q)}`,11000));searchJobs.push(reader(`https://www.bing.com/search?setlang=it-IT&q=${encodeURIComponent(q)}`,11000))}
+"""
+          new="""    const variants=titleVariants(title),base=variants.length>1?variants[1]:variants[0],extra=variants.slice(2,4);
+    const queries=[...(code?[`\"${code}\" \"${author}\"`,`\"${code}\" \"${base}\"`]:[]),`\"${base}\" \"${author}\" trilogia saga serie`,`\"${base}\" \"${author}\" sequel prequel seguito preceduto`,`\"${base}\" \"${author}\" \"sono poi seguiti\"`,`\"${base}\" \"${author}\" \"A questo è seguito\"`,...extra.map(v=>`\"${base}\" \"${v}\" \"${author}\" saga`)];
+    const searchJobs=[];for(const q of queries.slice(0,6)){searchJobs.push(reader(`https://www.google.com/search?hl=it&num=15&q=${encodeURIComponent(q)}`,11000));searchJobs.push(reader(`https://www.bing.com/search?setlang=it-IT&q=${encodeURIComponent(q)}`,11000))}
+"""
+          if old not in s: raise SystemExit('blocco query relazioni non trovato')
+          s=s.replace(old,new,1)
+          s=s.replace("norm(hint),'v5'", "norm(hint),'v6'",1)
+          p.write_text(s,encoding='utf-8')
+
+          p=Path('bg/bg8.js')
+          s=p.read_text(encoding='utf-8')
+          s,n=re.subn(r'series-relations\\.js\\?v=5','series-relations.js?v=6',s,count=1)
+          if n!=1: raise SystemExit('loader series-relations v5 non trovato')
+          p.write_text(s,encoding='utf-8')
+
+          p=Path('isbn-cover.js')
+          s=p.read_text(encoding='utf-8')
+          s,n=re.subn(r'RELATIONS_LOOKUP_VERSION=5','RELATIONS_LOOKUP_VERSION=6',s,count=1)
+          if n!=1: raise SystemExit('RELATIONS_LOOKUP_VERSION=5 non trovato')
+          p.write_text(s,encoding='utf-8')
+          PY
+
+      - name: Verifica JavaScript
+        run: |
+          node --check series-relations.js
+          node --check isbn-cover.js
+          node --check bg/bg8.js
+          grep -q 'series-relations.js?v=6' bg/bg8.js
+          grep -q 'RELATIONS_LOOKUP_VERSION=6' isbn-cover.js
+          grep -q "norm(hint),'v6'" series-relations.js
+
+      - name: Pubblica e pulisci
+        run: |
+          rm -f .github/workflows/fix-series-relations-v6-once.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add series-relations.js isbn-cover.js bg/bg8.js .github/workflows/fix-series-relations-v6-once.yml
+          git commit -m "Rende robusta la ricerca di prequel e sequel"
+          git push origin main
