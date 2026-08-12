@@ -75,7 +75,7 @@ function sagaFrom(text,title){
   const p=plain(text),parts=String(title||'').split(/\s*(?:\.|\s[-–—]\s|:)\s*/).map(cleanLine).filter(x=>x.length>2);
   const re=/(?:la\s+)?(?:saga|serie|ciclo)\s+["“”']?([^"“”'()\n]{2,90})["“”']?\s*\(([^)]{3,900})\)/gi;let m;
   while((m=re.exec(p))){const name=cleanLine(m[1]),list=normText(m[2]);if(parts.some(x=>list.includes(normText(x))))return name}
-  for(const part of parts){const e=escapeRe(part);if(new RegExp('(?:saga|serie|ciclo)\\s+["“”\\']?'+e+'(?:["“”\\']|\\b)','i').test(p))return part}
+  for(const part of parts){const e=escapeRe(part);if(new RegExp('(?:saga|serie|ciclo)\\s+'+e+'(?:\\b|\\s|\\.)','i').test(p))return part}
   return''
 }
 function splitTitleSaga(title,text){
