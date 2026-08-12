@@ -374,7 +374,7 @@ function boot(){
 
   async function enrichSavedRelations(){
     if(typeof window.__LIB_FIND_RELATIONS!=='function')return;
-    const RELATIONS_LOOKUP_VERSION=2,now=Date.now(),week=7*24*60*60*1000;
+    const RELATIONS_LOOKUP_VERSION=3,now=Date.now(),week=7*24*60*60*1000;
     const pending=books.filter(b=>{const code=normalizeLoose(b.code||b.isbn||'');return code&&b.title&&b.author&&(Number(b.relationsLookupVersion||0)!==RELATIONS_LOOKUP_VERSION||!b.relationsLookupAt||now-Number(b.relationsLookupAt)>week)&&(!b.prequel||!b.sequel||Number(b.relationsLookupVersion||0)!==RELATIONS_LOOKUP_VERSION)}).slice(0,8);
     for(const b of pending){
       try{const rel=await window.__LIB_FIND_RELATIONS({code:b.code||b.isbn||'',title:b.title,author:b.author,saga:b.saga||''});let changed=false;if(rel?.saga&&!b.saga){b.saga=rel.saga;changed=true}const effectiveSaga=rel?.saga||b.saga||'';if(effectiveSaga){const cleanedTitle=stripSagaFromTitle(b.title,effectiveSaga);if(cleanedTitle&&cleanedTitle!==b.title){b.title=cleanedTitle;changed=true}}if(rel?.prequel&&b.prequel!==rel.prequel){b.prequel=rel.prequel;changed=true}if(rel?.sequel&&b.sequel!==rel.sequel){b.sequel=rel.sequel;changed=true}b.relationsLookupAt=now;b.relationsLookupVersion=RELATIONS_LOOKUP_VERSION;saveBooks();if(changed)render()}catch(e){}

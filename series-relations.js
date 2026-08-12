@@ -57,12 +57,15 @@ function cleanRelatedTitle(v,saga='',target=''){
   return x.length>=2&&x.length<=180?x:''
 }
 function inferSagaFromItems(items,title){
+  const targetParts=titleSegments(title).slice(1),allowed=new Set(targetParts.map(norm).filter(Boolean));
+  if(!allowed.size)return'';
   const counts=new Map(),samples=new Map();
   for(const raw of items||[]){
     const variants=[clean(raw),...[...String(raw||'').matchAll(/\(([^()]{3,180})\)/g)].map(m=>clean(m[1]))];
     const seen=new Set();
     for(const variant of variants)for(const seg of titleSegments(variant).slice(1)){
-      const n=norm(seg);if(!n||seen.has(n)||n===norm(title)||n.length<7||n.split(' ').length<2||/^(?:libro|book|volume|edizione|romanzo|novel|trilogia|saga|serie|ciclo)$/.test(n))continue;
+      const n=norm(seg);
+      if(!n||!allowed.has(n)||seen.has(n)||n===norm(title)||n.length<7||n.split(' ').length<2||/^(?:libro|book|volume|edizione|romanzo|novel|trilogia|saga|serie|ciclo)$/.test(n))continue;
       seen.add(n);counts.set(n,(counts.get(n)||0)+1);if(!samples.has(n))samples.set(n,seg)
     }
   }

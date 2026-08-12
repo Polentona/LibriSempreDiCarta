@@ -364,12 +364,8 @@ async function confirmStandaloneSaga(rec){
     if(best){rec.saga=best.value;rec.score=(rec.score||0)+(best.count>1?6:5);return rec}
   }
 
-  const groups=new Map();
-  for(const [source,text] of [['g',g],['b',b]])for(const value of searchSagaCandidates(text,rec.title,rec.author)){
-    const key=normText(value);if(!key)continue;const x=groups.get(key)||{value,count:0,sources:new Set()};x.count++;x.sources.add(source);groups.set(key,x)
-  }
-  const best=[...groups.values()].sort((a,b)=>b.sources.size-a.sources.size||b.count-a.count)[0];
-  if(best&&(best.sources.size>=2||best.count>=2)){rec.saga=best.value;rec.score=(rec.score||0)+3}
+  // Nessun nome esplicito e verificabile: la serie può comunque avere
+  // prequel/sequel, ma il campo Saga deve restare vuoto.
   return rec
 }
 async function confirmCompositeSaga(rec){
