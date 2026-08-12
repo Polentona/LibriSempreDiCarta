@@ -52,19 +52,36 @@ function fieldAfter(text,labels){
   }
   return''
 }
+
+function cleanBookTitleCandidate(v){
+  let t=cleanLine(v);if(!t)return'';
+  const amazonSeo=/\s*:\s*Amazon(?:\.it)?\s*:\s*(?:Books?|Libri)\s*$/i;
+  const wasAmazonSeo=amazonSeo.test(t);
+  t=t.replace(amazonSeo,'').replace(/\s*[-|]\s*Amazon(?:\.it)?(?:\s*:\s*(?:Books?|Libri))?\s*$/i,'').trim();
+  if(wasAmazonSeo){
+    const parts=t.split(/\s+:\s+/);
+    if(parts.length>1){
+      const tail=parts[parts.length-1].trim();
+      const creditsLike=/^[A-Za-zÀ-ÿ'’.-]+,\s*[A-Za-zÀ-ÿ'’.-]+(?:\s+[A-Za-zÀ-ÿ'’.-]+)*(?:,\s*[A-Za-zÀ-ÿ'’.-]+(?:\s+[A-Za-zÀ-ÿ'’.-]+)*)*\.?$/.test(tail);
+      if(creditsLike)t=parts.slice(0,-1).join(' : ').trim();
+    }
+  }
+  return t.replace(/\s+/g,' ').trim()
+}
 function titleFrom(text,code){
   const labeled=fieldAfter(text,['Titolo','Title']);
   if(labeled){
-    const cleaned=labeled.replace(new RegExp('\\s*[-–—]?\\s*'+norm(code)+'\\s*$'),'').trim();
+    let cleaned=cleanBookTitleCandidate(labeled).replace(new RegExp('\\s*[-–—]?\\s*'+norm(code)+'\\s*$'),'').trim();
+    cleaned=cleanBookTitleCandidate(cleaned);
     if(cleaned&&!isNavigationTitle(cleaned))return cleaned
   }
   const lines=String(text||'').split(/\n/);
   let best='',bestScore=-99;
   for(let i=0;i<lines.length;i++){
     const raw=lines[i];if(!/^\s*#{1,3}\s+/.test(raw))continue;
-    let h=cleanLine(raw);if(!h||h.length<2||h.length>190||isNavigationTitle(h))continue;
-    const stripped=h.replace(new RegExp('\\s*[-–—|]?\\s*'+norm(code)+'\\s*$','i'),'').trim();if(stripped.length>=2)h=stripped;
-    if(isNavigationTitle(h))continue;
+    let h=cleanBookTitleCandidate(raw);if(!h||h.length<2||h.length>190||isNavigationTitle(h))continue;
+    h=cleanBookTitleCandidate(h.replace(new RegExp('\\s*[-–—|]?\\s*'+norm(code)+'\\s*$','i'),'').trim());
+    if(!h||isNavigationTitle(h))continue;
     const around=plain(lines.slice(Math.max(0,i-5),i+10).join('\n'));
     let score=2;
     if(codeAppears(h,code))score+=6;
@@ -77,8 +94,7 @@ function titleFrom(text,code){
   return best
 }
 function isNavigationTitle(v){
-  const n=normText(v);
-  if(!n)return true;
+  const n=normText(v);if(!n)return true;
   return /^(?:skip to(?: .*)?|salta a(?: .*)?|main content|contenuto principale|keyboard shortcuts?|scorciatoie da tastiera|search|cerca|cart|carrello|navigation|navigazione|menu|home|libri|ricerca|risultati|descrizione|sinossi|trama|dettagli|informazioni|recensioni|libro di|un libro di|back to top|torna su|select your cookie preferences|cookie preferences|accessibility|accessibilita|amazon|amazon it|account e liste|resi e ordini|tutte le categorie|tutto|buy now|acquista ora|aggiungi al carrello)$/i.test(n)
 }
 function cleanAuthorCandidate(v){
