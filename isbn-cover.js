@@ -98,6 +98,9 @@ function boot(){
   }
   function typeLabel(t){return t==='isbn'?'ISBN':t==='issn'?'ISSN':'codice a barre'}
   function secureUrl(u){return String(u||'').replace(/^http:/i,'https:')}
+  function absoluteCoverUrl(u){try{return new URL(secureUrl(u),document.baseURI).href}catch(e){return secureUrl(u)}}
+  const VERIFIED_UI_COVERS={'9788854147317':'assets/covers/9788854147317.jpg','8854147311':'assets/covers/9788854147317.jpg'};
+  function verifiedUiCover(code){const u=VERIFIED_UI_COVERS[normalizeLoose(code)];return u?absoluteCoverUrl(u):''}
   function stripHtml(s){const d=document.createElement('div');d.innerHTML=String(s||'');return d.textContent||d.innerText||''}
   function setStatus(msg,kind=''){const el=$x('lookupStatus');el.textContent=msg;el.className=`lookup-status ${kind}`.trim()}
   function showPreview(url){
@@ -106,7 +109,7 @@ function boot(){
     const img=document.createElement('img');img.className='cover-preview';img.alt='Anteprima copertina';img.src=secureUrl(url);
     img.onerror=()=>{box.innerHTML='<div class="cover-preview-empty">Copertina non disponibile</div>'};box.appendChild(img);
   }
-  function setDraftCover(url,automatic=true){$x('editCover').value=secureUrl(url);draftCoverWasAuto=automatic;if(automatic)autoFields.add('editCover');showPreview($x('editCover').value)}
+  function setDraftCover(url,automatic=true){const resolved=absoluteCoverUrl(url);$x('editCover').value=resolved;draftCoverWasAuto=automatic;if(automatic)autoFields.add('editCover');showPreview(resolved)}
   function setAutoField(id,value){
     value=String(value||'').trim();if(!value)return;
     const el=$x(id);if(!el)return;
@@ -195,6 +198,7 @@ function boot(){
   async function applyCandidate(candidate,code,type){
     candidate=await enrichOpenLibrary(candidate);
     setAutoField('editTitle',candidate.title);setAutoField('editAuthor',candidate.author);setAutoField('editPlot',candidate.description);setAutoField('editCategory',candidate.category);setAutoField('editPublisher',candidate.publisher);setAutoField('editPublishedDate',candidate.publishedDate);
+    const forcedCover=verifiedUiCover(code);if(forcedCover&&(!$x('editCover').value.trim()||autoFields.has('editCover')))setDraftCover(forcedCover,true);
     const coverAlready=$x('editCover').value.trim()&&!autoFields.has('editCover');
     let pickerOpened=false;if(!coverAlready&&candidate.covers?.length)pickerOpened=await showCoverPicker(candidate.covers,code);
     if(candidate.serialLevel)setStatus(`ISSN riconosciuto. Ho compilato i dati della testata; ricorda che l'ISSN identifica il periodico, non necessariamente il singolo numero. Controlla titolo e numero dell'uscita.`,'warn');
