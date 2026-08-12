@@ -121,6 +121,25 @@ function boot(){
     }
     if(changed){saveBooks();render()}
   }
+  function plausibleAuthorName(v){
+    const a=String(v||'').trim(),n=normalizeText(a);if(!a||a.length>120||/\d|€|%|@|https?:|www\./i.test(a))return false;
+    if(/\b(iva|ean|isbn|issn|sku|prezzo|sconto|spedizione|consegna|negozio|libreria|carrello|cookie|assistenza|editore|edizione|collana|pagine|formato|categoria|genere|reparto|provincia|regione|comune|disponibile|acquista|compra)\b/i.test(n))return false;
+    if(/^[A-ZÀ-Ý]{2,5}$/.test(a))return false;
+    return /^[A-Za-zÀ-ÿ'’.,&;\/-]+(?:\s+[A-Za-zÀ-ÿ'’.,&;\/-]+){0,12}$/.test(a)
+  }
+  function stripSagaFromTitle(title,saga){
+    let t=String(title||'').trim(),sg=String(saga||'').trim();if(!t||!sg)return t;
+    const e=sg.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    t=t.replace(new RegExp('^'+e+'\\s*(?:[.:-]|[-–—])\\s*','i'),'').replace(new RegExp('\\s*(?:[.:-]|[-–—])\\s*'+e+'$','i'),'').trim();
+    return t||String(title||'').trim()
+  }
+  function normalizeCandidateMetadata(candidate){
+    const c={...(candidate||{})};
+    c.saga=String(c.saga||'').trim();
+    c.title=stripSagaFromTitle(c.title,c.saga);
+    if(c.author&&!plausibleAuthorName(c.author))c.author='';
+    return c
+  }
   function stripHtml(s){const d=document.createElement('div');d.innerHTML=String(s||'');return d.textContent||d.innerText||''}
   function setStatus(msg,kind=''){const el=$x('lookupStatus');if(!el)return;if(kind==='busy'){el.innerHTML='<span class="lookup-book-spinner" aria-hidden="true">📖</span>';el.className='lookup-status lookup-busy';el.setAttribute('aria-label','Ricerca dati in corso');return}el.removeAttribute('aria-label');el.textContent=msg;el.className=`lookup-status ${kind}`.trim()}
   function clearLookupStatus(){const el=$x('lookupStatus');if(!el)return;el.removeAttribute('aria-label');el.textContent='';el.className='lookup-status'}
@@ -249,8 +268,8 @@ function boot(){
   }
 
   async function applyCandidate(candidate,code,type){
-    candidate=await enrichOpenLibrary(candidate);
-    const verifiedMeta=verifiedBookMetadata(code);if(verifiedMeta)candidate={...candidate,...verifiedMeta};
+    candidate=normalizeCandidateMetadata(await enrichOpenLibrary(candidate));
+    const verifiedMeta=verifiedBookMetadata(code);if(verifiedMeta)candidate=normalizeCandidateMetadata({...candidate,...verifiedMeta});
     setAutoField('editTitle',candidate.title);setAutoField('editSaga',candidate.saga);setAutoField('editAuthor',candidate.author);setAutoField('editPlot',candidate.description);setAutoField('editCategory',candidate.category);setAutoField('editPublisher',candidate.publisher);setAutoField('editPublishedDate',candidate.publishedDate);
     const forcedCover=verifiedUiCover(code);if(forcedCover&&(!$x('editCover').value.trim()||autoFields.has('editCover')))setDraftCover(forcedCover,true);
     const coverAlready=$x('editCover').value.trim()&&!autoFields.has('editCover');
@@ -268,7 +287,7 @@ function boot(){
 
   async function fetchCandidates(code,type){
     const tasks=[googleCandidates(code,type),openLibraryCandidates(code,type)];if(type==='issn')tasks.push(crossrefIssnCandidate(code));
-    const groups=await Promise.all(tasks);let candidates=mergeCandidates(groups.flat());
+    const groups=await Promise.all(tasks);let candidates=mergeCandidates(groups.flat()).map(normalizeCandidateMetadata);
     if(type==='isbn'&&candidates.length){
       const exact=candidates.filter(c=>c.exact);if(exact.length)candidates=exact;
       const seriesVerified=candidates.filter(c=>c.saga&&c.author&&!/^(IVA|EAN|ISBN|EUR|SKU)$/i.test(c.author.trim()));if(seriesVerified.length)candidates=seriesVerified

@@ -55,19 +55,37 @@ function titleFrom(text,code){
   }
   return best
 }
+function cleanAuthorCandidate(v){
+  let a=cleanLine(v).replace(/\s*\(Autore\).*$/i,'').replace(/^\s*(?:di|by)\s+/i,'').replace(/\s*[|•]\s*.*$/,'').trim();
+  const comma=a.match(/^([A-ZÀ-ÖØ-Ý][A-Za-zÀ-ÿ'’.-]+),\s*([A-ZÀ-ÖØ-Ý][A-Za-zÀ-ÿ'’.-]+(?:\s+[A-ZÀ-ÖØ-Ý][A-Za-zÀ-ÿ'’.-]+)?)$/);
+  if(comma)a=`${comma[2]} ${comma[1]}`;
+  return a
+}
 function validAuthor(v){
-  const a=cleanLine(v).replace(/\s*\(Autore\).*$/i,'').replace(/^di\s+/i,'').trim(),n=normText(a);
-  if(!a||a.length>100||/\d|€|%|@|https?:|www\./i.test(a))return false;
-  if(/\b(milano|monza|brianza|lodi|roma|torino|napoli|bologna|firenze|genova|venezia|provincia|regione|comune|lombardia|lazio|piemonte|italia|spedizione|consegna|negozio|libreria|magazzino|disponibile|carrello|cookie|assistenza|ritiro|punti vendita|iva|ean|isbn|eur|euro|sku|codice|prezzo|sconto|traduttore|collana|pagine|formato|dati)\b/i.test(n))return false;
-  if(/^[A-ZÀ-Ý]{2,4}$/.test(a))return false;
-  const w=a.split(/\s+/).filter(Boolean);return w.length>=1&&w.length<=6&&/^[A-Za-zÀ-ÿ'’.-]+(?:\s+[A-Za-zÀ-ÿ'’.-]+){0,5}$/.test(a)
+  const a=cleanAuthorCandidate(v),n=normText(a);
+  if(!a||a.length>120||/\d|€|%|@|https?:|www\./i.test(a))return false;
+  if(/\b(spedizione|consegna|negozio|libreria|magazzino|disponibile|carrello|cookie|assistenza|ritiro|punti vendita|iva|ean|isbn|issn|eur|euro|sku|codice|prezzo|sconto|traduttore|traduzione|collana|pagine|formato|dati|dettagli|edizione|editore|publisher|categoria|genere|reparto|home|menu|newsletter|acquista|compra|offerta|usato|nuovo|provincia|regione|comune)\b/i.test(n))return false;
+  if(/^[A-ZÀ-Ý]{2,5}$/.test(a))return false;
+  const people=a.split(/\s*(?:&|\be\b|;|\/)\s*/i).filter(Boolean);
+  if(!people.length||people.length>6)return false;
+  return people.every(person=>{
+    const words=person.split(/\s+/).filter(Boolean);
+    if(words.length<1||words.length>6)return false;
+    if(words.length===1)return /^[A-ZÀ-ÖØ-Ý][A-Za-zÀ-ÿ'’.-]{2,}$/.test(words[0]);
+    return words.every(w=>/^[A-Za-zÀ-ÿ'’.-]+$/.test(w))&&words.some(w=>/^[A-ZÀ-ÖØ-Ý]/.test(w));
+  })
 }
 function authorFrom(text,title=''){
-  const labeled=fieldAfter(text,['Autore','Autori']);if(validAuthor(labeled))return cleanLine(labeled).replace(/\s*\(Autore\).*$/i,'').trim();
+  const labeled=fieldAfter(text,['Autore','Autori','Autore/i','Scritto da']);if(validAuthor(labeled))return cleanAuthorCandidate(labeled);
+  const lines=String(text||'').split(/\n/);
+  for(const raw of lines){
+    const line=cleanLine(raw),m=line.match(/^(?:di|by|un libro di|libro di)\s+(.{3,120})$/i);
+    if(m&&validAuthor(m[1]))return cleanAuthorCandidate(m[1]);
+  }
   const p=plain(text);
-  for(const re of [/\bUn libro di\s+([^\n|]{3,100})/i,/\bLibro di\s+([^\n|]{3,100})/i,/\bdi\s+([A-ZÀ-ÖØ-Ý][A-Za-zÀ-ÿ'’.-]+(?:\s+[A-ZÀ-ÖØ-Ý][A-Za-zÀ-ÿ'’.-]+){0,4})\b/]){const m=p.match(re);if(m){const a=cleanLine(m[1]).replace(/\s+(edito|editore|sconto|isbn|ean)\b.*$/i,'').trim();if(validAuthor(a))return a}}
-  const lines=String(text||'').split(/\n/),nt=normText(title);let ti=-1;if(nt)for(let i=0;i<lines.length;i++)if(normText(cleanLine(lines[i])).includes(nt.slice(0,Math.min(nt.length,45)))){ti=i;break}
-  if(ti>=0)for(let i=ti+1;i<Math.min(lines.length,ti+10);i++){const a=cleanLine(lines[i]);if(!a||/^(zoom|libro di|un libro di|recensioni|scrivi|pronto|nuovo|usato|prezzo|image)/i.test(a))continue;if(validAuthor(a))return a}
+  for(const re of [/\bUn libro di\s+([^\n|]{3,120})/i,/\bLibro di\s+([^\n|]{3,120})/i,/\bScritto da\s+([^\n|]{3,120})/i]){
+    const m=p.match(re);if(m){const a=cleanAuthorCandidate(m[1]).replace(/\s+(edito|editore|sconto|isbn|ean|prezzo)\b.*$/i,'').trim();if(validAuthor(a))return a}
+  }
   return''
 }
 function escapeRe(v){return String(v||'').replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}
@@ -117,6 +135,28 @@ function inspectText(text,url,code){
   let score=4+(author?4:0)+(publisher?2:0)+(year?1:0)+(description?4:0)+(category?2:0)+(cover?2:0)+(saga?3:0);if(['Libraccio','Libreria Universitaria','Unilibro','IBS'].includes(sourceName(url)))score+=1;
   return {title,saga,author,publisher,year,description,category,cover,source:sourceName(url),score}
 }
+function chooseCatalogField(records,field,validator=v=>!!cleanLine(v)){
+  const groups=new Map();
+  for(const r of records){
+    const value=cleanLine(r?.[field]||'');if(!value||!validator(value))continue;
+    const key=normText(value);if(!key)continue;
+    const g=groups.get(key)||{value,count:0,score:0};g.count++;g.score+=(r.score||0);if(value.length>g.value.length)g.value=value;groups.set(key,g)
+  }
+  return [...groups.values()].sort((a,b)=>b.count-a.count||b.score-a.score)[0]?.value||''
+}
+function mergeCatalogRecords(records){
+  if(!records?.length)return null;
+  const out={...records[0]};
+  out.author=chooseCatalogField(records,'author',validAuthor)||out.author||'';
+  out.saga=chooseCatalogField(records,'saga',v=>v.length>=2&&v.length<90)||out.saga||'';
+  out.publisher=chooseCatalogField(records,'publisher',v=>v.length<120)||out.publisher||'';
+  out.year=chooseCatalogField(records,'year',v=>/^\d{4}$/.test(v))||out.year||'';
+  out.category=chooseCatalogField(records,'category',v=>v.length<150)||out.category||'';
+  if(!out.description)out.description=records.find(r=>r.description)?.description||'';
+  if(!out.cover)out.cover=records.find(r=>r.cover)?.cover||'';
+  if(out.saga){const split=splitTitleSaga(out.title,`Saga: ${out.saga}`);out.title=split.title;out.saga=split.saga||out.saga}
+  return out
+}
 async function confirmCompositeSaga(rec){
   if(!rec||rec.saga)return rec;
   const original=cleanLine(rec.title),parts=original.split(/\s*(?:\.\s+|\s[-–—]\s|:\s+)\s*/).map(cleanLine).filter(x=>x.length>2);
@@ -146,7 +186,7 @@ async function findCatalog(code){
     const searchTexts=await Promise.all(searches.map(u=>reader(u,12000)));for(const t of searchTexts)for(const u of searchLinks(t))if(!pages.includes(u))pages.push(u);
     pages=pages.slice(0,14);
     const inspected=(await Promise.all(pages.map(async u=>inspectText(await reader(u),u,ean)))).filter(Boolean).sort((x,y)=>y.score-x.score);
-    return await confirmCompositeSaga(inspected[0]||null)
+    return await confirmCompositeSaga(mergeCatalogRecords(inspected))
   })();cache.set(key,promise);return promise
 }
 function makeGoogleItem(rec,code){
