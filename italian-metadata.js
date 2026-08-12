@@ -24,6 +24,7 @@ function italianEdition(ed){return languageList(ed?.language).some(isItalianLang
 function yearFrom(v){const m=String(v||'').match(/\b(18|19|20)\d{2}\b/);return m?Number(m[0]):undefined}
 function coverIdFromUrl(v){const m=String(v||'').match(/\/b\/id\/(\d+)-/);return m?Number(m[1]):undefined}
 function addField(fields,name){const parts=String(fields||'').split(',').map(x=>x.trim()).filter(Boolean);if(!parts.includes(name))parts.push(name);return parts.join(',')}
+function cleanLine(v){return String(v||'').replace(/\*\*/g,'').replace(/\[([^\]]+)\]\([^)]*\)/g,'$1').replace(/[|#]/g,' ').replace(/\s+/g,' ').trim()}
 
 async function exactOpenLibraryIsbn(code){
   try{
@@ -38,6 +39,39 @@ async function exactOpenLibraryIsbn(code){
       key:b.key||'',title:b.title||'',subtitle:b.subtitle||'',author_name:authors,publisher:pub,
       first_publish_year:yearFrom(b.publish_date),publish_date:b.publish_date?[b.publish_date]:[],subject:[],
       cover_i:cId,isbn:ids,edition_key:b.key?[String(b.key).replace('/books/','')]:[],language:['ita']
+    }
+  }catch(e){return null}
+}
+
+/* Alcune vecchie edizioni italiane non sono indicizzate da Google Books/Open Library.
+   In quel caso usiamo la scheda ISBN di Eurolibro solo per recuperare i dati bibliografici
+   essenziali; trama e genere vengono poi completati dal normale fallback degli store italiani. */
+async function exactItalianCatalogIsbn(code){
+  try{
+    const r=await nativeFetch(`https://r.jina.ai/https://www.eurolibro.it/libro/isbn/${encodeURIComponent(code)}.html`,{headers:{Accept:'text/plain'}});
+    if(!r.ok)return null;const text=await r.text();
+    if(!text||!norm(text).includes(norm(code)))return null;
+    const pickHeading=label=>{
+      const re=new RegExp(label+'\\s*:?\\s*(?:\\|\\s*)?(?:\\n\\s*)+#{1,6}\\s*([^\\n]+)','i');
+      const m=text.match(re);return m?cleanLine(m[1]):''
+    };
+    let author=pickHeading('Autore');
+    let title=pickHeading('Titolo');
+    if(!title){
+      const m=text.match(/^#\s+(.+?)\s+-\s+(?:libri|nuovo libro|libro usato)/im);if(m)title=cleanLine(m[1])
+    }
+    if(!author){
+      const m=text.match(/(?:^|\n)(?:##\s*)?([^\n:]{3,90})\s*:\s*\n\s*#\s+/i);if(m)author=cleanLine(m[1])
+    }
+    if(!title)return null;
+    const pm=text.match(/(?:^|\n)Editore:\s*([^\n]+)/i);const publisher=pm?cleanLine(pm[1]):'';
+    const ym=text.match(/Anno di pubblicazione:\s*((?:18|19|20)\d{2})/i);const year=ym?Number(ym[1]):undefined;
+    const i10=text.match(/ISBN\s*\(ISBN-10\):\s*([0-9Xx-]+)/i);const i13=text.match(/EAN\s*\(ISBN-13\):\s*([0-9-]+)/i);
+    const ids=[norm(code),norm(i10?.[1]),norm(i13?.[1])].filter(Boolean);
+    return {
+      key:'',title,subtitle:'',author_name:author?[author]:[],publisher:publisher?[publisher]:[],
+      first_publish_year:year,publish_date:year?[String(year)]:[],subject:[],cover_i:undefined,
+      isbn:[...new Set(ids)],edition_key:[],language:['ita']
     }
   }catch(e){return null}
 }
@@ -57,7 +91,6 @@ window.fetch=async function(input,init){
       data.items=(data.items||[]).filter(item=>isItalianLanguage(item?.volumeInfo?.language));
       for(const item of data.items){
         const v=item.volumeInfo||{};
-        /* Se il record non e' italiano non deve mai finire nella bozza. */
         if(!isItalianLanguage(v.language)){delete v.description;delete v.categories}
       }
       data.totalItems=data.items.length;
@@ -66,7 +99,8 @@ window.fetch=async function(input,init){
   }
 
   /* Open Library: per un ISBN recuperiamo prima l'edizione esatta, non il Work
-     internazionale (che spesso porta titolo/trama inglesi). */
+     internazionale. Se non esiste nei cataloghi principali, tentiamo anche un
+     catalogo italiano indicizzato per ISBN. */
   if(u.hostname==='openlibrary.org'&&u.pathname==='/search.json'){
     const q=u.searchParams.get('q')||'';const m=q.match(/^isbn:([0-9Xx-]+)/i);
     if(m){
@@ -76,7 +110,7 @@ window.fetch=async function(input,init){
       let fields=u.searchParams.get('fields')||'';
       for(const f of ['language','editions','editions.title','editions.subtitle','editions.language','editions.publisher','editions.publish_date','editions.cover_i','editions.isbn'])fields=addField(fields,f);
       u.searchParams.set('fields',fields);
-      const [r,exact]=await Promise.all([fetchWithUrl(input,init,u),exactOpenLibraryIsbn(code)]);
+      const [r,exact,catalog]=await Promise.all([fetchWithUrl(input,init,u),exactOpenLibraryIsbn(code),exactItalianCatalogIsbn(code)]);
       if(!r.ok)return r;
       try{
         const data=await r.json();const docs=[];
@@ -95,6 +129,7 @@ window.fetch=async function(input,init){
           const duplicate=docs.some(z=>String(z.title).toLowerCase()===String(x.title).toLowerCase()&&String((z.publisher||[])[0]||'').toLowerCase()===String((x.publisher||[])[0]||'').toLowerCase());
           if(!duplicate)docs.push(x)
         }
+        if(!docs.length&&catalog)docs.push(catalog);
         data.docs=docs;data.numFound=docs.length;data.num_found=docs.length;
         return jsonResponse(r,data)
       }catch(e){return r}
