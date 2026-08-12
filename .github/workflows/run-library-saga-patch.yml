@@ -1,0 +1,29 @@
+name: Esegue correzioni saga e schede principali
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/run-library-saga-patch.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Applica patch
+        run: python tools/patch_library_saga_20260812.py
+      - name: Verifica JavaScript
+        run: node --check isbn-cover.js
+      - name: Pubblica
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add isbn-cover.js index.html bg/bg8.js
+          git commit -m "Corregge L'amore e l'odio e mostra la saga nelle schede"
+          git push origin main
