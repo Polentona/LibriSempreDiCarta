@@ -394,7 +394,7 @@ function boot(){
 
   async function enrichSavedRelations(){
     if(typeof window.__LIB_FIND_RELATIONS!=='function')return;
-    const RELATIONS_LOOKUP_VERSION=4,now=Date.now(),week=7*24*60*60*1000;
+    const RELATIONS_LOOKUP_VERSION=5,now=Date.now(),week=7*24*60*60*1000;
     const pending=books.filter(b=>{const code=normalizeLoose(b.code||b.isbn||'');return code&&b.title&&b.author&&(Number(b.relationsLookupVersion||0)!==RELATIONS_LOOKUP_VERSION||!b.relationsLookupAt||now-Number(b.relationsLookupAt)>week)&&(!b.prequel||!b.sequel||Number(b.relationsLookupVersion||0)!==RELATIONS_LOOKUP_VERSION)}).slice(0,8);
     for(const b of pending){
       try{

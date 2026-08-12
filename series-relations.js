@@ -138,6 +138,33 @@ function parseNarrativeTriples(text,title,source,relations,baseScore=8){
   ];
   for(const re of patterns){const m=p.match(re);if(m){const rel=relationFromItems([m[1],m[2],m[3]],title,source,baseScore+2);if(rel)relations.push(rel)}}
 }
+function chronologicalTitle(v){
+  let x=clean(v)
+    .replace(/^(?:il\s+suo\s+romanzo|il\s+romanzo|il\s+libro|un\s+romanzo|romanzo|libro)\s+/i,'')
+    .replace(/^(?:sono\s+poi\s+seguit[ie]|sono\s+seguit[ie]|seguono)\s+/i,'')
+    .replace(/,\s+(?:il|un)\s+romanzo\b.*$/i,'')
+    .replace(/\s+(?:pubblicato|edito|uscito)\b.*$/i,'')
+    .trim();
+  return cleanRelatedTitle(x)
+}
+function parseChronologicalOrder(text,title,source,relations,baseScore=8){
+  const p=clean(text);let m;
+  const first=/(?:il\s+suo\s+romanzo|il\s+romanzo|il\s+libro|un\s+romanzo|romanzo|libro)\s+([^()]{3,180}?)\s*\((?:pubblicato(?:\s+in\s+[^()]{1,45})?\s+nel\s+)?((?:18|19|20)\d{2})\)[^.]{0,700}?(?:sono\s+poi\s+seguit[ie]|sono\s+seguit[ie]|seguono)\s+([^()]{3,180}?)\s*\(((?:18|19|20)\d{2})\)\s+(?:e|,)\s+([^()]{3,180}?)\s*\(((?:18|19|20)\d{2})\)/gi;
+  while((m=first.exec(p))){
+    const items=[chronologicalTitle(m[1]),chronologicalTitle(m[3]),chronologicalTitle(m[5])].filter(Boolean);
+    const rel=relationFromItems(items,title,source,baseScore+4);if(rel)relations.push(rel)
+  }
+  const second=/([A-ZÀ-ÖØ-Ý][^.!?]{3,180}?)\.\s*A questo\s+(?:è|e)\s+seguito\s+([^.!?]{3,180}?)\.\s*Del\s+(?:18|19|20)\d{2}\s+(?:è|e)\s+([^.!?]{3,180}?)(?:\.|$)/gi;
+  while((m=second.exec(p))){
+    const items=[chronologicalTitle(m[1]),chronologicalTitle(m[2]),chronologicalTitle(m[3])].filter(Boolean);
+    const rel=relationFromItems(items,title,source,baseScore+3);if(rel)relations.push(rel)
+  }
+  const third=/Dopo\s+["“”']?([^"“”']{3,180})["“”']?\s+e\s+["“”']?([^"“”']{3,180})["“”']?[^.]{0,260}?(?:terzo|3[°º]|ultimo)\s+(?:capitolo|volume|libro)[^.]{0,140}?["“”']?([^"“”'.]{3,180})/gi;
+  while((m=third.exec(p))){
+    const items=[chronologicalTitle(m[1]),chronologicalTitle(m[2]),chronologicalTitle(m[3])].filter(Boolean);
+    const rel=relationFromItems(items,title,source,baseScore+3);if(rel)relations.push(rel)
+  }
+}
 function cleanNeighbor(v){return cleanRelatedTitle(String(v||'').replace(/^\s*(?:il\s+romanzo|il\s+libro|the\s+novel|the\s+book)\s+/i,'').replace(/\s*\([^)]*(?:\d{4}|editore|publisher)[^)]*\)\s*$/i,'').replace(/\s+(?:pubblicato|edito|uscito)\b.*$/i,''))}
 function parseExplicitNeighbors(text,title,source,relations,baseScore=9){
   const p=clean(text),out={prequel:'',sequel:'',source,score:baseScore,items:[]};let m;
@@ -156,7 +183,7 @@ function parseExplicitNeighbors(text,title,source,relations,baseScore=9){
   if(out.sequel&&matchesTarget(out.sequel,title))out.sequel='';
   if(out.prequel||out.sequel)relations.push(out)
 }
-function parseEvidence(text,title,source,score=7){const relations=[],sagas=[];parseExplicitSeries(text,title,source,relations,sagas,score);parseNarrativeTriples(text,title,source,relations,score);parseExplicitNeighbors(text,title,source,relations,score);return {relations,sagas}}
+function parseEvidence(text,title,source,score=7){const relations=[],sagas=[];parseExplicitSeries(text,title,source,relations,sagas,score);parseNarrativeTriples(text,title,source,relations,score);parseChronologicalOrder(text,title,source,relations,score);parseExplicitNeighbors(text,title,source,relations,score);return {relations,sagas}}
 async function reader(url,timeout=10500){const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),timeout);try{const r=await fetch('https://r.jina.ai/'+url,{signal:ctrl.signal,headers:{Accept:'text/plain'}});if(!r.ok)return'';return await r.text()}catch(e){return''}finally{clearTimeout(timer)}}
 function searchLinks(text){
   const out=[],seen=new Set(),re=/\[[^\]]*\]\((https?:\/\/[^)\s]+)\)/g;let m;
@@ -186,10 +213,10 @@ function bestRelations(candidates,saga=''){
 window.__LIB_FIND_RELATIONS=async function(input={}){
   const title=clean(input.title),author=clean(input.author),hint=clean(input.saga),code=String(input.code||'').replace(/[^0-9Xx]/g,'').toUpperCase();
   if(!title||!author)return {prequel:'',sequel:'',saga:'',sagaChecked:false,source:''};
-  const key=[code,norm(title),norm(author),norm(hint),'v4'].join('|');if(relationCache.has(key))return relationCache.get(key);
+  const key=[code,norm(title),norm(author),norm(hint),'v5'].join('|');if(relationCache.has(key))return relationCache.get(key);
   const promise=(async()=>{
     const variants=titleVariants(title),base=variants.length>1?variants[1]:variants[0],extra=variants.slice(2,4);
-    const queries=[`"${base}" "${author}" trilogia saga serie`,`"${base}" "${author}" sequel prequel seguito preceduto`,...extra.map(v=>`"${base}" "${v}" "${author}" saga`)];
+    const queries=[`"${base}" "${author}" trilogia saga serie`,`"${base}" "${author}" sequel prequel seguito preceduto`,`"${base}" "${author}" "sono poi seguiti"`,`"${base}" "${author}" "A questo è seguito"`,...extra.map(v=>`"${base}" "${v}" "${author}" saga`)];
     const searchJobs=[];for(const q of queries.slice(0,4)){searchJobs.push(reader(`https://www.google.com/search?hl=it&num=15&q=${encodeURIComponent(q)}`,11000));searchJobs.push(reader(`https://www.bing.com/search?setlang=it-IT&q=${encodeURIComponent(q)}`,11000))}
     const [searchTexts,gb]=await Promise.all([Promise.all(searchJobs),googleBooksEvidence(title,author)]);
     const relations=[...gb.relations],sagas=[...gb.sagas];let checked=gb.checked||searchTexts.some(Boolean);
