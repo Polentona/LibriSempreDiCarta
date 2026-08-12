@@ -12,22 +12,50 @@ body{min-height:100vh;color:var(--ink);font-family:"Segoe Print","Bradley Hand",
 header{position:sticky;top:0;z-index:10;padding:18px 0;background:transparent}.nav{max-width:1180px;margin:auto;min-height:54px;padding:0 18px;display:flex;align-items:center;gap:26px;background:rgba(250,241,229,.93);border:1px solid rgba(178,145,109,.22);border-radius:14px;box-shadow:0 3px 14px rgba(86,58,34,.08)}.brand{display:flex;align-items:center;gap:10px;min-width:210px}.brand .books{font-size:31px}.brand strong{font-size:22px;font-weight:500}.links{display:flex;gap:21px;flex:1;justify-content:center;white-space:nowrap}.links a{text-decoration:none;color:var(--ink);font-size:13px;padding-bottom:2px}.links a.active{border-bottom:1px solid var(--ink);font-weight:600}.search{background:#fff8;border:1px solid #ddcab8;border-radius:10px;padding:7px 11px;display:flex;gap:7px;min-width:220px}.search input{border:0;background:transparent;outline:0;width:100%;font:inherit;font-size:12px}
 main{position:relative;z-index:2;max-width:1040px;margin:8px auto 70px;padding:0 18px}.intro{margin:0 0 13px}.intro h1{font-size:29px;font-weight:500;margin:0 0 3px}.intro p{margin:0;color:var(--muted);font-size:13px}.pagination{display:grid;grid-template-columns:62px 1fr 62px;align-items:center;gap:16px;margin:0 0 20px}.page-arrow{height:42px;border:1px solid #d4bea7;background:rgba(248,237,220,.96);border-radius:9px;box-shadow:0 5px 12px rgba(82,56,35,.13);font-size:24px;color:var(--ink);cursor:pointer}.page-arrow:disabled{opacity:.32;cursor:default}.page-status{text-align:center;font-size:13px;color:var(--muted);line-height:1.65}.page-status strong{color:var(--ink);font-size:15px;font-weight:500}
 .book{background:rgba(252,247,239,.94);border:1px solid rgba(170,130,90,.18);border-radius:15px;box-shadow:0 9px 22px rgba(82,56,35,.12);padding:20px 25px;margin:0 0 14px;display:grid;grid-template-columns:150px 1fr;gap:26px;position:relative;overflow:hidden}.cover-wrap{position:relative;padding:8px;background:#f8eee1;border-radius:5px;box-shadow:0 4px 10px #5a3b2522;align-self:start}.tape{position:absolute;width:67px;height:18px;background:#e6c99aaa;top:-9px;left:50%;transform:translateX(-50%) rotate(-1deg)}.cover{width:100%;aspect-ratio:2/3;object-fit:cover;display:block;background:#d7c1aa}.info{padding-right:37px}.title{font-size:22px;font-weight:400;margin:0 0 2px;border-bottom:1px solid #928277;display:inline-block;padding-bottom:3px}.author{font-size:14px;margin:2px 0 12px}.label{font-size:10px;border-bottom:1px solid #928277;display:inline-block;margin-bottom:4px}.plot{font-size:11px;line-height:1.55;margin:0 0 12px}.meta{display:grid;grid-template-columns:.65fr .7fr 1.5fr;gap:10px;margin-top:8px}.panel,.notes{border:1px solid var(--line);border-radius:8px;padding:9px 11px;background:rgba(255,255,255,.13);min-height:70px}.panel h3{font-size:10px;font-weight:400;margin:0 0 7px;border-bottom:1px solid #928277;display:inline-block}.stars{display:flex;gap:1px}.star{border:0;background:transparent;color:#b3aaa2;font-size:20px;padding:0;cursor:pointer}.star.on{color:var(--gold)}.loan{font-size:11px;line-height:1.5}.loan input{font:inherit;border:0;border-bottom:1px dashed #bca995;background:transparent;outline:0;width:100%}.notes textarea{width:100%;min-height:45px;resize:vertical;border:0;background:transparent;outline:0;font:inherit;font-size:11px;line-height:1.45;color:var(--ink)}.read-corner{position:absolute;right:18px;top:14px;z-index:4;cursor:pointer}.read-corner input{position:absolute;opacity:0}.read-box{width:25px;height:25px;border:2px solid #5f554c;border-radius:3px;background:#fffaf2;display:grid;place-items:center;font-family:Arial,sans-serif;font-size:18px;font-weight:bold;color:#fff}.read-corner input:checked+.read-box{background:#607e56;border-color:#607e56}.read-corner input:checked+.read-box:after{content:"✓"}
+.book-manage{display:flex;justify-content:flex-end;gap:8px;margin-top:10px}.manage-btn{border:1px solid #cdb79f;background:rgba(250,241,229,.78);color:var(--ink);border-radius:7px;padding:5px 10px;font:inherit;font-size:10px;cursor:pointer;box-shadow:0 2px 5px rgba(82,56,35,.06)}.manage-btn:hover{background:#f3e4d1}.manage-btn.delete{border-color:#d7aaa1;color:#8a3e35}.manage-btn.delete:hover{background:#f6e0dc}
+.empty-state{background:rgba(252,247,239,.9);border:1px solid rgba(170,130,90,.18);border-radius:15px;padding:36px;text-align:center;color:var(--muted);box-shadow:0 9px 22px rgba(82,56,35,.08)}
+.edit-dialog{width:min(680px,calc(100vw - 28px));max-height:90vh;overflow:auto;border:1px solid #d6bea5;border-radius:16px;padding:0;background:#fbf4e9;color:var(--ink);box-shadow:0 22px 60px rgba(63,42,28,.28);font-family:inherit}.edit-dialog::backdrop{background:rgba(49,38,29,.38);backdrop-filter:blur(2px)}.edit-form{padding:23px}.edit-form h2{margin:0 0 17px;font-size:24px;font-weight:500}.edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.edit-field{display:flex;flex-direction:column;gap:5px}.edit-field.full{grid-column:1/-1}.edit-field label{font-size:11px;color:#5d5046}.edit-field input,.edit-field textarea,.edit-field select{width:100%;border:1px solid #d9c6b3;border-radius:8px;background:#fffaf3;color:var(--ink);padding:8px 10px;font:inherit;font-size:12px;outline:none}.edit-field textarea{min-height:80px;resize:vertical}.edit-check{display:flex;align-items:center;gap:8px;font-size:12px;padding-top:23px}.edit-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:18px}.dialog-btn{border:1px solid #cdb79f;background:#f6e8d6;border-radius:8px;padding:8px 14px;font:inherit;font-size:12px;cursor:pointer}.dialog-btn.primary{background:#607e56;border-color:#607e56;color:white}
 @media(max-width:1050px){.links{display:none}.brand{min-width:auto}.search{margin-left:auto}.book{grid-template-columns:130px 1fr}.meta{grid-template-columns:1fr 1fr}.notes{grid-column:1/-1}}
-@media(max-width:620px){header{padding:8px 0}.nav{margin:0 8px}.brand strong{font-size:19px}.brand .books{font-size:27px}.search{min-width:0}.book{grid-template-columns:1fr;padding:18px 15px}.cover-wrap{width:150px;margin:auto}.info{padding-right:0}.title{font-size:20px;padding-right:30px}.meta{grid-template-columns:1fr}.notes{grid-column:auto}.pagination{grid-template-columns:46px 1fr 46px}.page-arrow{height:38px}.read-corner{right:12px;top:12px}}
+@media(max-width:620px){header{padding:8px 0}.nav{margin:0 8px}.brand strong{font-size:19px}.brand .books{font-size:27px}.search{min-width:0}.book{grid-template-columns:1fr;padding:18px 15px}.cover-wrap{width:150px;margin:auto}.info{padding-right:0}.title{font-size:20px;padding-right:30px}.meta{grid-template-columns:1fr}.notes{grid-column:auto}.pagination{grid-template-columns:46px 1fr 46px}.page-arrow{height:38px}.read-corner{right:12px;top:12px}.edit-grid{grid-template-columns:1fr}.edit-field.full{grid-column:auto}.edit-check{padding-top:0}}
 </style>
 </head>
 <body>
 <div class="library-wall" id="libraryWall" aria-hidden="true"></div>
 <header><div class="nav"><div class="brand"><span class="books">📚</span><strong>Libri di Carta</strong></div><div class="links"><a href="#" data-view="home">Home</a><a href="#" data-view="library" class="active">La mia libreria</a><a href="#" data-view="read">Letti</a><a href="#" data-view="unread">Da leggere</a><a href="#" data-view="loaned">Prestati</a><a href="#" data-view="authors">Autori</a><a href="#" data-view="categories">Categorie</a></div><label class="search">⌕<input id="search" placeholder="Cerca un libro, autore…"></label></div></header>
 <main><div class="intro"><h1 id="viewTitle">La mia libreria</h1><p id="viewSubtitle">Tutti i libri, uno sotto l’altro.</p></div><div class="pagination"><button class="page-arrow" id="prevPage">←</button><div class="page-status" id="pageStatus"></div><button class="page-arrow" id="nextPage">→</button></div><div id="list"></div></main>
+
+<dialog class="edit-dialog" id="editDialog">
+<form class="edit-form" id="editForm">
+<h2>Modifica libro</h2>
+<div class="edit-grid">
+<div class="edit-field full"><label for="editTitle">Titolo</label><input id="editTitle" required></div>
+<div class="edit-field"><label for="editAuthor">Autore</label><input id="editAuthor" required></div>
+<div class="edit-field"><label for="editRating">Il mio rating</label><select id="editRating"><option value="0">Nessuna stella</option><option value="1">1 stella</option><option value="2">2 stelle</option><option value="3">3 stelle</option><option value="4">4 stelle</option><option value="5">5 stelle</option></select></div>
+<div class="edit-field full"><label for="editCover">URL copertina</label><input id="editCover" type="url"></div>
+<div class="edit-field full"><label for="editPlot">Trama</label><textarea id="editPlot"></textarea></div>
+<div class="edit-field"><label for="editLoanTo">Prestato a</label><input id="editLoanTo" placeholder="Nessuno"></div>
+<div class="edit-field"><label for="editLoanDate">Data prestito</label><input id="editLoanDate" placeholder="gg/mm/aaaa"></div>
+<div class="edit-field full"><label for="editNotes">Le mie note</label><textarea id="editNotes"></textarea></div>
+<label class="edit-check"><input id="editRead" type="checkbox"> Libro letto</label>
+</div>
+<div class="edit-actions"><button class="dialog-btn" type="button" id="cancelEdit">Annulla</button><button class="dialog-btn primary" type="submit">Salva modifiche</button></div>
+</form>
+</dialog>
+
 <script>
 (async()=>{try{window.__LIB_BG="";for(let i=1;i<=8;i++){await new Promise((resolve,reject)=>{const s=document.createElement('script');s.src=`bg/bg${i}.js?v=4`;s.onload=()=>{s.remove();resolve()};s.onerror=reject;document.head.appendChild(s)})}document.getElementById('libraryWall').style.backgroundImage=`url("data:image/webp;base64,${window.__LIB_BG}")`;delete window.__LIB_BG}catch(e){console.error('Sfondo non caricato',e)}})();
-const books=[
+
+const defaultBooks=[
 {id:1,title:"Stand by me - Ricordo di un’estate",author:"Stephen King",cover:"https://covers.openlibrary.org/b/isbn/9788804679349-L.jpg",plot:"Quattro ragazzi partono per un’avventura che cambierà per sempre le loro vite. Lungo il cammino scopriranno il coraggio, l’amicizia e il valore dei ricordi che restano.",rating:4,read:true,loanTo:"Marco B.",loanDate:"12/05/2024",notes:"Libro stupendo. Mi ha fatto tornare agli anni dell’adolescenza e al valore delle amicizie vere. Finale commovente."},
 {id:2,title:"Misery",author:"Stephen King",cover:"https://covers.openlibrary.org/b/isbn/9780451169525-L.jpg",plot:"Dopo un incidente d’auto, lo scrittore Paul Sheldon viene soccorso dalla sua ammiratrice Annie Wilkes. Quella che sembra una salvezza si trasforma presto in una prigionia inquietante.",rating:5,read:true,loanTo:"",loanDate:"",notes:"Tesissimo e claustrofobico. Annie Wilkes è uno dei personaggi più memorabili di King."},
 {id:3,title:"Shining",author:"Stephen King",cover:"https://covers.openlibrary.org/b/isbn/9780307743657-L.jpg",plot:"Jack Torrance accetta un lavoro invernale all’Overlook Hotel e vi si trasferisce con la moglie Wendy e il figlio Danny. L’isolamento e le presenze dell’hotel metteranno la famiglia in grave pericolo.",rating:3,read:false,loanTo:"Sara",loanDate:"02/08/2026",notes:"Da rileggere con calma: l’atmosfera dell’Overlook è la parte che mi è rimasta più impressa."}
 ];
-const PAGE_SIZE=50;let currentPage=1;let currentView='library';const $=id=>document.getElementById(id);
+const STORAGE_KEY='libriDiCarta.books.v1';
+let books;
+try{const saved=JSON.parse(localStorage.getItem(STORAGE_KEY));books=Array.isArray(saved)?saved:defaultBooks.map(b=>({...b}))}catch(e){books=defaultBooks.map(b=>({...b}))}
+function saveBooks(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(books))}catch(e){console.error('Impossibile salvare i libri',e)}}
+
+const PAGE_SIZE=50;let currentPage=1;let currentView='library';let editingId=null;const $=id=>document.getElementById(id);
 const viewInfo={
 home:['Home','Tutti i libri della tua raccolta.'],
 library:['La mia libreria','Tutti i libri, uno sotto l’altro.'],
@@ -37,7 +65,8 @@ loaned:['Prestati','Solo i libri attualmente prestati.'],
 authors:['Autori','I libri ordinati per autore.'],
 categories:['Categorie','Le categorie saranno mostrate quando verranno associate ai libri.']
 };
-function stars(n,id){return [1,2,3,4,5].map(v=>`<button class="star ${v<=n?'on':''}" data-id="${id}" data-v="${v}">★</button>`).join('')}
+function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function stars(n,id){return [1,2,3,4,5].map(v=>`<button class="star ${v<=n?'on':''}" data-id="${id}" data-v="${v}" title="${v} stelle">★</button>`).join('')}
 function getFilteredBooks(){
   const q=$('search').value.toLowerCase().trim();
   let f=books.filter(b=>`${b.title} ${b.author}`.toLowerCase().includes(q));
@@ -48,32 +77,54 @@ function getFilteredBooks(){
   return f;
 }
 function setView(view){
-  currentView=view;
-  currentPage=1;
+  currentView=view;currentPage=1;
   const info=viewInfo[view]||viewInfo.library;
-  $('viewTitle').textContent=info[0];
-  $('viewSubtitle').textContent=info[1];
+  $('viewTitle').textContent=info[0];$('viewSubtitle').textContent=info[1];
   document.querySelectorAll('.links a[data-view]').forEach(a=>a.classList.toggle('active',a.dataset.view===view));
   render();
 }
 function render(){
-  const f=getFilteredBooks();
-  const pages=Math.max(1,Math.ceil(f.length/PAGE_SIZE));
-  if(currentPage>pages)currentPage=pages;
-  const start=(currentPage-1)*PAGE_SIZE;
-  const vis=f.slice(start,start+PAGE_SIZE);
-  $('list').innerHTML=vis.map(b=>`<section class="book"><label class="read-corner"><input type="checkbox" data-read="${b.id}" ${b.read?'checked':''}><span class="read-box"></span></label><div class="cover-wrap"><div class="tape"></div><img class="cover" src="${b.cover}" alt="Copertina di ${b.title}"></div><div class="info"><h2 class="title">${b.title}</h2><p class="author">${b.author}</p><span class="label">TRAMA</span><p class="plot">${b.plot}</p><div class="meta"><div class="panel"><h3>IL MIO RATING</h3><div class="stars">${stars(b.rating,b.id)}</div></div><div class="panel"><h3>PRESTATO A</h3><div class="loan"><input data-loan="${b.id}" value="${b.loanTo}" placeholder="Nessuno">${b.loanDate?`<div>Dal ${b.loanDate}</div>`:''}</div></div><div class="notes"><span class="label">LE MIE NOTE</span><textarea data-notes="${b.id}">${b.notes}</textarea></div></div></div></section>`).join('');
+  const f=getFilteredBooks();const pages=Math.max(1,Math.ceil(f.length/PAGE_SIZE));if(currentPage>pages)currentPage=pages;
+  const start=(currentPage-1)*PAGE_SIZE;const vis=f.slice(start,start+PAGE_SIZE);
+  $('list').innerHTML=vis.length?vis.map(b=>`<section class="book">
+  <label class="read-corner" title="Segna come letto"><input type="checkbox" data-read="${b.id}" ${b.read?'checked':''}><span class="read-box"></span></label>
+  <div class="cover-wrap"><div class="tape"></div><img class="cover" src="${esc(b.cover)}" alt="Copertina di ${esc(b.title)}"></div>
+  <div class="info"><h2 class="title">${esc(b.title)}</h2><p class="author">${esc(b.author)}</p><span class="label">TRAMA</span><p class="plot">${esc(b.plot)}</p>
+  <div class="meta"><div class="panel"><h3>IL MIO RATING</h3><div class="stars">${stars(b.rating,b.id)}</div></div>
+  <div class="panel"><h3>PRESTATO A</h3><div class="loan"><input data-loan="${b.id}" value="${esc(b.loanTo)}" placeholder="Nessuno">${b.loanDate?`<div>Dal ${esc(b.loanDate)}</div>`:''}</div></div>
+  <div class="notes"><span class="label">LE MIE NOTE</span><textarea data-notes="${b.id}">${esc(b.notes)}</textarea></div></div>
+  <div class="book-manage"><button class="manage-btn" data-edit="${b.id}">✎ Modifica</button><button class="manage-btn delete" data-delete="${b.id}">Elimina</button></div>
+  </div></section>`).join(''):`<div class="empty-state">Nessun libro da mostrare in questa sezione.</div>`;
   const from=f.length?start+1:0,to=Math.min(start+PAGE_SIZE,f.length);
   $('pageStatus').innerHTML=`<strong>Pagina ${currentPage} di ${pages}</strong><br>Mostra ${from}–${to} di ${f.length} libri (50 per pagina)`;
-  $('prevPage').disabled=currentPage<=1;$('nextPage').disabled=currentPage>=pages;
-  bind();
+  $('prevPage').disabled=currentPage<=1;$('nextPage').disabled=currentPage>=pages;bind();
+}
+function openEdit(id){
+  const b=books.find(x=>x.id==id);if(!b)return;editingId=b.id;
+  $('editTitle').value=b.title||'';$('editAuthor').value=b.author||'';$('editCover').value=b.cover||'';$('editPlot').value=b.plot||'';
+  $('editRating').value=String(Number(b.rating)||0);$('editLoanTo').value=b.loanTo||'';$('editLoanDate').value=b.loanDate||'';$('editNotes').value=b.notes||'';$('editRead').checked=!!b.read;
+  $('editDialog').showModal();
+}
+function deleteBook(id){
+  const b=books.find(x=>x.id==id);if(!b)return;
+  if(confirm(`Vuoi eliminare definitivamente “${b.title}” dalla libreria?`)){books=books.filter(x=>x.id!=id);saveBooks();render()}
 }
 function bind(){
-  document.querySelectorAll('.star').forEach(s=>s.onclick=()=>{books.find(x=>x.id==s.dataset.id).rating=+s.dataset.v;render()});
-  document.querySelectorAll('[data-read]').forEach(c=>c.onchange=()=>{books.find(x=>x.id==c.dataset.read).read=c.checked;render()});
-  document.querySelectorAll('[data-loan]').forEach(i=>i.onchange=()=>{books.find(x=>x.id==i.dataset.loan).loanTo=i.value;render()});
-  document.querySelectorAll('[data-notes]').forEach(t=>t.onchange=()=>books.find(x=>x.id==t.dataset.notes).notes=t.value);
+  document.querySelectorAll('.star').forEach(s=>s.onclick=()=>{const b=books.find(x=>x.id==s.dataset.id);if(b){b.rating=+s.dataset.v;saveBooks();render()}});
+  document.querySelectorAll('[data-read]').forEach(c=>c.onchange=()=>{const b=books.find(x=>x.id==c.dataset.read);if(b){b.read=c.checked;saveBooks();render()}});
+  document.querySelectorAll('[data-loan]').forEach(i=>i.onchange=()=>{const b=books.find(x=>x.id==i.dataset.loan);if(b){b.loanTo=i.value;saveBooks();render()}});
+  document.querySelectorAll('[data-notes]').forEach(t=>t.onchange=()=>{const b=books.find(x=>x.id==t.dataset.notes);if(b){b.notes=t.value;saveBooks()}});
+  document.querySelectorAll('[data-edit]').forEach(btn=>btn.onclick=()=>openEdit(btn.dataset.edit));
+  document.querySelectorAll('[data-delete]').forEach(btn=>btn.onclick=()=>deleteBook(btn.dataset.delete));
 }
+$('editForm').onsubmit=e=>{
+  e.preventDefault();const b=books.find(x=>x.id==editingId);if(!b)return;
+  b.title=$('editTitle').value.trim();b.author=$('editAuthor').value.trim();b.cover=$('editCover').value.trim();b.plot=$('editPlot').value.trim();
+  b.rating=+$('editRating').value;b.loanTo=$('editLoanTo').value.trim();b.loanDate=$('editLoanDate').value.trim();b.notes=$('editNotes').value;b.read=$('editRead').checked;
+  saveBooks();$('editDialog').close();editingId=null;render();
+};
+$('cancelEdit').onclick=()=>{$('editDialog').close();editingId=null};
+$('editDialog').addEventListener('click',e=>{if(e.target===$('editDialog')){$('editDialog').close();editingId=null}});
 document.querySelectorAll('.links a[data-view]').forEach(a=>a.onclick=e=>{e.preventDefault();setView(a.dataset.view)});
 $('search').oninput=()=>{currentPage=1;render()};
 $('prevPage').onclick=()=>{if(currentPage>1){currentPage--;render();scrollTo({top:0,behavior:'smooth'})}};
