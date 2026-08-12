@@ -3,6 +3,7 @@ if(window.__LIB_ITALIAN_METADATA_PATCH)return;
 window.__LIB_ITALIAN_METADATA_PATCH=true;
 
 const nativeFetch=window.fetch.bind(window);
+const IT_CATALOG_DOMAINS=['eurolibro.it','unilibro.it','libreriauniversitaria.it','hoepli.it','ibs.it','libraccio.it','mondadoristore.it','giunti.it'];
 
 function urlOf(input){
   try{return new URL(typeof input==='string'?input:input.url,location.href)}catch(e){return null}
@@ -24,7 +25,77 @@ function italianEdition(ed){return languageList(ed?.language).some(isItalianLang
 function yearFrom(v){const m=String(v||'').match(/\b(18|19|20)\d{2}\b/);return m?Number(m[0]):undefined}
 function coverIdFromUrl(v){const m=String(v||'').match(/\/b\/id\/(\d+)-/);return m?Number(m[1]):undefined}
 function addField(fields,name){const parts=String(fields||'').split(',').map(x=>x.trim()).filter(Boolean);if(!parts.includes(name))parts.push(name);return parts.join(',')}
-function cleanLine(v){return String(v||'').replace(/\*\*/g,'').replace(/\[([^\]]+)\]\([^)]*\)/g,'$1').replace(/[|#]/g,' ').replace(/\s+/g,' ').trim()}
+function cleanLine(v){return String(v||'').replace(/!\[[^\]]*\]\([^)]*\)/g,'').replace(/\*\*/g,'').replace(/\[([^\]]+)\]\([^)]*\)/g,'$1').replace(/^\s*#{1,6}\s*/,'').replace(/^\s*\|\s*/,'').replace(/\s*\|\s*$/,'').replace(/\s+/g,' ').trim()}
+function catalogDomain(url){try{const h=new URL(url).hostname.replace(/^www\./,'');return IT_CATALOG_DOMAINS.find(d=>h===d||h.endsWith('.'+d))||''}catch(e){return''}}
+function fieldAfterLabel(text,label){
+  const lines=String(text||'').split(/\r?\n/),needle=label.toLowerCase()+':';
+  for(let i=0;i<lines.length;i++){
+    const line=cleanLine(lines[i]),low=line.toLowerCase();if(!low.startsWith(needle))continue;
+    const inline=cleanLine(line.slice(label.length+1)).replace(/^\|\s*/,'').trim();
+    if(inline&&inline!=='|')return inline;
+    for(let j=i+1;j<Math.min(lines.length,i+10);j++){
+      const next=cleanLine(lines[j]).replace(/^\|\s*/,'').trim();if(!next||next==='|')continue;
+      if(/^(autore|autori|titolo|isbn|ean|editore|anno di pubblicazione|data di pubblicazione|informazioni dettagliate|dettagli del libro)\s*:/i.test(next))break;
+      return next
+    }
+  }
+  return''
+}
+function headingForIsbn(text,code){
+  const lines=String(text||'').split(/\r?\n/);
+  for(const raw of lines){
+    if(!/^\s*#{1,3}\s+/.test(raw))continue;
+    const h=cleanLine(raw);if(!h||/^(dettagli|informazioni|recensioni|descrizione|trama)$/i.test(h))continue;
+    if(h.includes(code)){const t=h.replace(code,'').replace(/[-–—|]+\s*$/,'').trim();if(t.length>3)return t}
+    if(!/^\d+$/.test(h)&&h.length>4&&h.length<180)return h
+  }
+  return''
+}
+function authorFromText(text){
+  const direct=fieldAfterLabel(text,'Autore')||fieldAfterLabel(text,'Autori');if(direct)return direct;
+  const lines=String(text||'').split(/\r?\n/).slice(0,80).map(cleanLine).filter(Boolean);
+  for(const line of lines){
+    let m=line.match(/^di\s+(.{3,90}?)(?:\s*\(|$)/i);if(m)return cleanLine(m[1]);
+    m=line.match(/^(.{3,90}?)\s+\(Autore\)$/i);if(m)return cleanLine(m[1])
+  }
+  return''
+}
+function publisherFromText(text){return fieldAfterLabel(text,'Editore')||fieldAfterLabel(text,'Publisher')||''}
+function yearFromText(text){return yearFrom(fieldAfterLabel(text,'Anno di pubblicazione')||fieldAfterLabel(text,'Data di Pubblicazione')||fieldAfterLabel(text,'Pubblicazione')||text)}
+function catalogDocFromText(text,code){
+  if(!text||!norm(text).includes(norm(code)))return null;
+  const title=fieldAfterLabel(text,'Titolo')||headingForIsbn(text,code),author=authorFromText(text),publisher=publisherFromText(text),year=yearFromText(text);
+  if(!title||!author)return null;
+  const ids=[norm(code)];
+  for(const re of [/ISBN\s*\(ISBN-10\)\s*:\s*([0-9Xx-]+)/i,/ISBN-10\s*:?\s*([0-9Xx-]{10,17})/i,/EAN\s*\(ISBN-13\)\s*:\s*([0-9-]+)/i,/EAN13\s*:?\s*([0-9-]{13,20})/i]){
+    const m=text.match(re);if(m&&norm(m[1]))ids.push(norm(m[1]))
+  }
+  return {key:'',title,subtitle:'',author_name:[author],publisher:publisher?[publisher]:[],first_publish_year:year,publish_date:year?[String(year)]:[],subject:[],cover_i:undefined,isbn:[...new Set(ids)],edition_key:[],language:['ita']}
+}
+async function jinaText(url,timeout=12000){
+  const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),timeout);
+  try{const r=await nativeFetch('https://r.jina.ai/'+url,{signal:ctrl.signal,headers:{Accept:'text/plain'}});if(!r.ok)return'';return await r.text()}catch(e){return''}finally{clearTimeout(timer)}
+}
+function catalogLinks(markdown){
+  const out=[],re=/\[[^\]]*\]\((https?:\/\/[^)\s]+)\)/g;let m;
+  while((m=re.exec(String(markdown||'')))){const u=m[1].replace(/&amp;/g,'&');if(catalogDomain(u)&&!out.includes(u))out.push(u)}
+  return out
+}
+async function exactItalianCatalogIsbn(code){
+  const direct=[`https://www.eurolibro.it/libro/isbn/${encodeURIComponent(code)}.html`];
+  for(const url of direct){const text=await jinaText(url);const doc=catalogDocFromText(text,code);if(doc)return doc}
+  const domainQuery=IT_CATALOG_DOMAINS.map(d=>`site:${d}`).join(' OR ');
+  const searchUrl='https://www.google.com/search?hl=it&num=12&q='+encodeURIComponent(`"${code}" (${domainQuery})`);
+  const searchText=await jinaText(searchUrl,13000);
+  const links=catalogLinks(searchText).slice(0,8);
+  for(const url of links){const text=await jinaText(url);const doc=catalogDocFromText(text,code);if(doc)return doc}
+  const fallbackTitle=(searchText.match(new RegExp(`(?:^|\\n)#+?\\s*([^\\n]{4,160}?)\\s*(?:[-–—|]\\s*)?${code}`,'i'))||[])[1];
+  if(fallbackTitle){
+    const cleanTitle=cleanLine(fallbackTitle),near=searchText.slice(Math.max(0,searchText.indexOf(fallbackTitle)-500),searchText.indexOf(fallbackTitle)+1200),author=authorFromText(near),publisher=publisherFromText(near),year=yearFromText(near);
+    if(cleanTitle&&author)return {key:'',title:cleanTitle,subtitle:'',author_name:[author],publisher:publisher?[publisher]:[],first_publish_year:year,publish_date:year?[String(year)]:[],subject:[],cover_i:undefined,isbn:[norm(code)],edition_key:[],language:['ita']}
+  }
+  return null
+}
 
 async function exactOpenLibraryIsbn(code){
   try{
@@ -35,112 +106,45 @@ async function exactOpenLibraryIsbn(code){
     const ids=[];for(const arr of Object.values(b.identifiers||{})){if(Array.isArray(arr))for(const x of arr)ids.push(norm(x))}
     if(!ids.includes(norm(code)))ids.push(norm(code));
     const cId=coverIdFromUrl(b.cover?.large||b.cover?.medium||b.cover?.small||'');
-    return {
-      key:b.key||'',title:b.title||'',subtitle:b.subtitle||'',author_name:authors,publisher:pub,
-      first_publish_year:yearFrom(b.publish_date),publish_date:b.publish_date?[b.publish_date]:[],subject:[],
-      cover_i:cId,isbn:ids,edition_key:b.key?[String(b.key).replace('/books/','')]:[],language:['ita']
-    }
+    return {key:b.key||'',title:b.title||'',subtitle:b.subtitle||'',author_name:authors,publisher:pub,first_publish_year:yearFrom(b.publish_date),publish_date:b.publish_date?[b.publish_date]:[],subject:[],cover_i:cId,isbn:ids,edition_key:b.key?[String(b.key).replace('/books/','')]:[],language:['ita']}
   }catch(e){return null}
 }
-
-/* Alcune vecchie edizioni italiane non sono indicizzate da Google Books/Open Library.
-   In quel caso usiamo la scheda ISBN di Eurolibro solo per recuperare i dati bibliografici
-   essenziali; trama e genere vengono poi completati dal normale fallback degli store italiani. */
-async function exactItalianCatalogIsbn(code){
-  try{
-    const r=await nativeFetch(`https://r.jina.ai/https://www.eurolibro.it/libro/isbn/${encodeURIComponent(code)}.html`,{headers:{Accept:'text/plain'}});
-    if(!r.ok)return null;const text=await r.text();
-    if(!text||!norm(text).includes(norm(code)))return null;
-    const pickHeading=label=>{
-      const re=new RegExp(label+'\\s*:?\\s*(?:\\|\\s*)?(?:\\n\\s*)+#{1,6}\\s*([^\\n]+)','i');
-      const m=text.match(re);return m?cleanLine(m[1]):''
-    };
-    let author=pickHeading('Autore');
-    let title=pickHeading('Titolo');
-    if(!title){
-      const m=text.match(/^#\s+(.+?)\s+-\s+(?:libri|nuovo libro|libro usato)/im);if(m)title=cleanLine(m[1])
-    }
-    if(!author){
-      const m=text.match(/(?:^|\n)(?:##\s*)?([^\n:]{3,90})\s*:\s*\n\s*#\s+/i);if(m)author=cleanLine(m[1])
-    }
-    if(!title)return null;
-    const pm=text.match(/(?:^|\n)Editore:\s*([^\n]+)/i);const publisher=pm?cleanLine(pm[1]):'';
-    const ym=text.match(/Anno di pubblicazione:\s*((?:18|19|20)\d{2})/i);const year=ym?Number(ym[1]):undefined;
-    const i10=text.match(/ISBN\s*\(ISBN-10\):\s*([0-9Xx-]+)/i);const i13=text.match(/EAN\s*\(ISBN-13\):\s*([0-9-]+)/i);
-    const ids=[norm(code),norm(i10?.[1]),norm(i13?.[1])].filter(Boolean);
-    return {
-      key:'',title,subtitle:'',author_name:author?[author]:[],publisher:publisher?[publisher]:[],
-      first_publish_year:year,publish_date:year?[String(year)]:[],subject:[],cover_i:undefined,
-      isbn:[...new Set(ids)],edition_key:[],language:['ita']
-    }
-  }catch(e){return null}
+function googleItemFromCatalog(doc,code){
+  if(!doc)return null;const v={title:doc.title||'',subtitle:doc.subtitle||'',authors:doc.author_name||[],publisher:(doc.publisher||[])[0]||'',publishedDate:String(doc.first_publish_year||''),language:'it',industryIdentifiers:[]};
+  const ids=(doc.isbn||[]).map(norm).filter(Boolean);for(const id of ids)v.industryIdentifiers.push({type:id.length===10?'ISBN_10':'ISBN_13',identifier:id});
+  if(!v.industryIdentifiers.length)v.industryIdentifiers.push({type:code.length===10?'ISBN_10':'ISBN_13',identifier:code});
+  return {id:'catalog-'+code,volumeInfo:v}
 }
 
 window.fetch=async function(input,init){
   const u=urlOf(input);if(!u)return nativeFetch(input,init);
 
-  /* Google Books: per i libri privilegiamo esclusivamente record italiani. */
   if(u.hostname==='www.googleapis.com'&&u.pathname.includes('/books/v1/volumes')){
-    const q=u.searchParams.get('q')||'';
-    const isbnMatch=q.match(/^isbn:([0-9Xx-]+)/i);
-    if(isbnMatch)u.searchParams.set('langRestrict','it');
-    const r=await fetchWithUrl(input,init,u);
-    if(!isbnMatch||!r.ok)return r;
+    const q=u.searchParams.get('q')||'',isbnMatch=q.match(/^isbn:([0-9Xx-]+)/i);if(isbnMatch)u.searchParams.set('langRestrict','it');
+    const r=await fetchWithUrl(input,init,u);if(!isbnMatch||!r.ok)return r;
     try{
-      const data=await r.json();
-      data.items=(data.items||[]).filter(item=>isItalianLanguage(item?.volumeInfo?.language));
-      for(const item of data.items){
-        const v=item.volumeInfo||{};
-        if(!isItalianLanguage(v.language)){delete v.description;delete v.categories}
-      }
-      data.totalItems=data.items.length;
-      return jsonResponse(r,data)
+      const data=await r.json();data.items=(data.items||[]).filter(item=>isItalianLanguage(item?.volumeInfo?.language));
+      if(!data.items.length){const code=norm(isbnMatch[1]),catalog=await exactItalianCatalogIsbn(code),item=googleItemFromCatalog(catalog,code);if(item)data.items=[item]}
+      data.totalItems=data.items.length;return jsonResponse(r,data)
     }catch(e){return r}
   }
 
-  /* Open Library: per un ISBN recuperiamo prima l'edizione esatta, non il Work
-     internazionale. Se non esiste nei cataloghi principali, tentiamo anche un
-     catalogo italiano indicizzato per ISBN. */
   if(u.hostname==='openlibrary.org'&&u.pathname==='/search.json'){
-    const q=u.searchParams.get('q')||'';const m=q.match(/^isbn:([0-9Xx-]+)/i);
+    const q=u.searchParams.get('q')||'',m=q.match(/^isbn:([0-9Xx-]+)/i);
     if(m){
-      const code=norm(m[1]);
-      u.searchParams.set('lang','it');
-      u.searchParams.set('q',`isbn:${code} AND language:ita`);
-      let fields=u.searchParams.get('fields')||'';
-      for(const f of ['language','editions','editions.title','editions.subtitle','editions.language','editions.publisher','editions.publish_date','editions.cover_i','editions.isbn'])fields=addField(fields,f);
-      u.searchParams.set('fields',fields);
-      const [r,exact,catalog]=await Promise.all([fetchWithUrl(input,init,u),exactOpenLibraryIsbn(code),exactItalianCatalogIsbn(code)]);
-      if(!r.ok)return r;
+      const code=norm(m[1]);u.searchParams.set('lang','it');u.searchParams.set('q',`isbn:${code} AND language:ita`);
+      let fields=u.searchParams.get('fields')||'';for(const f of ['language','editions','editions.title','editions.subtitle','editions.language','editions.publisher','editions.publish_date','editions.cover_i','editions.isbn'])fields=addField(fields,f);u.searchParams.set('fields',fields);
+      const [r,exact,catalog]=await Promise.all([fetchWithUrl(input,init,u),exactOpenLibraryIsbn(code),exactItalianCatalogIsbn(code)]);if(!r.ok)return r;
       try{
-        const data=await r.json();const docs=[];
-        if(exact)docs.push(exact);
-        for(const d of data.docs||[]){
-          const editions=d?.editions?.docs||[];
-          const ed=editions.find(italianEdition);
-          if(!ed)continue;
-          const x={...d};
-          x.title=ed.title||x.title;x.subtitle=ed.subtitle||x.subtitle;
-          if(ed.publisher)x.publisher=Array.isArray(ed.publisher)?ed.publisher:[ed.publisher];
-          if(ed.publish_date)x.publish_date=Array.isArray(ed.publish_date)?ed.publish_date:[ed.publish_date];
-          if(ed.cover_i)x.cover_i=ed.cover_i;
-          if(ed.isbn)x.isbn=Array.isArray(ed.isbn)?ed.isbn:[ed.isbn];
-          x.language=['ita'];x.subject=[];
-          const duplicate=docs.some(z=>String(z.title).toLowerCase()===String(x.title).toLowerCase()&&String((z.publisher||[])[0]||'').toLowerCase()===String((x.publisher||[])[0]||'').toLowerCase());
-          if(!duplicate)docs.push(x)
-        }
-        if(!docs.length&&catalog)docs.push(catalog);
-        data.docs=docs;data.numFound=docs.length;data.num_found=docs.length;
-        return jsonResponse(r,data)
+        const data=await r.json(),docs=[];if(exact)docs.push(exact);
+        for(const d of data.docs||[]){const editions=d?.editions?.docs||[],ed=editions.find(italianEdition);if(!ed)continue;const x={...d};x.title=ed.title||x.title;x.subtitle=ed.subtitle||x.subtitle;if(ed.publisher)x.publisher=Array.isArray(ed.publisher)?ed.publisher:[ed.publisher];if(ed.publish_date)x.publish_date=Array.isArray(ed.publish_date)?ed.publish_date:[ed.publish_date];if(ed.cover_i)x.cover_i=ed.cover_i;if(ed.isbn)x.isbn=Array.isArray(ed.isbn)?ed.isbn:[ed.isbn];x.language=['ita'];x.subject=[];const duplicate=docs.some(z=>String(z.title).toLowerCase()===String(x.title).toLowerCase()&&String((z.publisher||[])[0]||'').toLowerCase()===String((x.publisher||[])[0]||'').toLowerCase());if(!duplicate)docs.push(x)}
+        if(!docs.length&&catalog)docs.push(catalog);data.docs=docs;data.numFound=docs.length;data.num_found=docs.length;return jsonResponse(r,data)
       }catch(e){return r}
     }
   }
 
-  /* Le descrizioni dei Work di Open Library sono spesso in inglese anche quando
-     l'edizione selezionata e' italiana: non le usiamo per compilare la trama. */
   if(u.hostname==='openlibrary.org'&&/^\/works\/[^/]+\.json$/.test(u.pathname)){
-    const r=await nativeFetch(input,init);if(!r.ok)return r;
-    try{const data=await r.json();delete data.description;delete data.subjects;return jsonResponse(r,data)}catch(e){return r}
+    const r=await nativeFetch(input,init);if(!r.ok)return r;try{const data=await r.json();delete data.description;delete data.subjects;return jsonResponse(r,data)}catch(e){return r}
   }
 
   return nativeFetch(input,init)
