@@ -16,72 +16,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: main
-
-      - name: Corregge ricerca e parsing relazioni
+      - name: Applica patch
         run: |
-          python - <<'PY'
-          from pathlib import Path
-          import re
-
-          p=Path('series-relations.js')
-          s=p.read_text(encoding='utf-8')
-
-          old="""function chronologicalTitle(v){
-  let x=clean(v)
-    .replace(/^(?:il\\s+suo\\s+romanzo|il\\s+romanzo|il\\s+libro|un\\s+romanzo|romanzo|libro)\\s+/i,'')
-    .replace(/^(?:sono\\s+poi\\s+seguit[ie]|sono\\s+seguit[ie]|seguono)\\s+/i,'')
-    .replace(/,\\s+(?:il|un)\\s+romanzo\\b.*$/i,'')
-    .replace(/\\s+(?:pubblicato|edito|uscito)\\b.*$/i,'')
-    .trim();
-  return cleanRelatedTitle(x)
-}
-"""
-          new="""function chronologicalTitle(v){
-  let x=clean(v)
-    .replace(/^(?:il\\s+suo\\s+romanzo|il\\s+romanzo|il\\s+libro|un\\s+romanzo|romanzo|libro)\\s+/i,'')
-    .replace(/^(?:sono\\s+poi\\s+seguit[ie]|sono\\s+seguit[ie]|seguono)\\s+/i,'')
-    .replace(/,\\s+(?:il|un)\\s+romanzo\\b.*$/i,'')
-    .replace(/\\s+(?:pubblicato|edito|uscito)\\b.*$/i,'')
-    .replace(/\\s*\\([^)]*(?:(?:18|19|20)\\d{2}|Baldini|Bompiani|Giunti|Mondadori|Newton|Nord|TEA|Dalai|Editore)[^)]*\\)\\s*$/i,'')
-    .trim();
-  return cleanRelatedTitle(x)
-}
-"""
-          if old not in s: raise SystemExit('chronologicalTitle non trovato')
-          s=s.replace(old,new,1)
-
-          old_re=r"const first=/\(\?:il\\s\+suo\\s\+romanzo\|il\\s\+romanzo\|il\\s\+libro\|un\\s\+romanzo\|romanzo\|libro\).*?/gi;"
-          m=re.search(old_re,s)
-          if not m: raise SystemExit('regex cronologica principale non trovata')
-          new_first="const first=/(?:il\\s+suo\\s+romanzo|il\\s+romanzo|il\\s+libro|un\\s+romanzo|romanzo|libro)\\s+([^()]{3,180}?)\\s*\\((?:pubblicato(?:\\s+in\\s+[^()]{1,45})?\\s+nel\\s+)?((?:18|19|20)\\d{2})\\).{0,1600}?(?:sono\\s+poi\\s+seguit[ie]|sono\\s+seguit[ie]|seguono)\\s+([^()]{3,180}?)\\s*\\(((?:18|19|20)\\d{2})\\)\\s+(?:e|,)\\s+([^()]{3,180}?)\\s*\\(((?:18|19|20)\\d{2})\\)/gi;"
-          s=s[:m.start()]+new_first+s[m.end():]
-
-          old="""    const variants=titleVariants(title),base=variants.length>1?variants[1]:variants[0],extra=variants.slice(2,4);
-    const queries=[`\"${base}\" \"${author}\" trilogia saga serie`,`\"${base}\" \"${author}\" sequel prequel seguito preceduto`,`\"${base}\" \"${author}\" \"sono poi seguiti\"`,`\"${base}\" \"${author}\" \"A questo è seguito\"`,...extra.map(v=>`\"${base}\" \"${v}\" \"${author}\" saga`)];
-    const searchJobs=[];for(const q of queries.slice(0,4)){searchJobs.push(reader(`https://www.google.com/search?hl=it&num=15&q=${encodeURIComponent(q)}`,11000));searchJobs.push(reader(`https://www.bing.com/search?setlang=it-IT&q=${encodeURIComponent(q)}`,11000))}
-"""
-          new="""    const variants=titleVariants(title),base=variants.length>1?variants[1]:variants[0],extra=variants.slice(2,4);
-    const queries=[...(code?[`\"${code}\" \"${author}\"`,`\"${code}\" \"${base}\"`]:[]),`\"${base}\" \"${author}\" trilogia saga serie`,`\"${base}\" \"${author}\" sequel prequel seguito preceduto`,`\"${base}\" \"${author}\" \"sono poi seguiti\"`,`\"${base}\" \"${author}\" \"A questo è seguito\"`,...extra.map(v=>`\"${base}\" \"${v}\" \"${author}\" saga`)];
-    const searchJobs=[];for(const q of queries.slice(0,6)){searchJobs.push(reader(`https://www.google.com/search?hl=it&num=15&q=${encodeURIComponent(q)}`,11000));searchJobs.push(reader(`https://www.bing.com/search?setlang=it-IT&q=${encodeURIComponent(q)}`,11000))}
-"""
-          if old not in s: raise SystemExit('blocco query relazioni non trovato')
-          s=s.replace(old,new,1)
-          s=s.replace("norm(hint),'v5'", "norm(hint),'v6'",1)
-          p.write_text(s,encoding='utf-8')
-
-          p=Path('bg/bg8.js')
-          s=p.read_text(encoding='utf-8')
-          s,n=re.subn(r'series-relations\\.js\\?v=5','series-relations.js?v=6',s,count=1)
-          if n!=1: raise SystemExit('loader series-relations v5 non trovato')
-          p.write_text(s,encoding='utf-8')
-
-          p=Path('isbn-cover.js')
-          s=p.read_text(encoding='utf-8')
-          s,n=re.subn(r'RELATIONS_LOOKUP_VERSION=5','RELATIONS_LOOKUP_VERSION=6',s,count=1)
-          if n!=1: raise SystemExit('RELATIONS_LOOKUP_VERSION=5 non trovato')
-          p.write_text(s,encoding='utf-8')
-          PY
-
+          echo 'CmZyb20gcGF0aGxpYiBpbXBvcnQgUGF0aAppbXBvcnQgcmUKCnA9UGF0aCgnc2VyaWVzLXJlbGF0aW9ucy5qcycpCnM9cC5yZWFkX3RleHQoZW5jb2Rpbmc9J3V0Zi04JykKCiMgMS4gQWxsb3cgY2hyb25vbG9neSBwYXR0ZXJucyB0byBzcGFuIG5vcm1hbCBwcm9zZS9zZW50ZW5jZXMgYmV0d2VlbiB0aGUgZmlyc3QgdGl0bGUgYW5kICJzb25vIHBvaSBzZWd1aXRpIi4Kb2xkID0gciIiImNvbnN0IGZpcnN0PS8oPzppbFxzK3N1b1xzK3JvbWFuem98aWxccytyb21hbnpvfGlsXHMrbGlicm98dW5ccytyb21hbnpvfHJvbWFuen98bGlicm8pXHMrKFteKCldezMsMTgwfT8pXHMqXCgoPzpwdWJibGljYXRvKD86XHMrK2luXHMrW14oKV17MSw0NX0pP1xzK25lbFxzKyk/KCg/OjE4fDE5fDIwKVxkezJ9KVwpW14uXXswLDcwMH0/KD86c29ub1xzK3BvaVxzK3NlZ3VpdFtpZV18c29ub1xzK3NlZ3VpdFtpZV18c2VndW9ubylccysoW14oKV17MywxODB9PylccypcKCgoPzoxOHwxOXwyMClcZHsyfSlcKVxzKyg/OmV8LClccysoW14oKV17MywxODB9PylccypcKCgoPzoxOHwxOXwyMClcZHsyfSlcKS9naTsiIiIKbmV3ID0gciIiImNvbnN0IGZpcnN0PS8oPzppbFxzK3N1b1xzK3JvbWFuem98aWxccytyb21hbnpvfGlsXHMrbGlicm98dW5ccytyb21hbnpvfHJvbWFuen98bGlicm8pXHMrKFteKCldezMsMTgwfT8pXHMqXCgoPzpwdWJibGljYXRvKD86XHMrK2luXHMrW14oKV17MSw0NX0pP1xzK25lbFxzKyk/KCg/OjE4fDE5fDIwKVxkezJ9KVwpLnswLDE4MDB9Pyg/OnNvbm9ccytwb2lccytzZWd1aXRbaWVdfHNvbm9ccytzZWd1aXRbaWVdfHNlZ3Vvbm8pXHMrKFteKCldezMsMTgwfT8pXHMqXCgoKD86MTh8MTl8MjApXGR7Mn0pXClccysoPzplfCwpXHMrKFteKCldezMsMTgwfT8pXHMqXCgoKD86MTh8MTl8MjApXGR7Mn0pXCkvZ2k7IiIiCmlmIG9sZCBub3QgaW4gczoKICAgIHJhaXNlIFN5c3RlbUV4aXQoJ3JlZ2V4IGNyb25vbG9naWNhIHByaW5jaXBhbGUgbm9uIHRyb3ZhdGEnKQpzPXMucmVwbGFjZShvbGQsbmV3LDEpCgojIDIuIENsZWFuIHB1Ymxpc2hlci95ZWFyIHBhcmVudGhlc2VzIGZyb20gdGl0bGVzIGZvdW5kIGluIGF1dGhvciBiaW9ncmFwaGllcy4Kb2xkMiA9IHIiIi5yZXBsYWNlKC9ccysoPzpwdWJibGljYXRvfGVkaXRvfHVzY2l0bylcYi4qJC9pLCcnKQogICAgLnRyaW0oKTsiIiIKbmV3MiA9IHIiIi5yZXBsYWNlKC9ccysoPzpwdWJibGljYXRvfGVkaXRvfHVzY2l0bylcYi4qJC9pLCcnKQogICAgLnJlcGxhY2UoL1xzKlwoW14pXSo/KD86KD86MTh8MTl8MjApXGR7Mn18QmFsZGluaXxCb21waWFuaXxHaXVudGl8TW9uZGFkb3JpfE5ld3RvbnxOb3JkfFRFQXxEYWxhaXxFZGl0b3JlKVteKV0qXClccyokL2ksJycpCiAgICAudHJpbSgpOyIiIgppZiBvbGQyIG5vdCBpbiBzOgogICAgcmFpc2UgU3lzdGVtRXhpdCgncHVsaXppYSBjaHJvbm9sb2dpY2FsVGl0bGUgbm9uIHRyb3ZhdGEnKQpzPXMucmVwbGFjZShvbGQyLG5ldzIsMSkKCiMgMy4gU2VhcmNoIGV4YWN0IElTQk4gdG9vLCBzbyBleGFjdCBlZGl0aW9uL2NhdGFsb2cgcGFnZXMgYXJlIGRpc2NvdmVyZWQgYmVmb3JlIGdlbmVyaWMgcmVzdWx0cy4Kb2xkMyA9ICIiIiAgICBjb25zdCB2YXJpYW50cz10aXRsZVZhcmlhbnRzKHRpdGxlKSxiYXNlPXZhcmlhbnRzLmxlbmd0aD4xP3ZhcmlhbnRzWzFdOnZhcmlhbnRzWzBdLGV4dHJhPXZhcmlhbnRzLnNsaWNlKDIsNCk7CiAgICBjb25zdCBxdWVyaWVzPVtgIiR7YmFzZX0iICIke2F1dGhvcn0iIHRyaWxvZ2lhIHNhZ2Egc2VyaWVgLGAiJHtiYXNlfSIgIiR7YXV0aG9yfSIgc2VxdWVsIHByZXF1ZWwgc2VndWl0byBwcmVjZWR1dG9gLGAiJHtiYXNlfSIgIiR7YXV0aG9yfSIgInNvbm8gcG9pIHNlZ3VpdGkiYCxgIiR7YmFzZX0iICIke2F1dGhvcn0iICJBIHF1ZXN0byDDqCBzZWd1aXRvImAsLi4uZXh0cmEubWFwKHY9PmAiJHtiYXNlfSIgIiR7dn0iICIke2F1dGhvcn0iIHNhZ2FgKV07CiAgICBjb25zdCBzZWFyY2hKb2JzPVtdO2Zvcihjb25zdCBxIG9mIHF1ZXJpZXMuc2xpY2UoMCw0KSl7c2VhcmNoSm9icy5wdXNoKHJlYWRlcihgaHR0cHM6Ly93d3cuZ29vZ2xlLmNvbS9zZWFyY2g/aGw9aXQmbnVtPTE1JnE9JHtlbmNvZGVVUklDb21wb25lbnQocSl9YCwxMTAwMCkpO3NlYXJjaEpvYnMucHVzaChyZWFkZXIoYGh0dHBzOi8vd3d3LmJpbmcuY29tL3NlYXJjaD9zZXRsYW5nPWl0LUlUJnE9JHtlbmNvZGVVUklDb21wb25lbnQocSl9YCwxMTAwMCkpfSIiIgpuZXczID0gIiIiICAgIGNvbnN0IHZhcmlhbnRzPXRpdGxlVmFyaWFudHModGl0bGUpLGJhc2U9dmFyaWFudHMubGVuZ3RoPjE/dmFyaWFudHNbMV06dmFyaWFudHNbMF0sZXh0cmE9dmFyaWFudHMuc2xpY2UoMiw0KTsKICAgIGNvbnN0IHF1ZXJpZXM9Wy4uLihjb2RlP1tgIiR7Y29kZX0iICIke2F1dGhvcn0iYCxgIiR7Y29kZX0iICIke2Jhc2V9ImBdOltdKSxgIiR7YmFzZX0iICIke2F1dGhvcn0iIHRyaWxvZ2lhIHNhZ2Egc2VyaWVgLGAiJHtiYXNlfSIgIiR7YXV0aG9yfSIgc2VxdWVsIHByZXF1ZWwgc2VndWl0byBwcmVjZWR1dG9gLGAiJHtiYXNlfSIgIiR7YXV0aG9yfSIgInNvbm8gcG9pIHNlZ3VpdGkiYCxgIiR7YmFzZX0iICIke2F1dGhvcn0iICJBIHF1ZXN0byDDqCBzZWd1aXRvImAsLi4uZXh0cmEubWFwKHY9PmAiJHtiYXNlfSIgIiR7dn0iICIke2F1dGhvcn0iIHNhZ2FgKV07CiAgICBjb25zdCBzZWFyY2hKb2JzPVtdO2Zvcihjb25zdCBxIG9mIHF1ZXJpZXMuc2xpY2UoMCw2KSl7c2VhcmNoSm9icy5wdXNoKHJlYWRlcihgaHR0cHM6Ly93d3cuZ29vZ2xlLmNvbS9zZWFyY2g/aGw9aXQmbnVtPTE1JnE9JHtlbmNvZGVVUklDb21wb25lbnQocSl9YCwxMTAwMCkpO3NlYXJjaEpvYnMucHVzaChyZWFkZXIoYGh0dHBzOi8vd3d3LmJpbmcuY29tL3NlYXJjaD9zZXRsYW5nPWl0LUlUJnE9JHtlbmNvZGVVUklDb21wb25lbnQocSl9YCwxMTAwMCkpfSIiIgppZiBvbGQzIG5vdCBpbiBzOgogICAgcmFpc2UgU3lzdGVtRXhpdCgnYmxvY2NvIHF1ZXJ5IHJlbGF6aW9uaSBub24gdHJvdmF0bycpCnM9cy5yZXBsYWNlKG9sZDMsbmV3MywxKQoKaWYgIm5vcm0oaGludCksJ3Y1JyIgbm90IGluIHM6CiAgICByYWlzZSBTeXN0ZW1FeGl0KCdjYWNoZSB2NSBub24gdHJvdmF0YScpCnM9cy5yZXBsYWNlKCJub3JtKGhpbnQpLCd2NSciLCJub3JtKGhpbnQpLCd2NiciLDEpCnAud3JpdGVfdGV4dChzLGVuY29kaW5nPSd1dGYtOCcpCgpwPVBhdGgoJ2JnL2JnOC5qcycpCnM9cC5yZWFkX3RleHQoZW5jb2Rpbmc9J3V0Zi04JykKcyxuPXJlLnN1Ym4ocidzZXJpZXMtcmVsYXRpb25zXC5qc1w/dj01Jywnc2VyaWVzLXJlbGF0aW9ucy5qcz92PTYnLHM sLGNvdW50PTEpCmlmIG4hPTE6IHJhaXNlIFN5c3RlbUV4aXQoJ2xvYWRlciB2NSBub24gdHJvdmF0bycpCnAud3JpdGVfdGV4dChzLGVuY29kaW5nPSd1dGYtOCcpCgpwPVBhdGgoJ2lzYm4tY292ZXIuanMnKQpzPXAucmVhZF90ZXh0KGVuY29kaW5nPSd1dGYtOCcpCnMsbj1yZS5zdWJuKHInUkVMQVRJT05TX0xPT0tVUF9WRVJTSU9OPTUnLCdSRUxBVElPTlNfTE9PS1VQX1ZFUlNJT049Nicscyxjb3VudD0xKQppZiBuIT0xOiByYWlzZSBTeXN0ZW1FeGl0KCd sb29rdXAgdmVyc2lvbiA1IG5vbiB0cm92YXRhJykKcC53cml0ZV90ZXh0KHMsZW5jb2Rpbmc9J3V0Zi04JykK' | tr -d ' ' | base64 -d > /tmp/patch.py
+          python /tmp/patch.py
       - name: Verifica JavaScript
         run: |
           node --check series-relations.js
@@ -89,8 +27,6 @@ jobs:
           node --check bg/bg8.js
           grep -q 'series-relations.js?v=6' bg/bg8.js
           grep -q 'RELATIONS_LOOKUP_VERSION=6' isbn-cover.js
-          grep -q "norm(hint),'v6'" series-relations.js
-
       - name: Pubblica e pulisci
         run: |
           rm -f .github/workflows/fix-series-relations-v6-once.yml
