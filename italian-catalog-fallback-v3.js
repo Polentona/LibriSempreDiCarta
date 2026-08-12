@@ -116,6 +116,24 @@ function inspectText(text,url,code){
   let score=4+(author?4:0)+(publisher?2:0)+(year?1:0)+(description?4:0)+(category?2:0)+(cover?2:0)+(saga?3:0);if(['Libraccio','Libreria Universitaria','Unilibro','IBS'].includes(sourceName(url)))score+=1;
   return {title,saga,author,publisher,year,description,category,cover,source:sourceName(url),score}
 }
+async function confirmCompositeSaga(rec){
+  if(!rec||rec.saga)return rec;
+  const original=cleanLine(rec.title),parts=original.split(/\s*(?:\.\s+|\s[-–—]\s|:\s+)\s*/).map(cleanLine).filter(x=>x.length>2);
+  if(parts.length<2)return rec;
+  const novel=parts[0],possible=parts.slice(1).filter(x=>x.length>=3&&x.length<=90);
+  for(const candidate of possible){
+    const q=`"${candidate}" "${novel}" ${rec.author||''} saga serie`;
+    const [g,b]=await Promise.all([
+      reader(`https://www.google.com/search?hl=it&num=10&q=${encodeURIComponent(q)}`,11000),
+      reader(`https://www.bing.com/search?setlang=it-IT&q=${encodeURIComponent(q)}`,11000)
+    ]);
+    const hay=normText(g+' '+b),c=normText(candidate),n=normText(novel);
+    const evidence=[`saga ${c}`,`serie ${c}`,`ciclo ${c}`,`${c} saga`,`${c} serie`].some(x=>hay.includes(x));
+    const both=hay.includes(c)&&hay.includes(n);
+    if(evidence&&both){rec.saga=candidate;rec.title=novel;rec.score=(rec.score||0)+3;return rec}
+  }
+  return rec
+}
 async function findCatalog(code){
   const key=norm(code);if(cache.has(key))return cache.get(key);
   const promise=(async()=>{
@@ -126,7 +144,7 @@ async function findCatalog(code){
     const searchTexts=await Promise.all(searches.map(u=>reader(u,12000)));for(const t of searchTexts)for(const u of searchLinks(t))if(!pages.includes(u))pages.push(u);
     pages=pages.slice(0,14);
     const inspected=(await Promise.all(pages.map(async u=>inspectText(await reader(u),u,ean)))).filter(Boolean).sort((x,y)=>y.score-x.score);
-    return inspected[0]||null
+    return await confirmCompositeSaga(inspected[0]||null)
   })();cache.set(key,promise);return promise
 }
 function makeGoogleItem(rec,code){
