@@ -70,7 +70,7 @@ unread:['Da leggere','Solo i libri che non hai ancora segnato come letti.'],
 loaned:['Prestati','Solo i libri attualmente prestati.'],
 authors:['Autori','I libri ordinati per autore.'],
 categories:['Categorie','Le categorie saranno mostrate quando verranno associate ai libri.'],
-series:['Saghe e trilogie','I libri appartenenti a saghe e trilogie, ordinati per cognome dell’autore e poi per pubblicazione.']
+series:['Saghe e trilogie','I libri appartenenti a saghe e trilogie, ordinati per cognome dell’autore, nome della saga e pubblicazione.']
 };
 function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function stars(n,id){return [1,2,3,4,5].map(v=>`<button class="star ${v<=n?'on':''}" data-id="${id}" data-v="${v}" type="button">★</button>`).join('')}
@@ -97,7 +97,7 @@ function getFilteredBooks(){
     f=f.filter(b=>String(b.saga||'').trim());
     f=[...f].sort((a,b)=>
       authorSurname(a.author).localeCompare(authorSurname(b.author),'it',{sensitivity:'base'})||
-      String(a.author||'').localeCompare(String(b.author||''),'it',{sensitivity:'base'})||
+      String(a.saga||'').localeCompare(String(b.saga||''),'it',{sensitivity:'base'})||
       publicationSortValue(a)-publicationSortValue(b)||
       String(a.title||'').localeCompare(String(b.title||''),'it',{sensitivity:'base'})
     );
