@@ -53,7 +53,7 @@ function boot(){
 
   const codeField=document.createElement('div');
   codeField.className='edit-field';
-  codeField.innerHTML=`<label for="editCode">ISBN / ISSN / codice a barre</label><input id="editCode" inputmode="text" autocomplete="off" placeholder="Inserisci o incolla il codice"><div class="lookup-tools"><button class="lookup-btn" id="lookupMetadataBtn" type="button">Cerca dati</button></div><div class="code-hint">Quando aggiungi un libro, titolo, autore, trama, categoria e copertina vengono cercati automaticamente.</div>`;
+  codeField.innerHTML=`<label for="editCode">ISBN / ISSN / codice a barre</label><input id="editCode" inputmode="text" autocomplete="off" placeholder="Inserisci o incolla il codice"><div class="lookup-tools"><button class="lookup-btn" id="lookupMetadataBtn" type="button">Cerca dati</button></div><div class="code-hint">Quando aggiungi un libro, titolo, autore, trama, categoria, saga, prequel/sequel e copertina vengono cercati automaticamente.</div>`;
   grid.insertBefore(codeField,ratingField);
 
   const categoryField=document.createElement('div');
@@ -75,6 +75,16 @@ function boot(){
   sagaField.className='edit-field';
   sagaField.innerHTML=`<label for="editSaga">Saga</label><input id="editSaga" placeholder="Nome della saga, se presente">`;
   dateField.insertAdjacentElement('afterend',sagaField);
+
+  const prequelField=document.createElement('div');
+  prequelField.className='edit-field';
+  prequelField.innerHTML=`<label for="editPrequel">Prequel</label><input id="editPrequel" placeholder="Libro precedente, se esistente">`;
+  sagaField.insertAdjacentElement('afterend',prequelField);
+
+  const sequelField=document.createElement('div');
+  sequelField.className='edit-field';
+  sequelField.innerHTML=`<label for="editSequel">Sequel</label><input id="editSequel" placeholder="Libro successivo, se esistente">`;
+  prequelField.insertAdjacentElement('afterend',sequelField);
 
   const coverField=$x('editCover').closest('.edit-field');
   const previewField=document.createElement('div');
@@ -135,7 +145,7 @@ function boot(){
   }
   function normalizeCandidateMetadata(candidate){
     const c={...(candidate||{})};
-    c.saga=String(c.saga||'').trim();
+    c.saga=String(c.saga||'').trim();c.prequel=String(c.prequel||'').trim();c.sequel=String(c.sequel||'').trim();
     c.title=stripSagaFromTitle(c.title,c.saga);
     if(c.author&&!plausibleAuthorName(c.author))c.author='';
     return c
@@ -268,9 +278,13 @@ function boot(){
   }
 
   async function applyCandidate(candidate,code,type){
+    if(type==='isbn')setStatus('', 'busy');
     candidate=normalizeCandidateMetadata(await enrichOpenLibrary(candidate));
     const verifiedMeta=verifiedBookMetadata(code);if(verifiedMeta)candidate=normalizeCandidateMetadata({...candidate,...verifiedMeta});
-    setAutoField('editTitle',candidate.title);setAutoField('editSaga',candidate.saga);setAutoField('editAuthor',candidate.author);setAutoField('editPlot',candidate.description);setAutoField('editCategory',candidate.category);setAutoField('editPublisher',candidate.publisher);setAutoField('editPublishedDate',candidate.publishedDate);
+    setAutoField('editTitle',candidate.title);setAutoField('editSaga',candidate.saga);setAutoField('editAuthor',candidate.author);setAutoField('editPlot',candidate.description);setAutoField('editCategory',candidate.category);setAutoField('editPublisher',candidate.publisher);setAutoField('editPublishedDate',candidate.publishedDate);setAutoField('editPrequel',candidate.prequel);setAutoField('editSequel',candidate.sequel);
+    if(type==='isbn'&&typeof window.__LIB_FIND_RELATIONS==='function'&&candidate.title&&candidate.author){
+      try{const rel=await window.__LIB_FIND_RELATIONS({code,title:candidate.title,author:candidate.author,saga:candidate.saga});if(rel?.saga&&!candidate.saga){candidate.saga=rel.saga;setAutoField('editSaga',rel.saga)}setAutoField('editPrequel',rel?.prequel);setAutoField('editSequel',rel?.sequel)}catch(e){console.warn('Relazioni serie non disponibili',e)}
+    }
     const forcedCover=verifiedUiCover(code);if(forcedCover&&(!$x('editCover').value.trim()||autoFields.has('editCover')))setDraftCover(forcedCover,true);
     const coverAlready=$x('editCover').value.trim()&&!autoFields.has('editCover');
     if(type==='isbn'&&!coverAlready){const retail=await retailerCoversForIsbn(code,candidate.title||'',candidate.author||'');candidate.covers=mergeCoverOptions(candidate.covers,retail)}
@@ -322,11 +336,11 @@ function boot(){
   const originalFillDialog=fillDialog;
   fillDialog=function(b={}){
     originalFillDialog(b);autoFields.clear();draftCoverWasAuto=false;lastSearchKey='';searchToken++;
-    const oldCode=b.code||b.isbn||'';$x('editCode').value=oldCode;$x('editCodeType').value=b.codeType||(b.isbn?'isbn':'auto');$x('editCategory').value=b.category||'';$x('editPublisher').value=b.publisher||'';$x('editPublishedDate').value=b.publishedDate||'';$x('editSaga').value=b.saga||'';showPreview(b.cover||'');
+    const oldCode=b.code||b.isbn||'';$x('editCode').value=oldCode;$x('editCodeType').value=b.codeType||(b.isbn?'isbn':'auto');$x('editCategory').value=b.category||'';$x('editPublisher').value=b.publisher||'';$x('editPublishedDate').value=b.publishedDate||'';$x('editSaga').value=b.saga||'';$x('editPrequel').value=b.prequel||'';$x('editSequel').value=b.sequel||'';showPreview(b.cover||'');
     setStatus(dialogMode==='add'?'Inserisci un codice: i dati verranno cercati automaticamente.':'Puoi cambiare il codice e premere “Cerca dati” per recuperare eventuali informazioni mancanti.')
   };
 
-  ['editTitle','editSaga','editAuthor','editPlot','editCategory','editPublisher','editPublishedDate'].forEach(id=>$x(id).addEventListener('input',()=>autoFields.delete(id)));
+  ['editTitle','editSaga','editPrequel','editSequel','editAuthor','editPlot','editCategory','editPublisher','editPublishedDate'].forEach(id=>$x(id).addEventListener('input',()=>autoFields.delete(id)));
   $x('editCover').addEventListener('input',()=>{searchToken++;draftCoverWasAuto=false;autoFields.delete('editCover');showPreview($x('editCover').value.trim());if($x('editCover').value.trim())setStatus('Copertina inserita manualmente: non verrà sostituita dalla ricerca automatica.')});
 
   function scheduleLookup(){
@@ -350,13 +364,23 @@ function boot(){
       const result=await lookupMetadata(true);if(result.kind==='multiple')return
     }
     originalSubmit.call($x('editForm'),e);
-    const extras={code,codeType,category:$x('editCategory').value.trim(),publisher:$x('editPublisher').value.trim(),publishedDate:$x('editPublishedDate').value.trim(),saga:$x('editSaga').value.trim(),isbn:codeType==='isbn'?code:''};
+    const extras={code,codeType,category:$x('editCategory').value.trim(),publisher:$x('editPublisher').value.trim(),publishedDate:$x('editPublishedDate').value.trim(),saga:$x('editSaga').value.trim(),prequel:$x('editPrequel').value.trim(),sequel:$x('editSequel').value.trim(),isbn:codeType==='isbn'?code:''};
     if(modeBefore==='add'){
       if(books[0]){Object.assign(books[0],extras);saveBooks();render()}
     }else{
       const b=books.find(x=>x.id==idBefore);if(b){Object.assign(b,extras);saveBooks();render()}
     }
   };
+
+  async function enrichSavedRelations(){
+    if(typeof window.__LIB_FIND_RELATIONS!=='function')return;
+    const now=Date.now(),week=7*24*60*60*1000;
+    const pending=books.filter(b=>{const code=normalizeLoose(b.code||b.isbn||'');return code&&b.title&&b.author&&(!b.relationsLookupAt||now-Number(b.relationsLookupAt)>week)&&(!b.prequel||!b.sequel)}).slice(0,8);
+    for(const b of pending){
+      try{const rel=await window.__LIB_FIND_RELATIONS({code:b.code||b.isbn||'',title:b.title,author:b.author,saga:b.saga||''});let changed=false;if(rel?.saga&&!b.saga){b.saga=rel.saga;changed=true}if(rel?.prequel&&b.prequel!==rel.prequel){b.prequel=rel.prequel;changed=true}if(rel?.sequel&&b.sequel!==rel.sequel){b.sequel=rel.sequel;changed=true}b.relationsLookupAt=now;saveBooks();if(changed)render()}catch(e){}
+    }
+  }
+  setTimeout(enrichSavedRelations,900);
 
   $x('closeMetadataPicker').onclick=()=>{hidePicker();setStatus('Scelta chiusa senza modificare la bozza.','warn')};
   overlay.addEventListener('click',e=>{if(e.target===overlay){hidePicker();setStatus('Scelta chiusa senza modificare la bozza.','warn')}});
