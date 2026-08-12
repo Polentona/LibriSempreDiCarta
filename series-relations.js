@@ -144,12 +144,13 @@ function chronologicalTitle(v){
     .replace(/^(?:sono\s+poi\s+seguit[ie]|sono\s+seguit[ie]|seguono)\s+/i,'')
     .replace(/,\s+(?:il|un)\s+romanzo\b.*$/i,'')
     .replace(/\s+(?:pubblicato|edito|uscito)\b.*$/i,'')
+    .replace(/\s*\([^)]*(?:(?:18|19|20)\d{2}|Baldini|Bompiani|Giunti|Mondadori|Newton|Nord|TEA|Dalai|Editore)[^)]*\)\s*$/i,'')
     .trim();
   return cleanRelatedTitle(x)
 }
 function parseChronologicalOrder(text,title,source,relations,baseScore=8){
   const p=clean(text);let m;
-  const first=/(?:il\s+suo\s+romanzo|il\s+romanzo|il\s+libro|un\s+romanzo|romanzo|libro)\s+([^()]{3,180}?)\s*\((?:pubblicato(?:\s+in\s+[^()]{1,45})?\s+nel\s+)?((?:18|19|20)\d{2})\)[^.]{0,700}?(?:sono\s+poi\s+seguit[ie]|sono\s+seguit[ie]|seguono)\s+([^()]{3,180}?)\s*\(((?:18|19|20)\d{2})\)\s+(?:e|,)\s+([^()]{3,180}?)\s*\(((?:18|19|20)\d{2})\)/gi;
+  const first=/(?:il\s+suo\s+romanzo|il\s+romanzo|il\s+libro|un\s+romanzo|romanzo|libro)\s+([^()]{3,180}?)\s*\((?:pubblicato(?:\s+in\s+[^()]{1,45})?\s+nel\s+)?((?:18|19|20)\d{2})\).{0,1800}?(?:sono\s+poi\s+seguit[ie]|sono\s+seguit[ie]|seguono)\s+([^()]{3,180}?)\s*\(((?:18|19|20)\d{2})\)\s+(?:e|,)\s+([^()]{3,180}?)\s*\(((?:18|19|20)\d{2})\)/gi;
   while((m=first.exec(p))){
     const items=[chronologicalTitle(m[1]),chronologicalTitle(m[3]),chronologicalTitle(m[5])].filter(Boolean);
     const rel=relationFromItems(items,title,source,baseScore+4);if(rel)relations.push(rel)
@@ -213,11 +214,11 @@ function bestRelations(candidates,saga=''){
 window.__LIB_FIND_RELATIONS=async function(input={}){
   const title=clean(input.title),author=clean(input.author),hint=clean(input.saga),code=String(input.code||'').replace(/[^0-9Xx]/g,'').toUpperCase();
   if(!title||!author)return {prequel:'',sequel:'',saga:'',sagaChecked:false,source:''};
-  const key=[code,norm(title),norm(author),norm(hint),'v5'].join('|');if(relationCache.has(key))return relationCache.get(key);
+  const key=[code,norm(title),norm(author),norm(hint),'v6'].join('|');if(relationCache.has(key))return relationCache.get(key);
   const promise=(async()=>{
     const variants=titleVariants(title),base=variants.length>1?variants[1]:variants[0],extra=variants.slice(2,4);
-    const queries=[`"${base}" "${author}" trilogia saga serie`,`"${base}" "${author}" sequel prequel seguito preceduto`,`"${base}" "${author}" "sono poi seguiti"`,`"${base}" "${author}" "A questo è seguito"`,...extra.map(v=>`"${base}" "${v}" "${author}" saga`)];
-    const searchJobs=[];for(const q of queries.slice(0,4)){searchJobs.push(reader(`https://www.google.com/search?hl=it&num=15&q=${encodeURIComponent(q)}`,11000));searchJobs.push(reader(`https://www.bing.com/search?setlang=it-IT&q=${encodeURIComponent(q)}`,11000))}
+    const queries=[...(code?[`"${code}" "${author}"`,`"${code}" "${base}"`]:[]),`"${base}" "${author}" trilogia saga serie`,`"${base}" "${author}" sequel prequel seguito preceduto`,`"${base}" "${author}" "sono poi seguiti"`,`"${base}" "${author}" "A questo è seguito"`,...extra.map(v=>`"${base}" "${v}" "${author}" saga`)];
+    const searchJobs=[];for(const q of queries.slice(0,6)){searchJobs.push(reader(`https://www.google.com/search?hl=it&num=15&q=${encodeURIComponent(q)}`,11000));searchJobs.push(reader(`https://www.bing.com/search?setlang=it-IT&q=${encodeURIComponent(q)}`,11000))}
     const [searchTexts,gb]=await Promise.all([Promise.all(searchJobs),googleBooksEvidence(title,author)]);
     const relations=[...gb.relations],sagas=[...gb.sagas];let checked=gb.checked||searchTexts.some(Boolean);
     searchTexts.forEach((txt,i)=>{if(!txt)return;const src=i%2===0?'Google':'Bing',ev=parseEvidence(txt,title,src,7);relations.push(...ev.relations);sagas.push(...ev.sagas)});
