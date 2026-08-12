@@ -1,0 +1,74 @@
+name: Conferma generale delle saghe
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/confirm-series-from-search.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Conferma le saghe dai risultati bibliografici
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('italian-catalog-fallback-v3.js')
+          s=p.read_text(encoding='utf-8')
+          anchor="""function inspectText(text,url,code){
+  if(!text||!codeAppears(text,code))return null;
+  const rawTitle=titleFrom(text,code),split=splitTitleSaga(rawTitle,text),title=split.title,saga=split.saga,author=authorFrom(text,rawTitle),publisher=publisherFrom(text),year=yearFrom(text),description=descriptionFrom(text),category=categoryFrom(text,rawTitle),cover=bestCover(text,rawTitle,url);
+  if(!title)return null;
+  let score=4+(author?4:0)+(publisher?2:0)+(year?1:0)+(description?4:0)+(category?2:0)+(cover?2:0)+(saga?3:0);if(['Libraccio','Libreria Universitaria','Unilibro','IBS'].includes(sourceName(url)))score+=1;
+  return {title,saga,author,publisher,year,description,category,cover,source:sourceName(url),score}
+}
+"""
+          extra=anchor+"""async function confirmCompositeSaga(rec){
+  if(!rec||rec.saga)return rec;
+  const original=cleanLine(rec.title),parts=original.split(/\\s*(?:\\.\\s+|\\s[-–—]\\s|:\\s+)\\s*/).map(cleanLine).filter(x=>x.length>2);
+  if(parts.length<2)return rec;
+  const novel=parts[0],possible=parts.slice(1).filter(x=>x.length>=3&&x.length<=90);
+  for(const candidate of possible){
+    const q=`\\"${candidate}\\" \\"${novel}\\" ${rec.author||''} saga serie`;
+    const [g,b]=await Promise.all([
+      reader(`https://www.google.com/search?hl=it&num=10&q=${encodeURIComponent(q)}`,11000),
+      reader(`https://www.bing.com/search?setlang=it-IT&q=${encodeURIComponent(q)}`,11000)
+    ]);
+    const hay=normText(g+' '+b),c=normText(candidate),n=normText(novel);
+    const evidence=[`saga ${c}`,`serie ${c}`,`ciclo ${c}`,`${c} saga`,`${c} serie`].some(x=>hay.includes(x));
+    const both=hay.includes(c)&&hay.includes(n);
+    if(evidence&&both){rec.saga=candidate;rec.title=novel;rec.score=(rec.score||0)+3;return rec}
+  }
+  return rec
+}
+"""
+          if anchor not in s: raise SystemExit('anchor inspectText missing')
+          s=s.replace(anchor,extra,1)
+          old="""    const inspected=(await Promise.all(pages.map(async u=>inspectText(await reader(u),u,ean)))).filter(Boolean).sort((x,y)=>y.score-x.score);
+    return inspected[0]||null
+"""
+          new="""    const inspected=(await Promise.all(pages.map(async u=>inspectText(await reader(u),u,ean)))).filter(Boolean).sort((x,y)=>y.score-x.score);
+    return await confirmCompositeSaga(inspected[0]||null)
+"""
+          if old not in s: raise SystemExit('findCatalog return missing')
+          s=s.replace(old,new,1)
+          p.write_text(s,encoding='utf-8')
+
+          p=Path('bg/bg8.js');s=p.read_text(encoding='utf-8')
+          s=s.replace('italian-catalog-fallback-v3.js?v=2','italian-catalog-fallback-v3.js?v=3')
+          p.write_text(s,encoding='utf-8')
+          PY
+          node --check italian-catalog-fallback-v3.js
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add italian-catalog-fallback-v3.js bg/bg8.js
+          git commit -m "Conferma le saghe con una ricerca bibliografica generale"
+          git push origin main
