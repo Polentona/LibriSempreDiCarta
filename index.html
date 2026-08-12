@@ -27,7 +27,7 @@ main{position:relative;z-index:2;max-width:1040px;margin:8px auto 70px;padding:0
 </head>
 <body>
 <div class="library-wall" id="libraryWall" aria-hidden="true"></div>
-<header><div class="nav"><div class="brand"><span class="books">📚</span><strong>Libri di Carta</strong></div><div class="links"><a href="#" data-view="home">Home</a><a href="#" data-view="library" class="active">La mia libreria</a><a href="#" data-view="read">Letti</a><a href="#" data-view="unread">Da leggere</a><a href="#" data-view="loaned">Prestati</a><a href="#" data-view="authors">Autori</a><a href="#" data-view="categories">Categorie</a></div><label class="search">⌕<input id="search" placeholder="Cerca un libro, autore…"></label><button class="add-book-btn" id="addBookBtn" type="button"><span class="plus">＋</span>Aggiungi libro</button></div></header>
+<header><div class="nav"><div class="brand"><span class="books">📚</span><strong>Libri di Carta</strong></div><div class="links"><a href="#" data-view="home">Home</a><a href="#" data-view="library" class="active">La mia libreria</a><a href="#" data-view="read">Letti</a><a href="#" data-view="unread">Da leggere</a><a href="#" data-view="loaned">Prestati</a><a href="#" data-view="authors">Autori</a><a href="#" data-view="categories">Categorie</a><a href="#" data-view="series">Saghe e trilogie</a></div><label class="search">⌕<input id="search" placeholder="Cerca un libro, autore…"></label><button class="add-book-btn" id="addBookBtn" type="button"><span class="plus">＋</span>Aggiungi libro</button></div></header>
 <main><div class="intro"><h1 id="viewTitle">La mia libreria</h1><p id="viewSubtitle">Tutti i libri, uno sotto l’altro.</p></div><div class="pagination"><button class="page-arrow" id="prevPage">←</button><div class="page-status" id="pageStatus"></div><button class="page-arrow" id="nextPage">→</button></div><div id="list"></div></main>
 
 <dialog class="edit-dialog" id="editDialog">
@@ -49,7 +49,7 @@ main{position:relative;z-index:2;max-width:1040px;margin:8px auto 70px;padding:0
 </dialog>
 
 <script>
-(async()=>{try{window.__LIB_BG="";for(let i=1;i<=8;i++){await new Promise((resolve,reject)=>{const s=document.createElement('script');s.src=`bg/bg${i}.js?v=16`;s.onload=()=>{s.remove();resolve()};s.onerror=reject;document.head.appendChild(s)})}document.getElementById('libraryWall').style.backgroundImage=`url("data:image/webp;base64,${window.__LIB_BG}")`;delete window.__LIB_BG}catch(e){console.error('Sfondo non caricato',e)}})();
+(async()=>{try{window.__LIB_BG="";for(let i=1;i<=8;i++){await new Promise((resolve,reject)=>{const s=document.createElement('script');s.src=`bg/bg${i}.js?v=17`;s.onload=()=>{s.remove();resolve()};s.onerror=reject;document.head.appendChild(s)})}document.getElementById('libraryWall').style.backgroundImage=`url("data:image/webp;base64,${window.__LIB_BG}")`;delete window.__LIB_BG}catch(e){console.error('Sfondo non caricato',e)}})();
 
 const defaultBooks=[
 {id:1,title:"Stand by me - Ricordo di un’estate",author:"Stephen King",cover:"https://covers.openlibrary.org/b/isbn/9788804679349-L.jpg",plot:"Quattro ragazzi partono per un’avventura che cambierà per sempre le loro vite. Lungo il cammino scopriranno il coraggio, l’amicizia e il valore dei ricordi che restano.",rating:4,read:true,loanTo:"Marco B.",loanDate:"12/05/2024",notes:"Libro stupendo. Mi ha fatto tornare agli anni dell’adolescenza e al valore delle amicizie vere. Finale commovente."},
@@ -69,10 +69,23 @@ read:['Letti','Solo i libri che hai segnato come letti.'],
 unread:['Da leggere','Solo i libri che non hai ancora segnato come letti.'],
 loaned:['Prestati','Solo i libri attualmente prestati.'],
 authors:['Autori','I libri ordinati per autore.'],
-categories:['Categorie','Le categorie saranno mostrate quando verranno associate ai libri.']
+categories:['Categorie','Le categorie saranno mostrate quando verranno associate ai libri.'],
+series:['Saghe e trilogie','I libri appartenenti a saghe e trilogie, ordinati per cognome dell’autore e poi per pubblicazione.']
 };
 function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function stars(n,id){return [1,2,3,4,5].map(v=>`<button class="star ${v<=n?'on':''}" data-id="${id}" data-v="${v}" type="button">★</button>`).join('')}
+function authorSurname(author){
+  const raw=String(author||'').trim();if(!raw)return'';
+  const first=raw.split(/\s*(?:;|&| e | and )\s*/i)[0].trim();
+  if(first.includes(','))return first.split(',')[0].trim().toLowerCase();
+  const parts=first.replace(/\([^)]*\)/g,'').trim().split(/\s+/).filter(Boolean);
+  return (parts[parts.length-1]||first).toLowerCase();
+}
+function publicationSortValue(book){
+  const raw=String(book?.publishedDate||book?.publication||book?.year||'').trim();
+  const y=raw.match(/(?:18|19|20)\d{2}/);if(y)return Number(y[0]);
+  const d=Date.parse(raw);return Number.isFinite(d)?new Date(d).getFullYear():9999;
+}
 function getFilteredBooks(){
   const q=$('search').value.toLowerCase().trim();
   let f=books.filter(b=>`${b.title} ${b.author} ${b.saga||''} ${b.prequel||''} ${b.sequel||''}`.toLowerCase().includes(q));
@@ -80,6 +93,15 @@ function getFilteredBooks(){
   else if(currentView==='unread')f=f.filter(b=>!b.read);
   else if(currentView==='loaned')f=f.filter(b=>(b.loanTo||'').trim());
   else if(currentView==='authors')f=[...f].sort((a,b)=>a.author.localeCompare(b.author,'it')||a.title.localeCompare(b.title,'it'));
+  else if(currentView==='series'){
+    f=f.filter(b=>String(b.saga||'').trim());
+    f=[...f].sort((a,b)=>
+      authorSurname(a.author).localeCompare(authorSurname(b.author),'it',{sensitivity:'base'})||
+      String(a.author||'').localeCompare(String(b.author||''),'it',{sensitivity:'base'})||
+      publicationSortValue(a)-publicationSortValue(b)||
+      String(a.title||'').localeCompare(String(b.title||''),'it',{sensitivity:'base'})
+    );
+  }
   return f;
 }
 function setView(view){

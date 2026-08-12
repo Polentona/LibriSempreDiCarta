@@ -116,10 +116,10 @@ function boot(){
   function absoluteCoverUrl(u){try{return new URL(secureUrl(u),document.baseURI).href}catch(e){return secureUrl(u)}}
   const VERIFIED_UI_COVERS={'9788854147317':'assets/covers/9788854147317.jpg','8854147311':'assets/covers/9788854147317.jpg'};
   const VERIFIED_BOOK_METADATA={
-    '9788854150706':{title:'Sarà per sempre',saga:'Baciata da un angelo',author:'Elizabeth Chandler'},
-    '8854150703':{title:'Sarà per sempre',saga:'Baciata da un angelo',author:'Elizabeth Chandler'},
-    '9788854147317':{title:"L'amore e l'odio",saga:'Baciata da un angelo',author:'Elizabeth Chandler'},
-    '8854147311':{title:"L'amore e l'odio",saga:'Baciata da un angelo',author:'Elizabeth Chandler'}
+    '9788854150706':{title:'Baciata da un angelo. Sarà per sempre',saga:'Baciata da un angelo',author:'Elizabeth Chandler'},
+    '8854150703':{title:'Baciata da un angelo. Sarà per sempre',saga:'Baciata da un angelo',author:'Elizabeth Chandler'},
+    '9788854147317':{title:"Baciata da un angelo. L'amore e l'odio",saga:'Baciata da un angelo',author:'Elizabeth Chandler'},
+    '8854147311':{title:"Baciata da un angelo. L'amore e l'odio",saga:'Baciata da un angelo',author:'Elizabeth Chandler'}
   };
   function verifiedUiCover(code){const u=VERIFIED_UI_COVERS[normalizeLoose(code)];return u?absoluteCoverUrl(u):''}
   function verifiedBookMetadata(code){return VERIFIED_BOOK_METADATA[normalizeLoose(code)]||null}
@@ -137,16 +137,21 @@ function boot(){
     if(/^[A-ZÀ-Ý]{2,5}$/.test(a))return false;
     return /^[A-Za-zÀ-ÿ'’.,&;\/-]+(?:\s+[A-Za-zÀ-ÿ'’.,&;\/-]+){0,12}$/.test(a)
   }
-  function stripSagaFromTitle(title,saga){
-    let t=String(title||'').trim(),sg=String(saga||'').trim();if(!t||!sg)return t;
+  function seriesTitleWithSagaFirst(title,saga){
+    const original=String(title||'').trim(),sg=String(saga||'').trim();if(!original||!sg)return original;
     const e=sg.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
-    t=t.replace(new RegExp('^'+e+'\\s*(?:[.:-]|[-–—])\\s*','i'),'').replace(new RegExp('\\s*(?:[.:-]|[-–—])\\s*'+e+'$','i'),'').trim();
-    return t||String(title||'').trim()
+    if(new RegExp('^'+e+'(?:\s*(?:[.:-]|[-–—])\s*|$)','i').test(original))return original;
+    const suffix=new RegExp('\s*(?:[.:-]|[-–—])\s*'+e+'$','i');
+    if(suffix.test(original)){
+      const novel=original.replace(suffix,'').trim();
+      return novel?sg+'. '+novel:original;
+    }
+    return original;
   }
   function normalizeCandidateMetadata(candidate){
     const c={...(candidate||{})};
     c.saga=String(c.saga||'').trim();c.prequel=String(c.prequel||'').trim();c.sequel=String(c.sequel||'').trim();
-    c.title=stripSagaFromTitle(c.title,c.saga);
+    c.title=seriesTitleWithSagaFirst(c.title,c.saga);
     if(c.author&&!plausibleAuthorName(c.author))c.author='';
     return c
   }
@@ -290,8 +295,8 @@ function boot(){
           candidate.saga=String(rel.saga||'').trim();
           setAutoField('editSaga',candidate.saga,true);
           if(candidate.saga){
-            const cleanedTitle=stripSagaFromTitle(candidate.title,candidate.saga);
-            if(cleanedTitle&&cleanedTitle!==candidate.title){candidate.title=cleanedTitle;setAutoField('editTitle',cleanedTitle)}
+            const fullTitle=seriesTitleWithSagaFirst(candidate.title,candidate.saga);
+            if(fullTitle&&fullTitle!==candidate.title){candidate.title=fullTitle;setAutoField('editTitle',fullTitle)}
           }
         }
         candidate.prequel=String(rel?.prequel||'').trim();
@@ -396,7 +401,7 @@ function boot(){
         const rel=await window.__LIB_FIND_RELATIONS({code:b.code||b.isbn||'',title:b.title,author:b.author,saga:b.saga||''});let changed=false;
         if(rel?.sagaChecked){const nextSaga=String(rel.saga||'').trim();if(String(b.saga||'').trim()!==nextSaga){b.saga=nextSaga;changed=true}}
         const effectiveSaga=rel?.sagaChecked?String(rel.saga||'').trim():String(b.saga||'').trim();
-        if(effectiveSaga){const cleanedTitle=stripSagaFromTitle(b.title,effectiveSaga);if(cleanedTitle&&cleanedTitle!==b.title){b.title=cleanedTitle;changed=true}}
+        if(effectiveSaga){const fullTitle=seriesTitleWithSagaFirst(b.title,effectiveSaga);if(fullTitle&&fullTitle!==b.title){b.title=fullTitle;changed=true}}
         if(rel?.prequel&&b.prequel!==rel.prequel){b.prequel=rel.prequel;changed=true}
         if(rel?.sequel&&b.sequel!==rel.sequel){b.sequel=rel.sequel;changed=true}
         b.relationsLookupAt=now;b.relationsLookupVersion=RELATIONS_LOOKUP_VERSION;saveBooks();if(changed)render()
