@@ -8,7 +8,16 @@ const SOURCE_NAMES={'libraccio.it':'Libraccio','ibs.it':'IBS','mondadoristore.it
 const cache=new Map();
 
 function norm(v){return String(v||'').replace(/[^0-9Xx]/g,'').toUpperCase()}
-function plain(v){return String(v||'').replace(/!\[[^\]]*\]\([^)]*\)/g,' ').replace(/\[([^\]]+)\]\([^)]*\)/g,'$1').replace(/[*_`|]/g,' ').replace(/\r/g,'').replace(/[ \t]+/g,' ').trim()}
+function plain(v){return String(v||'')
+  .replace(/[\u200B-\u200F\u202A-\u202E\u2060\u2066-\u2069\uFEFF]/g,'')
+  .replace(/\u00A0/g,' ')
+  .replace(/!\[[^\]]*\]\([^)]*\)/g,' ')
+  .replace(/\[([^\]]+)\]\([^)]*\)/g,'$1')
+  .replace(/[*_`|]/g,' ')
+  .replace(/\r/g,'')
+  .replace(/[ \t]+/g,' ')
+  .trim()
+}
 function cleanLine(v){return plain(v).replace(/^\s*#{1,6}\s*/,'').replace(/^\s*[>•*-]+\s*/,'').replace(/\s+/g,' ').trim()}
 function normText(v){return String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim()}
 function isbn13to10(v){const n=norm(v);if(!/^978\d{10}$/.test(n))return'';const core=n.slice(3,12);let s=0;for(let i=0;i<9;i++)s+=Number(core[i])*(10-i);const c=(11-(s%11))%11;return core+(c===10?'X':String(c))}
@@ -56,45 +65,73 @@ function titleFrom(text,code){
   return best
 }
 function cleanAuthorCandidate(v){
-  let a=cleanLine(v).replace(/\s*\(Autore\).*$/i,'').replace(/^\s*(?:di|by)\s+/i,'').replace(/\s*[|•]\s*.*$/,'').trim();
+  let a=cleanLine(v)
+    .replace(/\s*\((?:Autore|Autrice|Author)\).*$/i,'')
+    .replace(/^\s*(?:di|by)\s+/i,'')
+    .replace(/\s*[|•]\s*.*$/,'')
+    .trim();
   const comma=a.match(/^([A-ZÀ-ÖØ-Ý][A-Za-zÀ-ÿ'’.-]+),\s*([A-ZÀ-ÖØ-Ý][A-Za-zÀ-ÿ'’.-]+(?:\s+[A-ZÀ-ÖØ-Ý][A-Za-zÀ-ÿ'’.-]+)?)$/);
   if(comma)a=`${comma[2]} ${comma[1]}`;
   return a
 }
 function validAuthor(v){
   const a=cleanAuthorCandidate(v),n=normText(a);
-  if(!a||a.length>120||/\d|€|%|@|https?:|www\./i.test(a))return false;
-  if(/\b(spedizione|consegna|negozio|libreria|magazzino|disponibile|carrello|cookie|assistenza|ritiro|punti vendita|iva|ean|isbn|issn|eur|euro|sku|codice|prezzo|sconto|traduttore|traduzione|collana|pagine|formato|dati|dettagli|edizione|editore|publisher|categoria|genere|reparto|home|menu|newsletter|acquista|compra|offerta|usato|nuovo|provincia|regione|comune)\b/i.test(n))return false;
+  if(!a||a.length>140||/\d|€|%|@|https?:|www\./i.test(a))return false;
+  if(/\b(spedizione|consegna|negozio|libreria|magazzino|disponibile|carrello|cookie|assistenza|ritiro|punti vendita|iva|ean|isbn|issn|eur|euro|sku|codice|prezzo|sconto|traduttore|traduzione|collana|pagine|formato|dati|dettagli|edizione|editore|publisher|categoria|genere|reparto|home|menu|newsletter|acquista|compra|offerta|usato|nuovo|provincia|regione|comune|copertina|formato kindle|formato cartaceo)\b/i.test(n))return false;
   if(/^[A-ZÀ-Ý]{2,5}$/.test(a))return false;
   const people=a.split(/\s*(?:&|\be\b|;|\/)\s*/i).filter(Boolean);
-  if(!people.length||people.length>6)return false;
+  if(!people.length||people.length>8)return false;
   return people.every(person=>{
     const words=person.split(/\s+/).filter(Boolean);
-    if(words.length<1||words.length>6)return false;
+    if(words.length<1||words.length>7)return false;
     if(words.length===1)return /^[A-ZÀ-ÖØ-Ý][A-Za-zÀ-ÿ'’.-]{2,}$/.test(words[0]);
     return words.every(w=>/^[A-Za-zÀ-ÿ'’.-]+$/.test(w))&&words.some(w=>/^[A-ZÀ-ÖØ-Ý]/.test(w));
   })
 }
+function amazonAuthorsFrom(text){
+  const p=plain(text),out=[],seen=new Set();
+  const re=/\b([A-ZÀ-ÖØ-Ý][A-Za-zÀ-ÿ'’.-]+(?:\s+(?:(?:de|del|della|di|da|van|von|le|la|du|dos|das)\s+)?[A-ZÀ-ÖØ-Ý][A-Za-zÀ-ÿ'’.-]+){0,5})\s*\((?:Autore|Autrice|Author)\)/g;
+  let m;while((m=re.exec(p))){const a=cleanAuthorCandidate(m[1]);if(validAuthor(a)){const k=normText(a);if(!seen.has(k)){seen.add(k);out.push(a)}}}
+  return out.join(', ')
+}
 function authorFrom(text,title=''){
-  const labeled=fieldAfter(text,['Autore','Autori','Autore/i','Scritto da']);if(validAuthor(labeled))return cleanAuthorCandidate(labeled);
+  const amazon=amazonAuthorsFrom(text);if(amazon)return amazon;
+  const labeled=fieldAfter(text,['Autore','Autori','Autore/i','Scritto da','Written by']);if(validAuthor(labeled))return cleanAuthorCandidate(labeled);
   const lines=String(text||'').split(/\n/);
   for(const raw of lines){
-    const line=cleanLine(raw),m=line.match(/^(?:di|by|un libro di|libro di)\s+(.{3,120})$/i);
+    const line=cleanLine(raw),m=line.match(/^(?:di|by|un libro di|libro di|scritto da)\s+(.{3,140})$/i);
     if(m&&validAuthor(m[1]))return cleanAuthorCandidate(m[1]);
   }
   const p=plain(text);
-  for(const re of [/\bUn libro di\s+([^\n|]{3,120})/i,/\bLibro di\s+([^\n|]{3,120})/i,/\bScritto da\s+([^\n|]{3,120})/i]){
+  for(const re of [/\bUn libro di\s+([^\n|]{3,140})/i,/\bLibro di\s+([^\n|]{3,140})/i,/\bScritto da\s+([^\n|]{3,140})/i]){
     const m=p.match(re);if(m){const a=cleanAuthorCandidate(m[1]).replace(/\s+(edito|editore|sconto|isbn|ean|prezzo)\b.*$/i,'').trim();if(validAuthor(a))return a}
   }
   return''
 }
 function escapeRe(v){return String(v||'').replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}
 function sagaFrom(text,title){
-  const direct=fieldAfter(text,['Saga','Serie','Ciclo']);if(direct&&direct.length<90&&!/^(vertigo|narrativa|libri|romanzo)$/i.test(cleanLine(direct)))return cleanLine(direct);
+  const direct=fieldAfter(text,['Saga','Serie','Ciclo','Trilogia','Nome serie','Nome della serie','Serie di libri','Parte della serie','Parte di una serie','Book series']);
+  const cleanSaga=v=>{
+    let x=cleanLine(v).replace(/^[\s:|•·–—-]+/,'').replace(/[\s|•·–—-]+$/,'').trim();
+    x=x.replace(/\s+(?:Visualizza|Vedi|Scopri|Tutti i libri|All books).*$/i,'').trim();
+    if(!x||x.length<2||x.length>90||/^(vertigo|narrativa|libri|romanzo|fiction|books?|serie|saga|trilogia)$/i.test(x))return'';
+    return x
+  };
+  const d=cleanSaga(direct);if(d)return d;
   const p=plain(text),parts=String(title||'').split(/\s*(?:\.|\s[-–—]\s|:)\s*/).map(cleanLine).filter(x=>x.length>2);
-  const re=/(?:la\s+)?(?:saga|serie|ciclo)\s+["“”']?([^"“”'()\n]{2,90})["“”']?\s*\(([^)]{3,900})\)/gi;let m;
-  while((m=re.exec(p))){const name=cleanLine(m[1]),list=normText(m[2]);if(parts.some(x=>list.includes(normText(x))))return name}
-  for(const part of parts){const e=escapeRe(part);if(new RegExp('(?:saga|serie|ciclo)\\s+'+e+'(?:\\b|\\s|\\.)','i').test(p))return part}
+  const amazonPatterns=[
+    /\b(?:Parte|Fa parte)\s+(?:della|di una)\s+(?:serie|saga)\s*[:\-]?\s*([^\n]{2,90})/i,
+    /\b(?:Libro|Volume)\s+\d+\s+(?:di|su)\s+\d+\s*[:\-]\s*([^\n]{2,90})/i,
+    /\b(?:Book|Volume)\s+\d+\s+of\s+\d+\s*[:\-]\s*([^\n]{2,90})/i,
+    /\b(?:Series|Trilogy|Book series)\s*[:\-]\s*([^\n]{2,90})/i,
+    /\b(?:Trilogia|Saga|Serie)\s+(?:di\s+)?["“”']?([A-ZÀ-ÖØ-Ý][A-Za-zÀ-ÿ0-9'’.-]*(?:\s+[A-ZÀ-ÖØ-Ý0-9][A-Za-zÀ-ÿ0-9'’.-]*){0,4})/i
+  ];
+  for(const re of amazonPatterns){const m=p.match(re);const x=cleanSaga(m?.[1]||'');if(x&&!normText(title).includes(normText(x)))return x}
+  const reverse=p.match(/\b([A-ZÀ-ÖØ-Ý][A-Za-zÀ-ÿ0-9'’.-]*(?:\s+[A-ZÀ-ÖØ-Ý0-9][A-Za-zÀ-ÿ0-9'’.-]*){0,4})\s+(?:Trilogy|Series)\b/);
+  if(reverse){const x=cleanSaga(reverse[1]);if(x&&!normText(title).includes(normText(x)))return x}
+  const re=/(?:la\s+)?(?:saga|serie|ciclo|trilogia)\s+["“”']?([^"“”'()\n]{2,90})["“”']?\s*\(([^)]{3,900})\)/gi;let m;
+  while((m=re.exec(p))){const name=cleanSaga(m[1]),list=normText(m[2]);if(name&&parts.some(x=>list.includes(normText(x))))return name}
+  for(const part of parts){const e=escapeRe(part);if(new RegExp('(?:saga|serie|ciclo|trilogia)\\s+'+e+'(?:\\b|\\s|\\.)','i').test(p))return part}
   return''
 }
 function splitTitleSaga(title,text){
@@ -103,7 +140,14 @@ function splitTitleSaga(title,text){
   return {title:t||cleanLine(title),saga}
 }
 function yearFrom(text){const labeled=fieldAfter(text,['Anno edizione','Anno pubblicazione','Anno di pubblicazione','Data di Pubblicazione','Data pubblicazione','Pubblicazione']);const m=String(labeled||text).match(/\b(18|19|20)\d{2}\b/);return m?m[0]:''}
-function publisherFrom(text){return fieldAfter(text,['Editore','Publisher','Casa editrice']).replace(/^[:|\s-]+/,'').trim()}
+function cleanPublisherCandidate(v){
+  return cleanLine(String(v||'').replace(/[\u200B-\u200F\u202A-\u202E\u2060\u2066-\u2069\uFEFF]/g,''))
+    .replace(/^(?:Editore|Publisher|Casa editrice)\s*:?\s*/i,'')
+    .replace(/^[\s:;|•·–—-]+/,'')
+    .replace(/[\s:;|•·–—-]+$/,'')
+    .trim()
+}
+function publisherFrom(text){return cleanPublisherCandidate(fieldAfter(text,['Editore','Publisher','Casa editrice']))}
 function categoryFrom(text,title=''){
   const direct=fieldAfter(text,['Genere','Categoria','Reparto','Materia']);if(direct&&direct.length<120)return direct;
   const p=plain(text),m=p.match(/Home\s*[>›/]\s*([^>›/\n]{2,100})\s*[>›/]/i);if(m){const c=cleanLine(m[1]);if(c&&!normText(title).includes(normText(c)))return c}
@@ -130,9 +174,9 @@ function bestCover(text,title,pageUrl){
 }
 function inspectText(text,url,code){
   if(!text||!codeAppears(text,code))return null;
-  const rawTitle=titleFrom(text,code),split=splitTitleSaga(rawTitle,text),title=split.title,saga=split.saga,author=authorFrom(text,rawTitle),publisher=publisherFrom(text),year=yearFrom(text),description=descriptionFrom(text),category=categoryFrom(text,rawTitle),cover=bestCover(text,rawTitle,url);
+  const rawTitle=titleFrom(text,code),split=splitTitleSaga(rawTitle,text),title=split.title,saga=split.saga,author=authorFrom(text,rawTitle),publisher=cleanPublisherCandidate(publisherFrom(text)),year=yearFrom(text),description=descriptionFrom(text),category=categoryFrom(text,rawTitle),cover=bestCover(text,rawTitle,url);
   if(!title)return null;
-  let score=4+(author?4:0)+(publisher?2:0)+(year?1:0)+(description?4:0)+(category?2:0)+(cover?2:0)+(saga?3:0);if(['Libraccio','Libreria Universitaria','Unilibro','IBS'].includes(sourceName(url)))score+=1;
+  let score=4+(author?4:0)+(publisher?2:0)+(year?1:0)+(description?4:0)+(category?2:0)+(cover?2:0)+(saga?3:0);if(['Libraccio','Libreria Universitaria','Unilibro','IBS'].includes(sourceName(url)))score+=1;if(sourceName(url)==='Amazon Italia'&&(author||publisher||saga))score+=3;
   return {title,saga,author,publisher,year,description,category,cover,source:sourceName(url),score}
 }
 function chooseCatalogField(records,field,validator=v=>!!cleanLine(v)){
@@ -149,13 +193,45 @@ function mergeCatalogRecords(records){
   const out={...records[0]};
   out.author=chooseCatalogField(records,'author',validAuthor)||out.author||'';
   out.saga=chooseCatalogField(records,'saga',v=>v.length>=2&&v.length<90)||out.saga||'';
-  out.publisher=chooseCatalogField(records,'publisher',v=>v.length<120)||out.publisher||'';
+  out.publisher=cleanPublisherCandidate(chooseCatalogField(records,'publisher',v=>v.length<120)||out.publisher||'');
   out.year=chooseCatalogField(records,'year',v=>/^\d{4}$/.test(v))||out.year||'';
   out.category=chooseCatalogField(records,'category',v=>v.length<150)||out.category||'';
   if(!out.description)out.description=records.find(r=>r.description)?.description||'';
   if(!out.cover)out.cover=records.find(r=>r.cover)?.cover||'';
   if(out.saga){const split=splitTitleSaga(out.title,`Saga: ${out.saga}`);out.title=split.title;out.saga=split.saga||out.saga}
   return out
+}
+/* STANDALONE_SAGA_DISCOVERY_V2 */
+function searchSagaCandidates(text,title,author){
+  const p=plain(text),out=[];
+  const add=v=>{
+    let x=cleanLine(v).replace(/^["“”'\s:;|•·–—-]+|["“”'\s:;|•·–—-]+$/g,'').trim();
+    x=x.replace(/^(?:the|la|il)\s+/i,'').trim();
+    if(!x||x.length<2||x.length>70)return;
+    const n=normText(x);if(!n||n===normText(title)||n===normText(author)||/^(book|books|libro|libri|novel|novels|fiction|serie|series|saga|trilogy|trilogia|volume)$/i.test(n))return;
+    out.push(x)
+  };
+  let m;
+  const rev=/\b([A-ZÀ-ÖØ-Ý][A-Za-zÀ-ÿ0-9'’.-]*(?:\s+[A-ZÀ-ÖØ-Ý0-9][A-Za-zÀ-ÿ0-9'’.-]*){0,4})\s+(?:trilogy|series|saga|serie|ciclo|trilogia)\b/g;
+  while((m=rev.exec(p)))add(m[1]);
+  const fwd=/\b(?:saga|serie|ciclo|trilogia|series|trilogy)\s+(?:di|of|the)?\s*["“”']?([A-ZÀ-ÖØ-Ý][A-Za-zÀ-ÿ0-9'’.-]*(?:\s+[A-ZÀ-ÖØ-Ý0-9][A-Za-zÀ-ÿ0-9'’.-]*){0,4})/g;
+  while((m=fwd.exec(p)))add(m[1]);
+  return out
+}
+async function confirmStandaloneSaga(rec){
+  if(!rec||rec.saga||!rec.title||!rec.author)return rec;
+  const q=`"${rec.title}" "${rec.author}" saga serie trilogy series`;
+  const [g,b]=await Promise.all([
+    reader(`https://www.google.com/search?hl=it&num=10&q=${encodeURIComponent(q)}`,11000),
+    reader(`https://www.bing.com/search?setlang=it-IT&q=${encodeURIComponent(q)}`,11000)
+  ]);
+  const groups=new Map();
+  for(const [source,text] of [['g',g],['b',b]])for(const value of searchSagaCandidates(text,rec.title,rec.author)){
+    const key=normText(value),x=groups.get(key)||{value,count:0,sources:new Set()};x.count++;x.sources.add(source);groups.set(key,x)
+  }
+  const best=[...groups.values()].sort((a,b)=>b.sources.size-a.sources.size||b.count-a.count)[0];
+  if(best&&(best.sources.size>=2||best.count>=2)){rec.saga=best.value;rec.score=(rec.score||0)+3}
+  return rec
 }
 async function confirmCompositeSaga(rec){
   if(!rec||rec.saga)return rec;
@@ -186,7 +262,7 @@ async function findCatalog(code){
     const searchTexts=await Promise.all(searches.map(u=>reader(u,12000)));for(const t of searchTexts)for(const u of searchLinks(t))if(!pages.includes(u))pages.push(u);
     pages=pages.slice(0,14);
     const inspected=(await Promise.all(pages.map(async u=>inspectText(await reader(u),u,ean)))).filter(Boolean).sort((x,y)=>y.score-x.score);
-    return await confirmCompositeSaga(mergeCatalogRecords(inspected))
+    return await confirmStandaloneSaga(await confirmCompositeSaga(mergeCatalogRecords(inspected)))
   })();cache.set(key,promise);return promise
 }
 function makeGoogleItem(rec,code){
@@ -210,7 +286,7 @@ window.fetch=async function(input,init){
     if(rec.saga){v.title=rec.title||v.title;v.subtitle='';v.seriesName=rec.saga}
     else if(rec.title&&!v.title)v.title=rec.title;
     if(rec.author)v.authors=[rec.author];
-    if(rec.publisher&&!v.publisher)v.publisher=rec.publisher;
+    if(rec.publisher)v.publisher=cleanPublisherCandidate(rec.publisher);
     if(rec.year&&!v.publishedDate)v.publishedDate=rec.year;
     if(rec.description&&!v.description)v.description=rec.description;
     if(rec.category&&!(v.categories||[]).length)v.categories=[rec.category];
