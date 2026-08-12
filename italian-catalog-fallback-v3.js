@@ -143,7 +143,7 @@ function authorFrom(text,title=''){
 }
 function escapeRe(v){return String(v||'').replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}
 function sagaFrom(text,title){
-  const direct=fieldAfter(text,['Saga','Serie','Ciclo','Trilogia','Nome serie','Nome della serie','Serie di libri','Parte della serie','Parte di una serie','Book series']);
+  const direct=fieldAfter(text,['Saga','Ciclo','Trilogia','Nome serie','Nome della serie','Serie di libri','Parte della serie','Parte di una serie','Book series']);
   const cleanSaga=v=>{
     let x=cleanLine(v).replace(/^[\s:|•·–—-]+/,'').replace(/[\s|•·–—-]+$/,'').trim();
     x=x.replace(/\s+(?:Visualizza|Vedi|Scopri|Tutti i libri|All books).*$/i,'').trim();
@@ -157,7 +157,8 @@ function sagaFrom(text,title){
     /\b(?:Libro|Volume)\s+\d+\s+(?:di|su)\s+\d+\s*[:\-]\s*([^\n]{2,90})/i,
     /\b(?:Book|Volume)\s+\d+\s+of\s+\d+\s*[:\-]\s*([^\n]{2,90})/i,
     /\b(?:Series|Trilogy|Book series)\s*[:\-]\s*([^\n]{2,90})/i,
-    /\b(?:Trilogia|Saga|Serie)\s+(?:di\s+)?["“”']?([A-ZÀ-ÖØ-Ý][A-Za-zÀ-ÿ0-9'’.-]*(?:\s+[A-ZÀ-ÖØ-Ý0-9][A-Za-zÀ-ÿ0-9'’.-]*){0,4})/i
+    /\b(?:Saga|Trilogia|Ciclo|Serie)\s*[:\-]\s*([^\n]{2,90})/i,
+    /\b(?:[Ss]aga|[Tt]rilogia|[Cc]iclo|[Ss]erie)\s+(?:di|del|della|dei|degli|delle)\s+["“”']?([A-ZÀ-ÖØ-Ý][A-Za-zÀ-ÿ0-9'’.-]*(?:\s+(?:[A-ZÀ-ÖØ-Ý0-9][A-Za-zÀ-ÿ0-9'’.-]*|di|del|della|dei|degli|delle|da|dal|e|of|the)){0,5})/
   ];
   for(const re of amazonPatterns){const m=p.match(re);const x=cleanSaga(m?.[1]||'');if(x&&!normText(title).includes(normText(x)))return x}
   const reverse=p.match(/\b([A-ZÀ-ÖØ-Ý][A-Za-zÀ-ÿ0-9'’.-]*(?:\s+[A-ZÀ-ÖØ-Ý0-9][A-Za-zÀ-ÿ0-9'’.-]*){0,4})\s+(?:Trilogy|Series)\b/);
@@ -236,7 +237,17 @@ function mergeCatalogRecords(records){
 }
 /* STANDALONE_SAGA_DISCOVERY_V2 */
 function searchSagaCandidates(text,title,author){
-  const p=plain(text),out=[];
+  const raw=plain(text),out=[],target=normText(title);
+  let p=raw;
+  if(target){
+    const lines=String(raw||'').split(/\n/),relevant=[];
+    for(let i=0;i<lines.length;i++){
+      if(!normText(lines[i]).includes(target))continue;
+      relevant.push(lines.slice(Math.max(0,i-2),Math.min(lines.length,i+3)).join('\n'))
+    }
+    if(!relevant.length)return out;
+    p=relevant.join('\n')
+  }
   const add=v=>{
     let x=cleanLine(v).replace(/^["“”'\s:;|•·–—-]+|["“”'\s:;|•·–—-]+$/g,'').trim();
     x=x.replace(/^(?:the|la|il)\s+/i,'').trim();
