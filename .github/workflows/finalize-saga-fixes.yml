@@ -1,0 +1,50 @@
+name: Finalizza correzioni autore saga e copertine
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/finalize-saga-fixes.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Corregge sintassi valida e pubblica
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('italian-catalog-fallback-v3.js')
+          s=p.read_text(encoding='utf-8')
+          start="for(const part of parts){const e=escapeRe(part);if(new RegExp("
+          i=s.find(start)
+          if i<0: raise SystemExit('blocco saga non trovato')
+          j=s.find("return part}",i)
+          if j<0: raise SystemExit('fine blocco saga non trovata')
+          j+=len("return part}")
+          fixed="for(const part of parts){const e=escapeRe(part);if(new RegExp('(?:saga|serie|ciclo)\\\\s+'+e+'(?:\\\\b|\\\\s|\\\\.)','i').test(p))return part}"
+          s=s[:i]+fixed+s[j:]
+          p.write_text(s,encoding='utf-8')
+
+          p=Path('bg/bg8.js');s=p.read_text(encoding='utf-8')
+          s=s.replace('isbn-cover.js?v=6','isbn-cover.js?v=7').replace('italian-catalog-fallback-v3.js?v=1','italian-catalog-fallback-v3.js?v=2')
+          p.write_text(s,encoding='utf-8')
+
+          p=Path('index.html');s=p.read_text(encoding='utf-8')
+          s=s.replace('bg${i}.js?v=7','bg${i}.js?v=8')
+          p.write_text(s,encoding='utf-8')
+          PY
+          node --check italian-catalog-fallback-v3.js
+          node --check isbn-cover.js
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add italian-catalog-fallback-v3.js isbn-cover.js bg/bg8.js index.html
+          git commit -m "Finalizza autore saga e selettore copertine"
+          git push origin main
