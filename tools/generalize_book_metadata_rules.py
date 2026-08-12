@@ -1,0 +1,136 @@
+from pathlib import Path
+
+# Catalogo italiano: autore affidabile e consenso fra più fonti.
+p=Path('italian-catalog-fallback-v3.js')
+s=p.read_text(encoding='utf-8')
+
+start=s.index('function validAuthor(v){')
+end=s.index('function escapeRe(v){', start)
+replacement=r'''function cleanAuthorCandidate(v){
+  let a=cleanLine(v).replace(/\s*\(Autore\).*$/i,'').replace(/^\s*(?:di|by)\s+/i,'').replace(/\s*[|•]\s*.*$/,'').trim();
+  const comma=a.match(/^([A-ZÀ-ÖØ-Ý][A-Za-zÀ-ÿ'’.-]+),\s*([A-ZÀ-ÖØ-Ý][A-Za-zÀ-ÿ'’.-]+(?:\s+[A-ZÀ-ÖØ-Ý][A-Za-zÀ-ÿ'’.-]+)?)$/);
+  if(comma)a=`${comma[2]} ${comma[1]}`;
+  return a
+}
+function validAuthor(v){
+  const a=cleanAuthorCandidate(v),n=normText(a);
+  if(!a||a.length>120||/\d|€|%|@|https?:|www\./i.test(a))return false;
+  if(/\b(spedizione|consegna|negozio|libreria|magazzino|disponibile|carrello|cookie|assistenza|ritiro|punti vendita|iva|ean|isbn|issn|eur|euro|sku|codice|prezzo|sconto|traduttore|traduzione|collana|pagine|formato|dati|dettagli|edizione|editore|publisher|categoria|genere|reparto|home|menu|newsletter|acquista|compra|offerta|usato|nuovo|provincia|regione|comune)\b/i.test(n))return false;
+  if(/^[A-ZÀ-Ý]{2,5}$/.test(a))return false;
+  const people=a.split(/\s*(?:&|\be\b|;|\/)\s*/i).filter(Boolean);
+  if(!people.length||people.length>6)return false;
+  return people.every(person=>{
+    const words=person.split(/\s+/).filter(Boolean);
+    if(words.length<1||words.length>6)return false;
+    if(words.length===1)return /^[A-ZÀ-ÖØ-Ý][A-Za-zÀ-ÿ'’.-]{2,}$/.test(words[0]);
+    return words.every(w=>/^[A-Za-zÀ-ÿ'’.-]+$/.test(w))&&words.some(w=>/^[A-ZÀ-ÖØ-Ý]/.test(w));
+  })
+}
+function authorFrom(text,title=''){
+  const labeled=fieldAfter(text,['Autore','Autori','Autore/i','Scritto da']);if(validAuthor(labeled))return cleanAuthorCandidate(labeled);
+  const lines=String(text||'').split(/\n/);
+  for(const raw of lines){
+    const line=cleanLine(raw),m=line.match(/^(?:di|by|un libro di|libro di)\s+(.{3,120})$/i);
+    if(m&&validAuthor(m[1]))return cleanAuthorCandidate(m[1]);
+  }
+  const p=plain(text);
+  for(const re of [/\bUn libro di\s+([^\n|]{3,120})/i,/\bLibro di\s+([^\n|]{3,120})/i,/\bScritto da\s+([^\n|]{3,120})/i]){
+    const m=p.match(re);if(m){const a=cleanAuthorCandidate(m[1]).replace(/\s+(edito|editore|sconto|isbn|ean|prezzo)\b.*$/i,'').trim();if(validAuthor(a))return a}
+  }
+  return''
+}
+'''
+s=s[:start]+replacement+s[end:]
+
+anchor='async function confirmCompositeSaga(rec){'
+pos=s.index(anchor)
+helper=r'''function chooseCatalogField(records,field,validator=v=>!!cleanLine(v)){
+  const groups=new Map();
+  for(const r of records){
+    const value=cleanLine(r?.[field]||'');if(!value||!validator(value))continue;
+    const key=normText(value);if(!key)continue;
+    const g=groups.get(key)||{value,count:0,score:0};g.count++;g.score+=(r.score||0);if(value.length>g.value.length)g.value=value;groups.set(key,g)
+  }
+  return [...groups.values()].sort((a,b)=>b.count-a.count||b.score-a.score)[0]?.value||''
+}
+function mergeCatalogRecords(records){
+  if(!records?.length)return null;
+  const out={...records[0]};
+  out.author=chooseCatalogField(records,'author',validAuthor)||out.author||'';
+  out.saga=chooseCatalogField(records,'saga',v=>v.length>=2&&v.length<90)||out.saga||'';
+  out.publisher=chooseCatalogField(records,'publisher',v=>v.length<120)||out.publisher||'';
+  out.year=chooseCatalogField(records,'year',v=>/^\d{4}$/.test(v))||out.year||'';
+  out.category=chooseCatalogField(records,'category',v=>v.length<150)||out.category||'';
+  if(!out.description)out.description=records.find(r=>r.description)?.description||'';
+  if(!out.cover)out.cover=records.find(r=>r.cover)?.cover||'';
+  if(out.saga){const split=splitTitleSaga(out.title,`Saga: ${out.saga}`);out.title=split.title;out.saga=split.saga||out.saga}
+  return out
+}
+'''
+s=s[:pos]+helper+s[pos:]
+
+old="""    const inspected=(await Promise.all(pages.map(async u=>inspectText(await reader(u),u,ean)))).filter(Boolean).sort((x,y)=>y.score-x.score);
+    return await confirmCompositeSaga(inspected[0]||null)
+"""
+new="""    const inspected=(await Promise.all(pages.map(async u=>inspectText(await reader(u),u,ean)))).filter(Boolean).sort((x,y)=>y.score-x.score);
+    return await confirmCompositeSaga(mergeCatalogRecords(inspected))
+"""
+if old not in s:
+    raise SystemExit('findCatalog anchor missing')
+s=s.replace(old,new,1)
+p.write_text(s,encoding='utf-8')
+
+# UI: normalizzazione generale di autore, titolo e saga per ogni candidato.
+p=Path('isbn-cover.js')
+s=p.read_text(encoding='utf-8')
+marker="  function stripHtml(s){const d=document.createElement('div');d.innerHTML=String(s||'');return d.textContent||d.innerText||''}\n"
+general=r'''  function plausibleAuthorName(v){
+    const a=String(v||'').trim(),n=normalizeText(a);if(!a||a.length>120||/\d|€|%|@|https?:|www\./i.test(a))return false;
+    if(/\b(iva|ean|isbn|issn|sku|prezzo|sconto|spedizione|consegna|negozio|libreria|carrello|cookie|assistenza|editore|edizione|collana|pagine|formato|categoria|genere|reparto|provincia|regione|comune|disponibile|acquista|compra)\b/i.test(n))return false;
+    if(/^[A-ZÀ-Ý]{2,5}$/.test(a))return false;
+    return /^[A-Za-zÀ-ÿ'’.,&;\/-]+(?:\s+[A-Za-zÀ-ÿ'’.,&;\/-]+){0,12}$/.test(a)
+  }
+  function stripSagaFromTitle(title,saga){
+    let t=String(title||'').trim(),sg=String(saga||'').trim();if(!t||!sg)return t;
+    const e=sg.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    t=t.replace(new RegExp('^'+e+'\\s*(?:[.:-]|[-–—])\\s*','i'),'').replace(new RegExp('\\s*(?:[.:-]|[-–—])\\s*'+e+'$','i'),'').trim();
+    return t||String(title||'').trim()
+  }
+  function normalizeCandidateMetadata(candidate){
+    const c={...(candidate||{})};
+    c.saga=String(c.saga||'').trim();
+    c.title=stripSagaFromTitle(c.title,c.saga);
+    if(c.author&&!plausibleAuthorName(c.author))c.author='';
+    return c
+  }
+'''
+if marker not in s:
+    raise SystemExit('stripHtml marker missing')
+s=s.replace(marker,general+marker,1)
+
+old="    const groups=await Promise.all(tasks);let candidates=mergeCandidates(groups.flat());\n"
+new="    const groups=await Promise.all(tasks);let candidates=mergeCandidates(groups.flat()).map(normalizeCandidateMetadata);\n"
+if old not in s:
+    raise SystemExit('fetchCandidates anchor missing')
+s=s.replace(old,new,1)
+
+old="""    candidate=await enrichOpenLibrary(candidate);
+    const verifiedMeta=verifiedBookMetadata(code);if(verifiedMeta)candidate={...candidate,...verifiedMeta};
+"""
+new="""    candidate=normalizeCandidateMetadata(await enrichOpenLibrary(candidate));
+    const verifiedMeta=verifiedBookMetadata(code);if(verifiedMeta)candidate=normalizeCandidateMetadata({...candidate,...verifiedMeta});
+"""
+if old not in s:
+    raise SystemExit('applyCandidate anchor missing')
+s=s.replace(old,new,1)
+p.write_text(s,encoding='utf-8')
+
+# Loader: catalogo italiano prima del motore ISBN, così vale per ogni ricerca futura.
+p=Path('bg/bg8.js')
+s=p.read_text(encoding='utf-8')
+start=s.find("(()=>{if(document.querySelector('script[data-isbn-cover]'))return;")
+if start<0:
+    raise SystemExit('loader start missing')
+loader="""(()=>{if(document.querySelector('script[data-isbn-cover]'))return;const p=document.createElement('script');p.src='italian-metadata.js?v=9';p.onload=()=>{const c=document.createElement('script');c.src='italian-catalog-fallback-v3.js?v=5';c.dataset.catalogFallback='1';c.onload=()=>{const s=document.createElement('script');s.src='isbn-cover.js?v=11';s.dataset.isbnCover='1';s.onload=()=>{const r=document.createElement('script');r.src='italian-retailer-fallback-v2.js?v=2';r.dataset.retailerFallback='1';document.head.appendChild(r)};document.head.appendChild(s)};document.head.appendChild(c)};document.head.appendChild(p)})();\n"""
+s=s[:start]+loader
+p.write_text(s,encoding='utf-8')
