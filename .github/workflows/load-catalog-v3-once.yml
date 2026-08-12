@@ -1,0 +1,44 @@
+name: Collega fallback cataloghi italiani
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/load-catalog-v3-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch-loader:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Collega il nuovo fallback
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          bg=Path('bg/bg8.js')
+          s=bg.read_text(encoding='utf-8')
+          old="document.head.appendChild(r)};document.head.appendChild(s)};document.head.appendChild(p)})();"
+          new="document.head.appendChild(r);const c=document.createElement('script');c.src='italian-catalog-fallback-v3.js?v=1';c.dataset.catalogFallback='1';document.head.appendChild(c)};document.head.appendChild(s)};document.head.appendChild(p)})();"
+          if old not in s:
+              raise SystemExit('Loader atteso non trovato in bg8.js')
+          bg.write_text(s.replace(old,new,1),encoding='utf-8')
+
+          idx=Path('index.html')
+          t=idx.read_text(encoding='utf-8')
+          if 'bg${i}.js?v=6' not in t:
+              raise SystemExit('Cache version v6 non trovata in index.html')
+          idx.write_text(t.replace('bg${i}.js?v=6','bg${i}.js?v=7',1),encoding='utf-8')
+          PY
+          git rm .github/workflows/load-catalog-v3-once.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add bg/bg8.js index.html
+          git commit -m "Usa il fallback cataloghi italiani per ogni ISBN"
+          git push origin main
