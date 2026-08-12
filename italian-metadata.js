@@ -13,7 +13,7 @@ const VERIFIED_ISBN={
     year:2013,
     category:'Narrativa rosa',
     description:"Ivy conosce l'amore e sa che il legame tra due persone può essere più forte dell'odio, dei pericoli e della morte stessa. Ha scoperto che esiste un altro mondo oltre al nostro e che Tristan, il suo eterno amore ucciso dal folle Gregory, continua a proteggerla. Ma Gregory è ormai un demone potente e brama vendetta. Per combatterlo Tristan ha infranto le leggi che regolano i rapporti tra il mondo dei vivi e quello degli angeli, perdendo i suoi poteri ed essendo ricondotto sulla Terra in un corpo mortale. Per ritrovarsi, Tristan e Ivy dovranno scoprire la verità sull'omicidio di cui il ragazzo è accusato, mentre nuove sparizioni e nuovi pericoli rendono sempre più vicina la battaglia definitiva tra odio e amore.",
-    cover:'https://m.media-amazon.com/images/I/51fUu9E5wOL._SY445_SX342_.jpg',
+    cover:'assets/covers/9788854147317.jpg',
     coverSource:'Amazon Italia',
     aliases:['9788854147317','8854147311']
   }
@@ -112,6 +112,14 @@ function coverLinks(markdown){
   while((m=re.exec(String(markdown||'')))){const u=m[1].replace(/&amp;/g,'&');if(coverDomain(u)&&!out.includes(u))out.push(u)}
   return out
 }
+function retailerSafeImage(url){
+  const u=String(url||'').trim();
+  if(!u)return '';
+  if(/^https?:\/\/(?:m\.media-amazon\.com|images(?:-na)?\.ssl-images-amazon\.com)\//i.test(u)){
+    return 'https://images.weserv.nl/?url='+encodeURIComponent(u);
+  }
+  return u
+}
 function coverImageCandidates(text,title=''){
   const found=[],seen=new Set(),titleWords=String(title||'').toLowerCase().split(/[^a-zà-ž0-9]+/i).filter(x=>x.length>3);
   const add=(url,label='')=>{
@@ -140,12 +148,12 @@ async function retailerCoverForIsbn(code,title=''){
   const verified=verifiedEntry(code);if(verified?.cover)return verified.cover;
   const n=norm(code),i10=n.length===13?isbn13to10(n):n;
   if(i10&&/^\d{9}[\dX]$/.test(i10)){
-    const amazon=await coverFromRetailPage(`https://www.amazon.it/dp/${encodeURIComponent(i10)}`,n,title);if(amazon)return amazon
+    const amazon=await coverFromRetailPage(`https://www.amazon.it/dp/${encodeURIComponent(i10)}`,n,title);if(amazon)return retailerSafeImage(amazon)
   }
   const q=`\"${n}\" (site:amazon.it OR site:bancolibri.it)`;
   const search=await jinaText('https://www.google.com/search?hl=it&num=10&q='+encodeURIComponent(q),12000);
   for(const url of coverLinks(search).slice(0,6)){
-    const image=await coverFromRetailPage(url,n,title);if(image)return image
+    const image=await coverFromRetailPage(url,n,title);if(image)return retailerSafeImage(image)
   }
   return''
 }
