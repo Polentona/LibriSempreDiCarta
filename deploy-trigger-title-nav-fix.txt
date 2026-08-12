@@ -1,0 +1,1 @@
+Forza il deploy GitHub Pages della correzione generale che scarta intestazioni di navigazione come “Skip to” dai titoli dei libri.
