@@ -1,0 +1,105 @@
+name: E2E live Spiral titoli relazioni
+on:
+  workflow_run:
+    workflows: ["Deploy GitHub Pages"]
+    types: [completed]
+permissions:
+  contents: read
+jobs:
+  test-spiral:
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Installa Playwright
+        run: |
+          mkdir -p /tmp/e2e-spiral
+          cd /tmp/e2e-spiral
+          npm init -y >/dev/null 2>&1
+          npm install playwright@1.55.0 >/dev/null 2>&1
+          npx playwright install --with-deps chromium >/dev/null
+      - name: Prova ISBN Spiral sul sito pubblico
+        working-directory: /tmp/e2e-spiral
+        run: |
+          cat > test.js <<'JS'
+          const { chromium } = require('playwright');
+          const fs = require('fs');
+          const norm=s=>String(s||'').replace(/[’‘]/g,"'").replace(/\s+/g,' ').trim();
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+            const page=await browser.newPage();
+            const consoleLines=[];let result={};
+            page.on('console',m=>consoleLines.push(`[${m.type()}] ${m.text()}`));
+            page.on('pageerror',e=>consoleLines.push(`[pageerror] ${e.message}`));
+            try{
+              await page.goto('https://polentona.github.io/LibriSempreDiCarta/?e2e-spiral='+Date.now(),{waitUntil:'domcontentloaded',timeout:60000});
+              await page.locator('#addBookBtn').waitFor({state:'visible',timeout:30000});
+              await page.locator('#addBookBtn').click();
+              await page.locator('#editCode').waitFor({state:'visible',timeout:30000});
+              await page.locator('#editCode').fill('8842913316');
+              await page.locator('#lookupMetadataBtn').click();
+              await page.waitForFunction(()=>{
+                const t=document.querySelector('#editTitle')?.value||'';
+                const o=document.querySelector('#metadataOverlay');
+                return /Spiral/i.test(t)||(o&&o.open);
+              },null,{timeout:90000});
+              if(await page.locator('#metadataOverlay').evaluate(el=>!!el.open).catch(()=>false)){
+                const choices=page.locator('[data-meta-choice]');const count=await choices.count();let chosen=false;
+                for(let i=0;i<count;i++){
+                  const text=await choices.nth(i).innerText();
+                  if(/\bSpiral\b/i.test(text)&&/Koji Suzuki/i.test(text)){await choices.nth(i).click();chosen=true;break}
+                }
+                if(!chosen&&count===1)await choices.first().click();
+              }
+              await page.waitForFunction(()=>/\bSpiral\b/i.test(document.querySelector('#editTitle')?.value||''),null,{timeout:60000});
+              await page.waitForFunction(()=>{
+                const p=document.querySelector('#editPrequel')?.value||'';
+                const s=document.querySelector('#editSequel')?.value||'';
+                return !!p&&!!s;
+              },null,{timeout:120000}).catch(()=>{});
+              await page.waitForTimeout(1800);
+              result=await page.evaluate(()=>({
+                title:document.querySelector('#editTitle')?.value||'',
+                author:document.querySelector('#editAuthor')?.value||'',
+                saga:document.querySelector('#editSaga')?.value||'',
+                prequel:document.querySelector('#editPrequel')?.value||'',
+                sequel:document.querySelector('#editSequel')?.value||'',
+                status:document.querySelector('#lookupStatus')?.textContent||''
+              }));
+              console.log('E2E_SPIRAL_RESULT='+JSON.stringify(result));
+              console.log('E2E_SPIRAL_CONSOLE='+JSON.stringify(consoleLines));
+              fs.writeFileSync('spiral-e2e.json',JSON.stringify({result,consoleLines},null,2));
+              await page.screenshot({path:'spiral-e2e.png',fullPage:true});
+              const errors=[];
+              if(norm(result.title)!=='Spiral')errors.push(`titolo=${JSON.stringify(result.title)}`);
+              if(norm(result.author)!=='Koji Suzuki')errors.push(`autore=${JSON.stringify(result.author)}`);
+              if(norm(result.saga)!=='Ring')errors.push(`saga=${JSON.stringify(result.saga)}`);
+              if(norm(result.prequel)!=='Ring')errors.push(`prequel=${JSON.stringify(result.prequel)}`);
+              if(norm(result.sequel)!=='Loop')errors.push(`sequel=${JSON.stringify(result.sequel)}`);
+              if(/\b(?:novel|romanzo|book|libro)\b|Suzuki|["“”«»]/i.test(result.prequel))errors.push(`prequel contiene dettagli=${JSON.stringify(result.prequel)}`);
+              if(/\b(?:novel|romanzo|book|libro)\b|Suzuki|["“”«»]/i.test(result.sequel))errors.push(`sequel contiene dettagli=${JSON.stringify(result.sequel)}`);
+              if(errors.length)throw new Error('Campi Spiral non puliti: '+errors.join(' | '));
+            }catch(e){
+              try{result=await page.evaluate(()=>({title:editTitle?.value||'',author:editAuthor?.value||'',saga:editSaga?.value||'',prequel:editPrequel?.value||'',sequel:editSequel?.value||''}))}catch(_){}
+              try{fs.writeFileSync('spiral-e2e.json',JSON.stringify({result,consoleLines,error:String(e&&e.stack||e)},null,2))}catch(_){}
+              try{await page.screenshot({path:'spiral-e2e.png',fullPage:true})}catch(_){}
+              console.error('E2E_SPIRAL_FAILURE_RESULT='+JSON.stringify(result));
+              console.error('E2E_SPIRAL_FAILURE',e);
+              process.exitCode=1;
+            }finally{await browser.close()}
+          })();
+          JS
+          node test.js
+      - name: Carica diagnostica E2E
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: spiral-clean-relations-e2e
+          path: |
+            /tmp/e2e-spiral/spiral-e2e.json
+            /tmp/e2e-spiral/spiral-e2e.png
+          if-no-files-found: ignore
+          retention-days: 3
