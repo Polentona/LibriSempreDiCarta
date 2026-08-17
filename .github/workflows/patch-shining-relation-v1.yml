@@ -1,0 +1,30 @@
+name: Supporta relazioni verificate senza saga
+on:
+  push:
+    paths:
+      - 'tools/patch_shining_relation_v1.py'
+      - '.github/workflows/patch-shining-relation-v1.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Applica patch
+        run: python tools/patch_shining_relation_v1.py
+      - name: Verifica
+        run: |
+          grep -q "codes:{'9788845275746':0" series-authoritative-catalog-v1.js
+          grep -q "candidate.title&&candidate.author&&(!candidate.prequel||!candidate.sequel)" isbn-cover.js
+          grep -q "candidate.saga=safeBookRelation(localRel.saga);setAutoField('editSaga',candidate.saga,true)" isbn-cover.js
+          grep -q "series-authoritative-catalog-v1.js?v=4" index.html
+          grep -q 'bg${i}.js?v=25' index.html
+          grep -q "isbn-cover.js?v=25" bg/bg8.js
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add series-authoritative-catalog-v1.js isbn-cover.js index.html bg/bg8.js
+          git commit -m "Supporta sequel verificati senza nome di saga"
+          git push
