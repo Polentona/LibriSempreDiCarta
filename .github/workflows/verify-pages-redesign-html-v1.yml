@@ -1,0 +1,45 @@
+name: Verifica HTML Pages redesign v1
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "deploy-library-redesign-20260818.txt"
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Verifica HTML pubblico
+        id: check
+        continue-on-error: true
+        run: |
+          ok=0
+          for i in $(seq 1 20); do
+            if curl -fsSL --max-time 20 "https://polentona.github.io/LibriSempreDiCarta/?html-check=$RANDOM" -o /tmp/live.html; then
+              if grep -q 'id="editInLibrary"' /tmp/live.html && grep -q "currentView='home'" /tmp/live.html && grep -q 'data-author-letter' /tmp/live.html && grep -q 'class="series-row"' /tmp/live.html; then
+                ok=1; break
+              fi
+            fi
+            sleep 10
+          done
+          echo "ok=$ok" | tee /tmp/html-result.txt
+          echo "bytes=$(wc -c </tmp/live.html 2>/dev/null || echo 0)" >> /tmp/html-result.txt
+          test "$ok" = 1
+      - name: Registra risultato
+        if: always()
+        run: |
+          echo "outcome=${{ steps.check.outcome }}" > pages-redesign-html-result.txt
+          cat /tmp/html-result.txt >> pages-redesign-html-result.txt 2>/dev/null || true
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pages-redesign-html-result.txt
+          git commit -m "Registra verifica HTML Pages redesign"
+          git push
+      - name: Fail if needed
+        if: steps.check.outcome != 'success'
+        run: exit 1
