@@ -122,7 +122,11 @@ function cleanRelationTitle(v){
   x=stripRelationQualifier(x);
   return x.replace(/\s+/g,' ').trim()
 }
-function safeBookRelation(v){const x=cleanRelationTitle(v);return x&&!screenMediaNoise(x)?x:''}
+function relationMarkupNoise(v){
+  const x=String(v||''),n=normalizeText(x);if(!x)return false;
+  return /[{}]/.test(x)||/\|\s*[a-z][a-z0-9 _-]{1,45}\s*=/i.test(x)||/\b(?:followed by|preceded by|website|publisher|author|language|isbn|issn|homepage|url)\s*=/i.test(x)||/\b(?:infobox|cite book|cite web|birth date|website)\b/i.test(n)
+}
+function safeBookRelation(v){const x=cleanRelationTitle(v);return x&&!screenMediaNoise(x)&&!relationMarkupNoise(x)?x:''}
   function cleanCatalogTitle(v){
     let t=String(v||'').replace(/\s+/g,' ').trim();if(!t)return'';
     t=t.replace(/\s*[:|]\s*[^:|]{0,220}\bAmazon(?:\.it)?\b.*$/i,'').trim();

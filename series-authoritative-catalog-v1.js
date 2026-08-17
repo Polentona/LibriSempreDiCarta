@@ -54,6 +54,17 @@
       verified:'2026-08-17'
     },
     {
+      author:'Koji Suzuki',
+      saga:'Ring',
+      titles:['Ring','Spiral','Loop'],
+      codes:{'8842913316':1,'9788842913313':1},
+      sources:[
+        'https://www.penguinrandomhouse.com/books/175557/spiral-by-koji-suzuki/',
+        'https://kodansha.us/book/ring-trilogy/loop-paperback/'
+      ],
+      verified:'2026-08-17'
+    },
+    {
       author:'Stephen King',
       saga:'',
       titles:['Shining','Doctor Sleep'],
