@@ -1,0 +1,1 @@
+Pubblica ef295fd755222cdc8441870a15bc348b2d894ba2: riconoscimento sinossi dopo ISBN/EAN e filtro anti-recensioni globale.
