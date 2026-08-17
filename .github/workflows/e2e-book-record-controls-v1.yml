@@ -1,0 +1,70 @@
+name: E2E scheda libro e presenza fisica v1
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/e2e-book-record-controls-v1.yml'
+permissions:
+  contents: read
+jobs:
+  test-book-record:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Installa Playwright
+        run: |
+          mkdir -p /tmp/e2e-book-record
+          cd /tmp/e2e-book-record
+          npm init -y >/dev/null 2>&1
+          npm install playwright@1.55.0 >/dev/null 2>&1
+          npx playwright install --with-deps chromium >/dev/null
+      - name: Attendi pubblicazione Pages
+        run: sleep 35
+      - name: Test scheda completa e spunta privata
+        working-directory: /tmp/e2e-book-record
+        run: |
+          cat > test.js <<'JS'
+          const { chromium }=require('playwright');
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+            const page=await browser.newPage();
+            const logs=[];page.on('console',m=>logs.push(`[${m.type()}] ${m.text()}`));page.on('pageerror',e=>logs.push(`[pageerror] ${e.message}`));
+            try{
+              await page.goto('https://polentona.github.io/LibriSempreDiCarta/?e2e-book-record='+Date.now(),{waitUntil:'domcontentloaded',timeout:60000});
+              await page.evaluate(()=>localStorage.removeItem('libriDiCarta.books.v1'));
+              await page.reload({waitUntil:'domcontentloaded'});
+              await page.locator('#addBookBtn').waitFor({state:'visible',timeout:30000});
+              await page.locator('#addBookBtn').click();
+              await page.locator('#editPhysicalOwned').waitFor({state:'visible',timeout:30000});
+              await page.locator('#editTitle').fill('Libro test presenza fisica');
+              await page.locator('#editAuthor').fill('Autore Test');
+              await page.locator('#editPhysicalOwned').check();
+              await page.locator('#saveDialogBtn').click();
+              await page.locator('.book').first().waitFor({state:'visible',timeout:30000});
+
+              const cardText=await page.locator('.book').first().innerText();
+              if(/presente fisicamente/i.test(cardText))throw new Error('La spunta è visibile nella card principale');
+
+              const openBtn=page.locator('.book').first().locator('[data-edit]');
+              await page.waitForFunction(()=>/apri scheda/i.test(document.querySelector('.book [data-edit]')?.textContent||''),null,{timeout:10000});
+              await openBtn.click();
+              await page.locator('#editDialog[open]').waitFor({state:'visible',timeout:10000});
+
+              const ids=['editCode','editCategory','editPublisher','editPublishedDate','editSaga','editPrequel','editSequel','editCover','editPlot','editPhysicalOwned'];
+              for(const id of ids)if(!(await page.locator('#'+id).count()))throw new Error('Campo mancante nella scheda riaperta: '+id);
+              if(!(await page.locator('#editPhysicalOwned').isChecked()))throw new Error('La presenza fisica non è stata mantenuta al primo riavvio');
+
+              await page.locator('#editPhysicalOwned').uncheck();
+              await page.locator('#saveDialogBtn').click();
+              await page.locator('.book').first().locator('[data-edit]').click();
+              await page.locator('#editDialog[open]').waitFor({state:'visible',timeout:10000});
+              if(await page.locator('#editPhysicalOwned').isChecked())throw new Error('La presenza fisica non ha salvato il valore NO');
+
+              console.log('BOOK_RECORD_RESULT='+JSON.stringify({openButton:'Apri scheda',fullFields:true,physicalPersisted:true,hiddenFromCard:true}));
+            }catch(e){console.error('BOOK_RECORD_ERROR='+e.message);console.error('BOOK_RECORD_LOGS='+JSON.stringify(logs.slice(-80)));process.exitCode=1}
+            await browser.close();
+          })();
+          JS
+          node test.js
