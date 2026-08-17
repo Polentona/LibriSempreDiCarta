@@ -1,0 +1,129 @@
+name: Corregge le due trilogie di Kerstin Gier
+on:
+  push:
+    paths:
+      - '.github/workflows/patch-kerstin-series-once.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Applica correzione catalogo e ISBN
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          # 1) Metadati ISBN verificati: titolo canonico + saga corretta.
+          p=Path('isbn-cover.js')
+          s=p.read_text(encoding='utf-8')
+          marker="  const VERIFIED_BOOK_METADATA={\n"
+          if "'9788863807035':{title:'La porta di Liv. Silver'" not in s:
+              add=(
+                  "    '9788863807035':{title:'La porta di Liv. Silver',saga:'Trilogia dei sogni',author:'Kerstin Gier',publisher:'Corbaccio',publishedDate:'2014'},\n"
+                  "    '8863807035':{title:'La porta di Liv. Silver',saga:'Trilogia dei sogni',author:'Kerstin Gier',publisher:'Corbaccio',publishedDate:'2014'},\n"
+                  "    '9788850230884':{title:'Blue',saga:'Trilogia delle gemme',author:'Kerstin Gier',publisher:'TEA',publishedDate:'2013'},\n"
+                  "    '8850230885':{title:'Blue',saga:'Trilogia delle gemme',author:'Kerstin Gier',publisher:'TEA',publishedDate:'2013'},\n"
+              )
+              if marker not in s:
+                  raise SystemExit('VERIFIED_BOOK_METADATA non trovato')
+              s=s.replace(marker,marker+add,1)
+          p.write_text(s,encoding='utf-8')
+
+          # 2) Catalogo autorevole: due serie distinte dello stesso autore,
+          #    con lookup prioritario per ISBN per evitare contaminazioni.
+          p=Path('series-authoritative-catalog-v1.js')
+          s=p.read_text(encoding='utf-8')
+          if "saga:'Trilogia dei sogni'" not in s:
+              addition=""",
+    {
+      author:'Kerstin Gier',
+      saga:'Trilogia dei sogni',
+      titles:['Il libro dei sogni','La porta di Liv. Silver',"L'ultimo segreto"],
+      codes:{'9788863807035':1,'8863807035':1},
+      sources:[
+        'https://books.google.com/books/about/Silver_La_Trilogia.html?id=ydS2DQAAQBAJ',
+        'https://www.ibs.it/porta-di-liv-silver-trilogia-libro-kerstin-gier/e/9788863807035'
+      ],
+      verified:'2026-08-17'
+    },
+    {
+      author:'Kerstin Gier',
+      saga:'Trilogia delle gemme',
+      titles:['Red','Blue','Green'],
+      codes:{'9788850230884':1,'8850230885':1},
+      sources:[
+        'https://books.google.com/books/about/Red_Blue_Green_La_Trilogia.html?id=-HcFlavOcOgC',
+        'https://www.ibs.it/blue-trilogia-delle-gemme-vol-libro-kerstin-gier/e/9788850230884'
+      ],
+      verified:'2026-08-17'
+    }"""
+              needle="\n  ];\n\n  function resolve(input={}){"
+              if needle not in s:
+                  raise SystemExit('Punto inserimento catalogo non trovato')
+              s=s.replace(needle,addition+needle,1)
+
+          old="""  function resolve(input={}){
+    const author=clean(input.author),saga=clean(input.saga),title=clean(input.title);
+    if(!author||!saga||!title)return null;
+    const entry=SERIES.find(x=>same(x.author,author)&&same(x.saga,saga));
+    if(!entry)return null;
+    const idx=entry.titles.findIndex(x=>sameTitle(title,x,entry.saga));
+    if(idx<0)return null;
+"""
+          new="""  function resolve(input={}){
+    const author=clean(input.author),saga=clean(input.saga),title=clean(input.title),code=clean(input.code).replace(/[^0-9Xx]/g,'').toUpperCase();
+    let entry=null,idx=-1;
+    if(code){
+      entry=SERIES.find(x=>x.codes&&Object.prototype.hasOwnProperty.call(x.codes,code))||null;
+      if(entry)idx=Number(entry.codes[code]);
+    }
+    if(!entry){
+      if(!author||!saga||!title)return null;
+      entry=SERIES.find(x=>same(x.author,author)&&same(x.saga,saga));
+      if(!entry)return null;
+      idx=entry.titles.findIndex(x=>sameTitle(title,x,entry.saga));
+    }
+    if(idx<0||idx>=entry.titles.length)return null;
+"""
+          if old in s:
+              s=s.replace(old,new,1)
+          elif "Object.prototype.hasOwnProperty.call(x.codes,code)" not in s:
+              raise SystemExit('Blocco resolve non trovato')
+          s=s.replace("window.__LIB_AUTHORITATIVE_SERIES_LAST__={input:{title,author,saga},entry,result};","window.__LIB_AUTHORITATIVE_SERIES_LAST__={input:{title,author,saga,code},entry,result};")
+          p.write_text(s,encoding='utf-8')
+
+          # 3) Cache bust dei file modificati.
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          s,n1=re.subn(r'bg/bg\$\{i\}\.js\?v=\d+', 'bg/bg${i}.js?v=23', s, count=1)
+          s,n2=re.subn(r'series-authoritative-catalog-v1\.js\?v=\d+', 'series-authoritative-catalog-v1.js?v=3', s, count=1)
+          if n1!=1 or n2!=1:
+              raise SystemExit(f'Cache bust index non riuscito: bg={n1}, catalog={n2}')
+          p.write_text(s,encoding='utf-8')
+
+          p=Path('bg/bg8.js')
+          s=p.read_text(encoding='utf-8')
+          s,n=re.subn(r'isbn-cover\.js\?v=\d+', 'isbn-cover.js?v=23', s, count=1)
+          if n!=1:
+              raise SystemExit('Cache bust isbn-cover non riuscito')
+          p.write_text(s,encoding='utf-8')
+          PY
+      - name: Verifica patch
+        run: |
+          grep -q "La porta di Liv. Silver',saga:'Trilogia dei sogni'" isbn-cover.js
+          grep -q "Blue',saga:'Trilogia delle gemme'" isbn-cover.js
+          grep -q "codes:{'9788863807035':1" series-authoritative-catalog-v1.js
+          grep -q "codes:{'9788850230884':1" series-authoritative-catalog-v1.js
+          grep -q "Object.prototype.hasOwnProperty.call(x.codes,code)" series-authoritative-catalog-v1.js
+          grep -q "series-authoritative-catalog-v1.js?v=3" index.html
+          grep -q "isbn-cover.js?v=23" bg/bg8.js
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add isbn-cover.js series-authoritative-catalog-v1.js index.html bg/bg8.js
+          git commit -m "Separa Trilogia dei sogni e Trilogia delle gemme"
+          git push
