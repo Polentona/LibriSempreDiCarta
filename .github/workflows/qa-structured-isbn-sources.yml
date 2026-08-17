@@ -1,0 +1,31 @@
+name: QA fonti strutturate ISBN
+on:
+  push:
+    branches: [qa-isbn-9788845283253]
+    paths: ['.github/workflows/qa-structured-isbn-sources.yml']
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Interroga fonti
+        shell: bash
+        run: |
+          node <<'JS'
+          const urls = [
+            'https://openlibrary.org/search.json?isbn=9788845283253&fields=title,author_name,publisher,publish_year,first_publish_year,isbn,subject,cover_i,language&limit=10',
+            'https://openlibrary.org/api/volumes/brief/isbn/9788845283253.json',
+            'https://itunes.apple.com/search?term='+encodeURIComponent('I sussurri della morte Simon Beckett')+'&country=IT&media=ebook&entity=ebook&limit=10'
+          ];
+          (async()=>{
+            for (const url of urls) {
+              try {
+                const r=await fetch(url,{headers:{'User-Agent':'LibriSempreDiCarta QA'}});
+                const text=await r.text();
+                console.log('\nURL='+url+'\nSTATUS='+r.status+'\nBODY='+text.slice(0,12000));
+              } catch(e) { console.log('ERR',url,String(e)); }
+            }
+          })();
+          JS
