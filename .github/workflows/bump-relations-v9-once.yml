@@ -1,0 +1,31 @@
+name: Forza relazioni v9
+on:
+  push:
+    paths:
+      - '.github/workflows/bump-relations-v9-once.yml'
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Aggiorna versione
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('isbn-cover.js')
+          s=p.read_text(encoding='utf-8')
+          if 'const RELATIONS_LOOKUP_VERSION=8' not in s:
+              raise SystemExit('Versione 8 non trovata')
+          p.write_text(s.replace('const RELATIONS_LOOKUP_VERSION=8','const RELATIONS_LOOKUP_VERSION=9'),encoding='utf-8')
+          PY
+          node --check isbn-cover.js
+      - name: Pubblica e rimuove workflow
+        run: |
+          rm -f .github/workflows/bump-relations-v9-once.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Forza nuovo controllo di saga prequel e sequel"
+          git push
