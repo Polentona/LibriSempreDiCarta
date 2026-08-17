@@ -1,0 +1,105 @@
+name: E2E live Baciata finale
+on:
+  workflow_run:
+    workflows: ["Deploy GitHub Pages"]
+    types: [completed]
+permissions:
+  contents: read
+jobs:
+  test-baciata-final:
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Installa Playwright
+        run: |
+          mkdir -p /tmp/e2e-baciata
+          cd /tmp/e2e-baciata
+          npm init -y >/dev/null 2>&1
+          npm install playwright@1.55.0 >/dev/null 2>&1
+          npx playwright install --with-deps chromium >/dev/null
+      - name: Prova ISBN Sarà per sempre sul sito pubblico
+        working-directory: /tmp/e2e-baciata
+        run: |
+          cat > test.js <<'JS'
+          const { chromium } = require('playwright');
+          const fs = require('fs');
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+            const page=await browser.newPage();
+            const consoleLines=[];
+            page.on('console',m=>consoleLines.push(`[${m.type()}] ${m.text()}`));
+            page.on('pageerror',e=>consoleLines.push(`[pageerror] ${e.message}`));
+            const snapshot=()=>page.evaluate(()=>({
+              title:document.querySelector('#editTitle')?.value||'',
+              author:document.querySelector('#editAuthor')?.value||'',
+              saga:document.querySelector('#editSaga')?.value||'',
+              prequel:document.querySelector('#editPrequel')?.value||'',
+              sequel:document.querySelector('#editSequel')?.value||'',
+              status:document.querySelector('#lookupStatus')?.textContent||'',
+              statusClass:document.querySelector('#lookupStatus')?.className||'',
+              authoritative:window.__LIB_LAST_AUTHORITATIVE_SERIES_RESULT__||null,
+              authoritativeCatalog:window.__LIB_AUTHORITATIVE_SERIES_LAST__||null,
+              neighbors:window.__LIB_LAST_NEIGHBORS_RESULT__||null
+            }));
+            let result={};
+            try{
+              await page.goto('https://polentona.github.io/LibriSempreDiCarta/?e2e-baciata='+Date.now(),{waitUntil:'domcontentloaded',timeout:60000});
+              await page.locator('#addBookBtn').waitFor({state:'visible',timeout:30000});
+              await page.locator('#addBookBtn').click();
+              await page.locator('#editCode').waitFor({state:'visible',timeout:30000});
+              await page.locator('#editCode').fill('9788854150706');
+              await page.locator('#lookupMetadataBtn').click();
+              await page.waitForFunction(()=>{
+                const t=document.querySelector('#editTitle')?.value||'';
+                const overlay=document.querySelector('#metadataOverlay');
+                return /Sarà per sempre/i.test(t)||(overlay&&overlay.open);
+              },null,{timeout:90000});
+              const overlayOpen=await page.locator('#metadataOverlay').evaluate(el=>!!el.open).catch(()=>false);
+              if(overlayOpen){
+                const choices=page.locator('[data-meta-choice]');
+                const count=await choices.count();
+                let chosen=false;
+                for(let i=0;i<count;i++){
+                  const text=await choices.nth(i).innerText();
+                  if(/Sarà per sempre/i.test(text)&&/Elizabeth Chandler/i.test(text)){await choices.nth(i).click();chosen=true;break}
+                }
+                if(!chosen&&count===1)await choices.first().click();
+              }
+              await page.waitForFunction(()=>/Sarà per sempre/i.test(document.querySelector('#editTitle')?.value||'')&&/Elizabeth Chandler/i.test(document.querySelector('#editAuthor')?.value||''),null,{timeout:60000});
+              await page.waitForFunction(()=>{
+                const status=document.querySelector('#lookupStatus');
+                return !(status?.classList.contains('lookup-busy')||status?.querySelector('.lookup-book-spinner'));
+              },null,{timeout:120000}).catch(()=>{});
+              await page.waitForTimeout(1200);
+              result=await snapshot();
+              console.log('E2E_BACIATA_RESULT='+JSON.stringify(result));
+              console.log('E2E_BACIATA_CONSOLE='+JSON.stringify(consoleLines));
+              fs.writeFileSync('baciata-e2e.json',JSON.stringify({result,consoleLines},null,2));
+              await page.screenshot({path:'baciata-e2e.png',fullPage:true});
+              const ok=/^Baciata da un angelo$/i.test(result.saga.trim())&&/^L['’]amore e l['’]odio$/i.test(result.prequel.trim())&&result.sequel.trim()==='';
+              if(!ok)throw new Error(`Campi non corretti: saga=${JSON.stringify(result.saga)} prequel=${JSON.stringify(result.prequel)} sequel=${JSON.stringify(result.sequel)}`);
+            }catch(e){
+              try{result=await snapshot()}catch(_){}
+              try{fs.writeFileSync('baciata-e2e.json',JSON.stringify({result,consoleLines,error:String(e&&e.stack||e)},null,2))}catch(_){}
+              try{await page.screenshot({path:'baciata-e2e.png',fullPage:true})}catch(_){}
+              console.error('E2E_BACIATA_FAILURE_RESULT='+JSON.stringify(result));
+              console.error('E2E_BACIATA_FAILURE',e);
+              process.exitCode=1;
+            }finally{await browser.close()}
+          })();
+          JS
+          node test.js
+      - name: Carica diagnostica E2E
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: baciata-final-e2e-diagnostics
+          path: |
+            /tmp/e2e-baciata/baciata-e2e.json
+            /tmp/e2e-baciata/baciata-e2e.png
+          if-no-files-found: ignore
+          retention-days: 3
