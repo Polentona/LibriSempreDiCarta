@@ -1,0 +1,28 @@
+name: Copertine EAN fidate v15
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/trusted_ean_cover_v15.py'
+      - '.github/workflows/run-trusted-ean-cover-v15.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Applica patch
+        run: python tools/trusted_ean_cover_v15.py
+      - name: Verifica
+        run: |
+          node --check isbn-cover.js
+          grep -q "trustedEanCoverCheck" isbn-cover.js
+          grep -q "isbn-cover.js?v=20260817-15" index.html
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add isbn-cover.js index.html
+          git commit -m "Verifica direttamente le copertine associate all EAN"
+          git push
