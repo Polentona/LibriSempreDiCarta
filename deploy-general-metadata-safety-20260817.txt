@@ -1,0 +1,2 @@
+Retry GitHub Pages deployment for general metadata safety fix after transient GitHub Pages 503/429.
+Includes commit 8696f7dcd2517915cf9df6d908996947182e74ec and E2E Shining workflow.
