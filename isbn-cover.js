@@ -309,13 +309,13 @@ function boot(){
     /* __LIB_PRE_RELATION_NEIGHBORS_V5__ */
     /* __LIB_AUTHORITATIVE_PRELOOKUP_V1__ */
     let authoritativeRelationsResolved=false;
-    if(type==='isbn'&&typeof window.__LIB_RESOLVE_AUTHORITATIVE_SERIES_NEIGHBORS==='function'&&candidate.title&&candidate.author&&candidate.saga&&(!candidate.prequel||!candidate.sequel)){
+    if(type==='isbn'&&typeof window.__LIB_RESOLVE_AUTHORITATIVE_SERIES_NEIGHBORS==='function'&&candidate.title&&candidate.author&&(!candidate.prequel||!candidate.sequel)){
       try{
         const localRel=window.__LIB_RESOLVE_AUTHORITATIVE_SERIES_NEIGHBORS({code,title:candidate.title,author:candidate.author,saga:candidate.saga});
         window.__LIB_LAST_AUTHORITATIVE_SERIES_RESULT__=localRel||null;
         authoritativeRelationsResolved=!!localRel?.authoritative;
         if(localRel?.authoritative){
-          if(localRel.saga){candidate.saga=safeBookRelation(localRel.saga);setAutoField('editSaga',candidate.saga,true)}
+          candidate.saga=safeBookRelation(localRel.saga);setAutoField('editSaga',candidate.saga,true)
           candidate.prequel=safeBookRelation(localRel.prequel);
           candidate.sequel=safeBookRelation(localRel.sequel);
           setAutoField('editPrequel',candidate.prequel,true);

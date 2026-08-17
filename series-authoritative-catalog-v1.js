@@ -52,6 +52,17 @@
       codes:{'9788850230884':1,'8850230885':1},
       sources:['https://books.google.com/books/about/Red_Blue_Green_La_Trilogia.html?id=-HcFlavOcOgC','https://www.ibs.it/blue-trilogia-delle-gemme-vol-libro-kerstin-gier/e/9788850230884'],
       verified:'2026-08-17'
+    },
+    {
+      author:'Stephen King',
+      saga:'',
+      titles:['Shining','Doctor Sleep'],
+      codes:{'9788845275746':0,'8845275744':0},
+      sources:[
+        'https://www.bompiani.it/autori/stephen-king-773',
+        'https://stephenking.com/news/doctor-sleep-release-date-325.html'
+      ],
+      verified:'2026-08-17'
     }
   ];
 
