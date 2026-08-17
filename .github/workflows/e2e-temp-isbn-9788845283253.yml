@@ -30,43 +30,21 @@ jobs:
           (async()=>{
             const browser=await chromium.launch({headless:true});
             const page=await browser.newPage();
-            const failed=[];const consoleLines=[];
-            page.on('response',r=>{ if(r.status()>=400) failed.push({status:r.status(),url:r.url()}); });
-            page.on('requestfailed',r=>failed.push({status:'FAILED',url:r.url(),error:r.failure()?.errorText||''}));
-            page.on('console',m=>consoleLines.push(`[${m.type()}] ${m.text()}`));
-            page.on('pageerror',e=>consoleLines.push(`[pageerror] ${e.message}`));
             await page.goto('https://polentona.github.io/LibriSempreDiCarta/?qa-final-9788845283253='+Date.now(),{waitUntil:'domcontentloaded',timeout:60000});
             await page.locator('#addBookBtn').waitFor({state:'visible',timeout:30000});
             await page.locator('#addBookBtn').click();
             await page.locator('#editCode').fill('9788845283253');
             await page.locator('#lookupMetadataBtn').click();
-            await page.waitForFunction(()=>{
-              const t=document.querySelector('#editTitle')?.value||'';
-              const o=document.querySelector('#metadataOverlay');
-              return !!t || (o&&o.open);
-            },null,{timeout:90000}).catch(()=>{});
+            await page.waitForFunction(()=>{const t=document.querySelector('#editTitle')?.value||'';const o=document.querySelector('#metadataOverlay');return !!t||(o&&o.open)},null,{timeout:90000}).catch(()=>{});
             if(await page.locator('#metadataOverlay').evaluate(el=>!!el.open).catch(()=>false)){
               const choices=page.locator('[data-meta-choice]');const count=await choices.count();let chosen=false;
-              for(let i=0;i<count;i++){
-                const text=await choices.nth(i).innerText();
-                if(/sussurri della morte/i.test(text)&&/Simon Beckett/i.test(text)){await choices.nth(i).click();chosen=true;break}
-              }
+              for(let i=0;i<count;i++){const text=await choices.nth(i).innerText();if(/sussurri della morte/i.test(text)&&/Simon Beckett/i.test(text)){await choices.nth(i).click();chosen=true;break}}
               if(!chosen&&count===1)await choices.first().click();
             }
             await page.waitForFunction(()=>/sussurri della morte/i.test(document.querySelector('#editTitle')?.value||''),null,{timeout:120000}).catch(()=>{});
             await page.waitForTimeout(8000);
-            const result=await page.evaluate(()=>{
-              const val=id=>document.querySelector(id)?.value||'';
-              return {
-                title:val('#editTitle'),author:val('#editAuthor'),category:val('#editCategory'),publisher:val('#editPublisher'),publication:val('#editPublishedDate'),saga:val('#editSaga'),prequel:val('#editPrequel'),sequel:val('#editSequel'),cover:val('#editCover'),plot:val('#editPlot'),
-                resilient:window.__LIB_RESILIENT_ISBN_LAST__||null,
-                authoritative:window.__LIB_AUTHORITATIVE_SERIES_LAST__||null,
-                bounded:window.__LIB_BOUNDED_SERIES_LAST__||null
-              };
-            });
+            const result=await page.evaluate(()=>{const val=id=>document.querySelector(id)?.value||'';return {title:val('#editTitle'),author:val('#editAuthor'),category:val('#editCategory'),publisher:val('#editPublisher'),publication:val('#editPublishedDate'),saga:val('#editSaga'),prequel:val('#editPrequel'),sequel:val('#editSequel')}});
             console.log('ISBN_FINAL_RESULT='+JSON.stringify(result));
-            console.log('ISBN_FINAL_FAILED='+JSON.stringify(failed));
-            console.log('ISBN_FINAL_CONSOLE='+JSON.stringify(consoleLines.slice(-60)));
             const errors=[];
             if(norm(result.title).toLowerCase()!=='i sussurri della morte')errors.push('titolo='+JSON.stringify(result.title));
             if(norm(result.author)!=='Simon Beckett')errors.push('autore='+JSON.stringify(result.author));
@@ -75,10 +53,11 @@ jobs:
             if(norm(result.saga)!=='David Hunter')errors.push('saga='+JSON.stringify(result.saga));
             if(norm(result.prequel)!=='Scritto nelle ossa')errors.push('prequel='+JSON.stringify(result.prequel));
             if(norm(result.sequel)!=='La voce dei morti')errors.push('sequel='+JSON.stringify(result.sequel));
-            if(/libraccio\.it/i.test(result.title))errors.push('titolo generico Libraccio');
+            if(/libraccio\.it|product details|product information|book details/i.test(result.title))errors.push('titolo generico='+JSON.stringify(result.title));
             if(/https?:|\[\]\(/i.test(result.category))errors.push('categoria sporca='+JSON.stringify(result.category));
             if(errors.length)throw new Error('ISBN 9788845283253 non corretto: '+errors.join(' | '));
             await browser.close();
           })().catch(e=>{console.error('ISBN_FINAL_FAILURE',e);process.exitCode=1});
           JS
           node test.js
+# rerun after generic-title hardening
