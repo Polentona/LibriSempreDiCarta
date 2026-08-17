@@ -336,11 +336,19 @@ function candidateRelationsIncomplete(candidate){
     img.src=coverProbeUrl(url)
   })}
   window.__LIB_INSPECT_FRONT_COVER=inspectFrontCover;
+  function trustedEanCoverCheck(url){return new Promise(resolve=>{
+    const img=new Image();let done=false;
+    const finish=v=>{if(done)return;done=true;clearTimeout(t);resolve(v)};const t=setTimeout(()=>finish({ok:false,reason:'timeout'}),6500);
+    img.onerror=()=>finish({ok:false,reason:'load'});
+    img.onload=()=>{const w=img.naturalWidth,h=img.naturalHeight,ratio=w/Math.max(1,h);finish({ok:w>=100&&h>=150&&ratio>=0.43&&ratio<=0.86,reason:'trusted-ean-ratio',w,h,ratio})};
+    img.src=secureUrl(url)
+  })}
+  window.__LIB_TRUSTED_EAN_COVER_CHECK=trustedEanCoverCheck;
   function imageWorks(url){return inspectFrontCover(url).then(x=>!!x.ok)}
   async function usableCovers(covers){
     const seen=new Set(),list=[];
     for(const c of covers||[]){const url=secureUrl(typeof c==='string'?c:c.url),source=typeof c==='string'?'Fonte bibliografica':(c.source||'Fonte bibliografica');if(url&&!seen.has(url)){seen.add(url);list.push({url,source})}}
-    const tested=await Promise.all(list.slice(0,12).map(async c=>({c,q:await inspectFrontCover(c.url)})));
+    const tested=await Promise.all(list.slice(0,12).map(async c=>({c,q:/Messaggerie Libri · EAN/i.test(c.source)?await trustedEanCoverCheck(c.url):await inspectFrontCover(c.url)})));
     window.__LIB_LAST_COVER_QUALITY__=tested.map(x=>({url:x.c.url,source:x.c.source,...x.q}));
     return tested.filter(x=>x.q.ok).map(x=>x.c)
   }
@@ -600,11 +608,11 @@ function candidateRelationsIncomplete(candidate){
       const exactEan=normalizeLoose(code);
       const exactMessaggerie={url:`https://img.messaggerielibri.it/images/${encodeURIComponent(exactEan)}_0_500_0_0.jpg`,source:'Messaggerie Libri · EAN'};
       const exactOl={url:`https://covers.openlibrary.org/b/isbn/${encodeURIComponent(exactEan)}-L.jpg?default=false`,source:'Open Library · ISBN'};
-      const messaggerieOk=await imageWorks(exactMessaggerie.url);
+      const messaggerieProbe=await trustedEanCoverCheck(exactMessaggerie.url),messaggerieOk=!!messaggerieProbe.ok;
       let retail=[];
       if(!messaggerieOk)retail=await retailerCoversForIsbn(code,candidate.title||'',candidate.author||'');
       candidate.covers=mergeCoverOptions(messaggerieOk?[exactMessaggerie,...(candidate.covers||[])]:candidate.covers,[exactOl,...retail]);
-      window.__LIB_EXACT_EAN_COVER__={code:exactEan,url:exactMessaggerie.url,ok:messaggerieOk,retailerFallback:!messaggerieOk}
+      window.__LIB_EXACT_EAN_COVER__={code:exactEan,url:exactMessaggerie.url,ok:messaggerieOk,probe:messaggerieProbe,retailerFallback:!messaggerieOk}
     }
     let pickerOpened=false;if(!coverAlready&&candidate.covers?.length)pickerOpened=await showCoverPicker(candidate.covers,code);
     if(candidate.serialLevel)setStatus(`ISSN riconosciuto. Ho compilato i dati della testata; ricorda che l'ISSN identifica il periodico, non necessariamente il singolo numero. Controlla titolo e numero dell'uscita.`,'warn');
