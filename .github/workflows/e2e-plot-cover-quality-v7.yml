@@ -25,7 +25,20 @@ jobs:
         run: |
           cat > test.js <<'JS'
           const {chromium}=require('playwright');
-          (async()=>{const b=await chromium.launch({headless:true}),p=await b.newPage();await p.goto('https://polentona.github.io/LibriSempreDiCarta/?proxy-test='+Date.now(),{waitUntil:'domcontentloaded'});
-          const out=await p.evaluate(async()=>{const target='https://www.rizzolilibri.it/libri/rapture/';const urls={jina:'https://r.jina.ai/'+target,allorigins:'https://api.allorigins.win/raw?url='+encodeURIComponent(target),corsproxy:'https://corsproxy.io/?url='+encodeURIComponent(target),codetabs:'https://api.codetabs.com/v1/proxy?quest='+encodeURIComponent(target)};const r={};for(const [k,u] of Object.entries(urls)){try{const x=await fetch(u,{signal:AbortSignal.timeout(15000)}),t=await x.text();r[k]={ok:x.ok,status:x.status,len:t.length,hasLuce:/Luce/i.test(t),hasDaniel:/Daniel/i.test(t)}}catch(e){r[k]={ok:false,error:String(e)}}return r});console.log('PROXY_RESULT='+JSON.stringify(out));await b.close()})().catch(e=>{console.error(e);process.exitCode=1});
+          (async()=>{
+            const b=await chromium.launch({headless:true}),p=await b.newPage();
+            await p.goto('https://polentona.github.io/LibriSempreDiCarta/?proxy-test='+Date.now(),{waitUntil:'domcontentloaded'});
+            const out=await p.evaluate(async()=>{
+              const target='https://www.rizzolilibri.it/libri/rapture/';
+              const urls={jina:'https://r.jina.ai/'+target,allorigins:'https://api.allorigins.win/raw?url='+encodeURIComponent(target),corsproxy:'https://corsproxy.io/?url='+encodeURIComponent(target),codetabs:'https://api.codetabs.com/v1/proxy?quest='+encodeURIComponent(target)};
+              const r={};
+              for(const [k,u] of Object.entries(urls)){
+                try{const x=await fetch(u,{signal:AbortSignal.timeout(15000)}),t=await x.text();r[k]={ok:x.ok,status:x.status,len:t.length,hasLuce:/Luce/i.test(t),hasDaniel:/Daniel/i.test(t)}}
+                catch(e){r[k]={ok:false,error:String(e)}}
+              }
+              return r;
+            });
+            console.log('PROXY_RESULT='+JSON.stringify(out));await b.close();
+          })().catch(e=>{console.error(e);process.exitCode=1});
           JS
           node test.js
