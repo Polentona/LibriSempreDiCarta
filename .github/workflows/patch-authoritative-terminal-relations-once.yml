@@ -1,0 +1,111 @@
+name: Corregge relazioni terminali serie verificate
+on:
+  push:
+    paths:
+      - '.github/workflows/patch-authoritative-terminal-relations-once.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Applica correzione
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          p=Path('isbn-cover.js')
+          s=p.read_text(encoding='utf-8')
+          start=s.index('  async function applyCandidate(candidate,code,type){')
+          end=s.index('    const forcedCover=verifiedUiCover(code);', start)
+          seg=s[start:end]
+
+          marker='    /* __LIB_AUTHORITATIVE_PRELOOKUP_V1__ */\n'
+          if 'let authoritativeRelationsResolved=false;' not in seg:
+              if marker not in seg:
+                  raise SystemExit('Marker authoritative non trovato')
+              seg=seg.replace(marker, marker+'    let authoritativeRelationsResolved=false;\n',1)
+
+          old="""        window.__LIB_LAST_AUTHORITATIVE_SERIES_RESULT__=localRel||null;
+        if(localRel?.prequel){candidate.prequel=String(localRel.prequel).trim();setAutoField('editPrequel',candidate.prequel,true)}
+        if(localRel?.sequel){candidate.sequel=String(localRel.sequel).trim();setAutoField('editSequel',candidate.sequel,true)}
+"""
+          new="""        window.__LIB_LAST_AUTHORITATIVE_SERIES_RESULT__=localRel||null;
+        authoritativeRelationsResolved=!!localRel?.authoritative;
+        if(localRel?.authoritative){
+          if(localRel.saga){candidate.saga=String(localRel.saga).trim();setAutoField('editSaga',candidate.saga,true)}
+          candidate.prequel=String(localRel.prequel||'').trim();
+          candidate.sequel=String(localRel.sequel||'').trim();
+          setAutoField('editPrequel',candidate.prequel,true);
+          setAutoField('editSequel',candidate.sequel,true);
+        }
+"""
+          if old not in seg:
+              raise SystemExit('Blocco authoritative da sostituire non trovato')
+          seg=seg.replace(old,new,1)
+
+          # Una relazione verificata è definitiva, anche quando prequel/sequel è volutamente vuoto.
+          seg=seg.replace("if(type==='isbn'&&typeof window.__LIB_RESOLVE_SERIES_NEIGHBORS==='function'", "if(type==='isbn'&&!authoritativeRelationsResolved&&typeof window.__LIB_RESOLVE_SERIES_NEIGHBORS==='function'")
+          seg=seg.replace("if(type==='isbn'&&typeof window.__LIB_FIND_RELATIONS==='function'", "if(type==='isbn'&&!authoritativeRelationsResolved&&typeof window.__LIB_FIND_RELATIONS==='function'")
+          if seg.count('!authoritativeRelationsResolved') < 3:
+              raise SystemExit('Non sono stati protetti tutti i fallback dinamici')
+
+          s=s[:start]+seg+s[end:]
+
+          # Anche l'arricchimento dei libri già salvati deve rispettare i confini autorevoli.
+          old_saved="""    for(const b of pending){
+      try{
+        const rel=await window.__LIB_FIND_RELATIONS({code:b.code||b.isbn||'',title:b.title,author:b.author,saga:b.saga||'',description:b.plot||b.description||''});let changed=false;
+"""
+          new_saved="""    for(const b of pending){
+      try{
+        const authoritativeRel=typeof window.__LIB_RESOLVE_AUTHORITATIVE_SERIES_NEIGHBORS==='function'?window.__LIB_RESOLVE_AUTHORITATIVE_SERIES_NEIGHBORS({code:b.code||b.isbn||'',title:b.title,author:b.author,saga:b.saga||''}):null;
+        if(authoritativeRel?.authoritative){
+          let changed=false;
+          const nextSaga=String(authoritativeRel.saga||b.saga||'').trim(),nextPrequel=String(authoritativeRel.prequel||'').trim(),nextSequel=String(authoritativeRel.sequel||'').trim();
+          if(String(b.saga||'').trim()!==nextSaga){b.saga=nextSaga;changed=true}
+          if(String(b.prequel||'').trim()!==nextPrequel){b.prequel=nextPrequel;changed=true}
+          if(String(b.sequel||'').trim()!==nextSequel){b.sequel=nextSequel;changed=true}
+          b.relationsLookupAt=now;b.relationsLookupVersion=RELATIONS_LOOKUP_VERSION;saveBooks();if(changed)render();continue
+        }
+        const rel=await window.__LIB_FIND_RELATIONS({code:b.code||b.isbn||'',title:b.title,author:b.author,saga:b.saga||'',description:b.plot||b.description||''});let changed=false;
+"""
+          if old_saved not in s:
+              raise SystemExit('Blocco enrichSavedRelations non trovato')
+          s=s.replace(old_saved,new_saved,1)
+          p.write_text(s,encoding='utf-8')
+
+          # Cache bust degli script modificati.
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          s,n1=re.subn(r'bg/bg\$\{i\}\.js\?v=\d+', 'bg/bg${i}.js?v=22', s, count=1)
+          s,n2=re.subn(r'series-authoritative-catalog-v1\.js\?v=\d+', 'series-authoritative-catalog-v1.js?v=2', s, count=1)
+          if n1!=1 or n2!=1:
+              raise SystemExit(f'Cache bust index non riuscito: bg={n1}, catalog={n2}')
+          p.write_text(s,encoding='utf-8')
+
+          p=Path('bg/bg8.js')
+          s=p.read_text(encoding='utf-8')
+          s,n=re.subn(r'isbn-cover\.js\?v=\d+', 'isbn-cover.js?v=22', s, count=1)
+          if n!=1:
+              raise SystemExit('Cache bust isbn-cover in bg8 non riuscito')
+          p.write_text(s,encoding='utf-8')
+          PY
+      - name: Verifica patch
+        run: |
+          grep -q "let authoritativeRelationsResolved=false" isbn-cover.js
+          grep -q "authoritativeRelationsResolved=!!localRel?.authoritative" isbn-cover.js
+          grep -q "candidate.sequel=String(localRel.sequel||'').trim()" isbn-cover.js
+          grep -q "!authoritativeRelationsResolved&&typeof window.__LIB_FIND_RELATIONS" isbn-cover.js
+          grep -q "authoritativeRel?.authoritative" isbn-cover.js
+          grep -q "series-authoritative-catalog-v1.js?v=2" index.html
+          grep -q "isbn-cover.js?v=22" bg/bg8.js
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add isbn-cover.js index.html bg/bg8.js
+          git commit -m "Rende definitivi prequel e sequel delle serie verificate"
+          git push
