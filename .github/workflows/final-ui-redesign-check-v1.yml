@@ -1,19 +1,21 @@
 name: Verifica finale redesign UI v1
 
 on:
-  push:
-    branches: ["main"]
-    paths:
-      - "ui-redesign-20260818.txt"
+  workflow_run:
+    workflows: ["Deploy GitHub Pages"]
+    types: [completed]
 
 permissions:
   contents: write
 
 jobs:
   verify:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: main
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -98,7 +100,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add final-ui-redesign-result.txt
-          git commit -m "Registra verifica finale redesign UI"
+          git commit -m "Registra verifica finale redesign UI" || exit 0
           git push
       - name: Fallisci se necessario
         if: steps.html.outcome != 'success' || steps.browser.outcome != 'success'
