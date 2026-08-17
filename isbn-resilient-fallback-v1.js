@@ -34,10 +34,19 @@ function validAuthor(v){const a=clean(v),n=normText(a);if(!a||a.length<2||a.leng
 function cleanCommercialTitle(v){let t=clean(v);t=t.replace(/\s*\((?:grande\s+distrib[^)]*|ediz(?:ione)?[^)]*|vol\.?\s*\d+[^)]*)\)?\s*$/i,'').trim();t=t.replace(/\s*\((?:grande\s+distrib|ediz(?:ione)?|vol\.?\s*\d+).*$/i,'').trim();t=t.replace(/\s+(?:grande\s+distrib(?:uzione)?|ediz(?:ione)?\s+economica)\s*$/i,'').trim();t=t.replace(/\s*[-–—|]\s*(?:TheBanco(?:\.it)?|Libraccio(?:\.it)?|IBS|Amazon(?:\.it)?|Feltrinelli|Mondadori Store|Unilibro|Hoepli).*$/i,'').trim();return t}
 function cleanPublisher(v){let p=clean(v).replace(/^(?:editore|publisher|casa editrice)\s*:?\s*/i,'').trim();if(/^[A-ZÀ-Ý0-9 .&'’-]{3,}$/.test(p))p=p.toLowerCase().replace(/(^|\s|[-'’])([a-zà-ÿ])/g,(m,a,b)=>a+b.toUpperCase());p=p.replace(/\s+(?:Varia|Editore|Edizioni)$/i,m=>/editore|edizioni/i.test(m)?'':m).trim();return p}
 function safeCategory(v){const x=clean(v);if(!x||x.length>120||/https?:|\[\]\(|cookie|carrello/i.test(x))return'';const n=normText(x);if(/mystery|thriller|crime|gialli/.test(n))return 'Gialli e thriller';if(/horror/.test(n))return 'Horror';if(/fantasy/.test(n))return 'Fantasy';if(/science fiction|fantascienza/.test(n))return 'Fantascienza';if(/juvenile|young adult|ragazzi/.test(n))return 'Libri per ragazzi';if(/fiction|narrativa|letteratura/.test(n))return 'Narrativa';return x}
+function cleanPlot(v){
+  let p=htmlDecode(String(v||'').replace(/<br\s*\/?\s*>/gi,' ')).replace(/\s+/g,' ').trim();if(!p)return'';
+  const markers=[/\b(?:customer reviews?|recensioni degli utenti|recensioni dei clienti|verified purchase|acquisto verificato|reviewed in|recensito in|helpful|sending feedback|thank you for your feedback|translate review|see original|double tap to read)\b/i,/\b(?:read more|read less|leggi di piu|leggi di meno)\b/i,/\b(?:[1-5](?:[.,]\d+)?\s*(?:out of 5 )?stars?|[1-5](?:[.,]\d+)?\s*su\s*5\s*stelle)\b/i];let cut=-1;for(const re of markers){const m=re.exec(p);if(m&&(cut<0||m.index<cut))cut=m.index}if(cut>=0){const before=p.slice(0,cut).trim();if(before.length>=90&&!/\b(?:a mio parere|secondo me|mi e piaciut|ho letto|ho trovato|consiglio|appassionante|deludente)\b/i.test(normText(before)))p=before;else return''}
+  const n=normText(p);let score=0;for(const re of [/\ba mio parere\b/,/\bsecondo me\b/,/\bmi e piaciut/,/\bho letto\b/,/\bho trovato\b/,/\bconsiglio\b/,/\bappassionante\b/,/\bdeludente\b/,/\brecensione\b/])if(re.test(n))score++;if(score>=2)return'';return p.length>=60?p:''
+}
+function officialPlot(body,title){
+  const lines=String(body||'').split(/\n/),cleaned=lines.map(cleanLine);for(let i=0;i<lines.length;i++){const h=normText(cleaned[i]);if(!/^(?:descrizione|sinossi|trama|descrizione del libro|descrizione prodotto)$/.test(h))continue;const out=[];for(let j=i+1;j<lines.length&&out.join(' ').length<2600;j++){const raw=lines[j],x=cleaned[j];if(!x)continue;if(/^\s*#{1,5}\s+/.test(raw)&&out.length)break;if(/^(?:caratteristiche|dettagli|informazioni|recensioni|acquista|conosci l autore|autore)$/i.test(normText(x))&&out.length)break;out.push(x)}const p=cleanPlot(out.join(' '));if(p)return p}
+  let start=-1;for(let i=0;i<lines.length;i++){if(/^\s*#{1,3}\s+/.test(lines[i])&&titleSimilarity(cleaned[i],title)>=.55){start=i;break}}if(start>=0){const out=[];for(let j=start+1;j<Math.min(lines.length,start+45)&&out.join(' ').length<2600;j++){const raw=lines[j],x=cleaned[j],n=normText(x);if(!x)continue;if(/^\s*#{1,3}\s+/.test(raw)&&out.length&&/(?:caratteristiche|dettagli|autore|conosci l autore|recensioni|acquista)/i.test(n))break;if(/^(?:isbn|isbn cartaceo|isbn ebook|editore|prezzo|pagine|formato|data di uscita|condividi|scegli formato|acquista il libro)$/i.test(n))continue;if(/^\d{4}$/.test(x)||validAuthor(x))continue;if(x.length<55)continue;out.push(x)}const p=cleanPlot(out.join(' '));if(p)return p}return''
+}
 function responseJson(data){return new Response(JSON.stringify(data),{status:200,headers:{'content-type':'application/json; charset=utf-8'}})}
 function exactIds(v,code){const ids=(v?.industryIdentifiers||[]).map(x=>normCode(x?.identifier));const aa=aliases(code);return !ids.length||ids.some(x=>aa.includes(x))}
-function validGoogleItem(item,code){const v=item?.volumeInfo||{},title=cleanCommercialTitle(v.title||''),authors=(v.authors||[]).filter(validAuthor),publisher=cleanPublisher(v.publisher||''),description=clean(v.description||'');if(!validTitle(title)||!exactIds(v,code))return false;if(!authors.length&&!publisher&&description.length<60)return false;if((v.categories||[]).some(x=>/https?:|\[\]\(/.test(String(x))))return false;return true}
-function sanitizeGoogle(data,code){if(!data||!Array.isArray(data.items))return null;const items=data.items.filter(x=>validGoogleItem(x,code));if(!items.length)return null;for(const item of items){const v=item.volumeInfo||{};v.title=cleanCommercialTitle(v.title);v.authors=(v.authors||[]).filter(validAuthor);v.publisher=cleanPublisher(v.publisher||'');v.categories=(v.categories||[]).map(safeCategory).filter(Boolean)}return {...data,items,totalItems:items.length}}
+function validGoogleItem(item,code){const v=item?.volumeInfo||{},title=cleanCommercialTitle(v.title||''),authors=(v.authors||[]).filter(validAuthor),publisher=cleanPublisher(v.publisher||''),description=cleanPlot(v.description||'');if(!validTitle(title)||!exactIds(v,code))return false;if(!authors.length&&!publisher&&description.length<60)return false;if((v.categories||[]).some(x=>/https?:|\[\]\(/.test(String(x))))return false;return true}
+function sanitizeGoogle(data,code){if(!data||!Array.isArray(data.items))return null;const items=data.items.filter(x=>validGoogleItem(x,code));if(!items.length)return null;for(const item of items){const v=item.volumeInfo||{};v.title=cleanCommercialTitle(v.title);v.authors=(v.authors||[]).filter(validAuthor);v.publisher=cleanPublisher(v.publisher||'');v.description=cleanPlot(v.description||'');v.categories=(v.categories||[]).map(safeCategory).filter(Boolean)}return {...data,items,totalItems:items.length}}
 
 async function openLibrary(code){
   const ean=aliases(code).find(x=>/^97[89]\d{10}$/.test(x))||normCode(code);
@@ -91,7 +100,7 @@ function inspectPage(text,url,code){
   let category=safeCategory(field(lines,['Genere','Categoria','Reparto','Materia']));
   if(author&&!validAuthor(author))author='';
   if(!author&&!publisher)return null;
-  let description='';const joined=lines.map(cleanLine).join(' '),dm=joined.match(/(?:Descrizione|Sinossi|Trama|Abstract)\s*:?\s*(.{80,1600}?)(?=\s(?:ISBN|EAN|Editore|Anno|Autore|Prezzo|Recensioni)\b|$)/i);if(dm&&!/carrello|spedizione|venditori|disponibile|prezzo/i.test(dm[1]))description=clean(dm[1]);
+  let description='';const joined=lines.map(cleanLine).join(' '),dm=joined.match(/(?:Descrizione|Sinossi|Trama|Abstract)\s*:?\s*(.{80,1600}?)(?=\s(?:ISBN|EAN|Editore|Anno|Autore|Prezzo|Recensioni)\b|$)/i);if(dm&&!/carrello|spedizione|venditori|disponibile|prezzo/i.test(dm[1]))description=cleanPlot(dm[1]);
   let score=12+(author?5:0)+(publisher?4:0)+(year?3:0)+(description?3:0)+(category?1:0);if(domainOf(url)==='thebanco.it')score+=2;
   return {title,author,publisher,year,category,description,cover:'',source:sourceName(url),score,url}
 }
@@ -101,7 +110,7 @@ async function appleSearch(rec){
   if(!data?.results?.length)return rec;const surname=normText(rec.author).split(' ').pop();let best=null,bestScore=-1;for(const x of data.results){if(x.kind!=='ebook'||!validTitle(x.trackName)||!validAuthor(x.artistName))continue;const a=normText(x.artistName),sim=titleSimilarity(rec.title,x.trackName);let sc=sim*10;if(surname&&a.split(' ').includes(surname))sc+=5;if(sc>bestScore){best=x;bestScore=sc}}if(!best||bestScore<7)return rec;
   if(titleSimilarity(rec.title,best.trackName)>=0.45)rec.title=cleanCommercialTitle(best.trackName);
   if(rec.author.split(/\s+/).length===1||normText(best.artistName).includes(normText(rec.author)))rec.author=clean(best.artistName);
-  if(!rec.description&&best.description)rec.description=htmlDecode(best.description);
+  if(!rec.description&&best.description)rec.description=cleanPlot(best.description);
   if(!rec.category&&best.genres?.length)rec.category=safeCategory(best.genres[0]);
   rec.score=(rec.score||0)+7;rec.appleValidated=true;return rec
 }
@@ -129,6 +138,7 @@ async function enrichOfficial(rec){
     let a=headingAuthor(body,rec.title);if(!a){const lines=String(body).split(/\n/);a=field(lines,['Autore','Autori','Author','Scritto da'])}
     if(a&&validAuthor(a))rec.author=clean(a);
     const h=String(body).split(/\n/).map(cleanLine).find(x=>validTitle(x)&&titleSimilarity(x,rec.title)>=0.65);if(h)rec.title=cleanCommercialTitle(h);
+    const op=officialPlot(body,rec.title);if(op)rec.description=op;
     rec.officialSource=u;rec.score=(rec.score||0)+8;break
   }
   return rec
@@ -164,7 +174,7 @@ async function discoverRetail(code){
 }
 async function resilientLookup(code){if(cache.has(code))return cache.get(code);const p=(async()=>{const ol=await openLibrary(code);if(ol&&ol.author&&ol.publisher)return await enrichOfficial(await appleSearch(ol));const web=await discoverRetail(code);if(web)return await enrichOfficial(web);return ol?await enrichOfficial(await appleSearch(ol)):null})();cache.set(code,p);return p}
 window.__LIB_RESILIENT_ISBN_LOOKUP=resilientLookup;
-function toGoogle(rec,code){const ids=aliases(code).map(x=>({type:x.length===10?'ISBN_10':'ISBN_13',identifier:x})),v={title:rec.title,authors:rec.author?[rec.author]:[],publisher:rec.publisher||'',publishedDate:rec.year||'',language:'it',industryIdentifiers:ids,description:rec.description||'',categories:rec.category?[rec.category]:[]};if(rec.cover)v.imageLinks={thumbnail:rec.cover,smallThumbnail:rec.cover,medium:rec.cover,large:rec.cover};return {kind:'books#volumes',totalItems:1,items:[{id:'resilient-'+normCode(code),volumeInfo:v,__resilientSource:rec.source||'fallback'}]}}
+function toGoogle(rec,code){const ids=aliases(code).map(x=>({type:x.length===10?'ISBN_10':'ISBN_13',identifier:x})),v={title:rec.title,authors:rec.author?[rec.author]:[],publisher:rec.publisher||'',publishedDate:rec.year||'',language:'it',industryIdentifiers:ids,description:cleanPlot(rec.description||''),categories:rec.category?[rec.category]:[]};if(rec.cover)v.imageLinks={thumbnail:rec.cover,smallThumbnail:rec.cover,medium:rec.cover,large:rec.cover};return {kind:'books#volumes',totalItems:1,items:[{id:'resilient-'+normCode(code),volumeInfo:v,__resilientSource:rec.source||'fallback'}]}}
 
 window.fetch=async function(input,init){
   let u;try{u=new URL(typeof input==='string'?input:input.url,location.href)}catch(e){return nativeFetch(input,init)}

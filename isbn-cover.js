@@ -210,10 +210,47 @@ function candidateRelationsIncomplete(candidate){
     }
     return original;
   }
+  function plotPlainText(v){
+    const d=document.createElement('div');d.innerHTML=String(v||'');
+    return String(d.textContent||d.innerText||'').replace(/!\[[^\]]*\]\([^)]*\)/g,' ').replace(/\[([^\]]+)\]\([^)]*\)/g,'$1').replace(/[\u200B-\u200F\u202A-\u202E\u2060\u2066-\u2069\uFEFF]/g,'').replace(/\u00a0/g,' ').replace(/\s+/g,' ').trim()
+  }
+  function reviewNoiseIndex(text){
+    const pats=[
+      /\b(?:customer reviews?|user reviews?|recensioni degli utenti|recensioni dei clienti|valutazioni e recensioni)\b/i,
+      /\b(?:verified purchase|acquisto verificato|reviewed in|recensito in|reviewed on|recensito il)\b/i,
+      /\b(?:helpful|sending feedback|thank you for your feedback|sorry,? we failed|report this review|translate review|see original)\b/i,
+      /\b(?:brief content visible|full content visible|double tap to read|read more|read less|leggi di piu|leggi di meno|mostra altre recensioni)\b/i,
+      /\b(?:[1-5](?:[.,]\d+)?\s*(?:out of 5 )?stars?|[1-5](?:[.,]\d+)?\s*su\s*5\s*stelle)\b/i
+    ];
+    let idx=-1;for(const re of pats){const m=re.exec(text);if(m&&(idx<0||m.index<idx))idx=m.index}return idx
+  }
+  function opinionReviewText(text){
+    const n=normalizeText(text);let score=0;
+    for(const re of [/\ba mio parere\b/i,/\bsecondo me\b/i,/\bmi e piaciut/i,/\bnon mi e piaciut/i,/\bho letto\b/i,/\bho trovato\b/i,/\bconsiglio (?:questo|il|la)\b/i,/\bappassionante\b/i,/\bdeludente\b/i,/\brecensione\b/i,/\bverified purchase\b/i,/\breviewed in\b/i])if(re.test(n))score++;
+    return score>=2
+  }
+  function cleanBookPlotDescription(v){
+    let p=plotPlainText(v);if(!p)return'';
+    p=p.replace(/^(?:descrizione(?: del libro| prodotto)?|sinossi|trama|abstract)\s*[:\-]?\s*/i,'').trim();
+    const cut=reviewNoiseIndex(p);
+    if(cut>=0){
+      const before=p.slice(0,cut).trim();
+      if(before.length>=90&&!opinionReviewText(before))p=before;else return''
+    }
+    if(opinionReviewText(p))return'';
+    if(/\b(?:customer review|verified purchase|sending feedback|translate review|double tap to read|recensioni degli utenti|recensito in)\b/i.test(p))return'';
+    if(/\b(?:aggiungi al carrello|buy now|spedizione|disponibilita immediata|prezzo|cookie|privacy policy)\b/i.test(normalizeText(p)))return'';
+    p=p.replace(/\s+/g,' ').trim();
+    if(p.length<60)return'';
+    if(p.length>2600)p=p.slice(0,2600).replace(/\s+\S*$/,'')+'…';
+    return p
+  }
+  window.__LIB_CLEAN_BOOK_PLOT=cleanBookPlotDescription;
   function normalizeCandidateMetadata(candidate){
     const c={...(candidate||{})};
     c.saga=safeSeriesName(c.saga);c.prequel=safeBookRelation(c.prequel);c.sequel=safeBookRelation(c.sequel);
     c.title=cleanCatalogTitle(seriesTitleWithSagaFirst(c.title,c.saga));
+    c.description=cleanBookPlotDescription(c.description||'');
     if(c.author&&!plausibleAuthorName(c.author))c.author='';
     return c
   }
@@ -272,11 +309,39 @@ function candidateRelationsIncomplete(candidate){
   window.__LIB_COMPLETE_RELATIONS_FROM_FIELDS__=completeUniversalRelationsFromFields;
   function hidePicker(){if(overlay.open)overlay.close();overlay.setAttribute('aria-hidden','true');$x('metadataChoices').innerHTML=''}
   function openPicker(title,text){$x('metadataPickerTitle').textContent=title;$x('metadataPickerText').textContent=text;overlay.setAttribute('aria-hidden','false');if(!overlay.open)overlay.showModal()}
-  function imageWorks(url){return new Promise(resolve=>{const img=new Image();let done=false;const finish=v=>{if(done)return;done=true;clearTimeout(t);resolve(v)};const t=setTimeout(()=>finish(false),4200);img.onload=()=>finish(img.naturalWidth>20&&img.naturalHeight>20);img.onerror=()=>finish(false);img.src=url})}
+  function coverProbeUrl(url){
+    const u=secureUrl(url);if(!u)return'';if(/images\.weserv\.nl\//i.test(u))return u;
+    return 'https://images.weserv.nl/?url='+encodeURIComponent(u)
+  }
+  function inspectFrontCover(url){return new Promise(resolve=>{
+    const img=new Image();img.crossOrigin='anonymous';let done=false;
+    const finish=v=>{if(done)return;done=true;clearTimeout(t);resolve(v)};const t=setTimeout(()=>finish({ok:false,reason:'timeout'}),6500);
+    img.onerror=()=>finish({ok:false,reason:'load'});
+    img.onload=()=>{
+      const w=img.naturalWidth,h=img.naturalHeight,ratio=w/Math.max(1,h);
+      if(w<55||h<90)return finish({ok:false,reason:'small',w,h,ratio});
+      if(ratio<0.43||ratio>0.86)return finish({ok:false,reason:'ratio',w,h,ratio});
+      try{
+        const cw=40,ch=60,cv=document.createElement('canvas');cv.width=cw;cv.height=ch;const ctx=cv.getContext('2d',{willReadFrequently:true});ctx.drawImage(img,0,0,cw,ch);const d=ctx.getImageData(0,0,cw,ch).data;
+        const col=[];for(let x=0;x<cw;x++){let sum=0,sum2=0;for(let y=0;y<ch;y++){const i=(y*cw+x)*4,lum=.2126*d[i]+.7152*d[i+1]+.0722*d[i+2];sum+=lum;sum2+=lum*lum}const mean=sum/ch,sd=Math.sqrt(Math.max(0,sum2/ch-mean*mean));col.push({mean,sd})}
+        const edgeMean=(start,end)=>{let z=0,n=0;for(let x=start;x<end;x++){z+=col[x].mean;n++}return z/Math.max(1,n)};
+        const leftBg=edgeMean(0,3),rightBg=edgeMean(cw-3,cw);
+        let lm=0;for(let x=0;x<cw;x++){if(Math.abs(col[x].mean-leftBg)<14&&col[x].sd<20)lm++;else break}
+        let rm=0;for(let x=cw-1;x>=0;x--){if(Math.abs(col[x].mean-rightBg)<14&&col[x].sd<20)rm++;else break}
+        const marginFrac=(lm+rm)/cw,oneSide=Math.max(lm,rm)/cw;
+        if(marginFrac>0.24||oneSide>0.20)return finish({ok:false,reason:'side-margins',w,h,ratio,marginFrac,oneSide});
+        return finish({ok:true,reason:'front',w,h,ratio,marginFrac,oneSide})
+      }catch(e){return finish({ok:true,reason:'ratio-only',w,h,ratio})}
+    };
+    img.src=coverProbeUrl(url)
+  })}
+  function imageWorks(url){return inspectFrontCover(url).then(x=>!!x.ok)}
   async function usableCovers(covers){
     const seen=new Set(),list=[];
     for(const c of covers||[]){const url=secureUrl(typeof c==='string'?c:c.url),source=typeof c==='string'?'Fonte bibliografica':(c.source||'Fonte bibliografica');if(url&&!seen.has(url)){seen.add(url);list.push({url,source})}}
-    const checked=await Promise.all(list.slice(0,12).map(async c=>(await imageWorks(c.url))?c:null));return checked.filter(Boolean)
+    const tested=await Promise.all(list.slice(0,12).map(async c=>({c,q:await inspectFrontCover(c.url)})));
+    window.__LIB_LAST_COVER_QUALITY__=tested.map(x=>({url:x.c.url,source:x.c.source,...x.q}));
+    return tested.filter(x=>x.q.ok).map(x=>x.c)
   }
   function getGoogleCover(l={}){return l.extraLarge||l.large||l.medium||l.small||l.thumbnail||l.smallThumbnail||''}
   function joinTitle(t,sub){t=String(t||'').trim();sub=String(sub||'').trim();if(!sub||normalizeText(t).includes(normalizeText(sub)))return t;return `${t} - ${sub}`}
@@ -362,7 +427,7 @@ function candidateRelationsIncomplete(candidate){
 
   async function enrichOpenLibrary(c){
     if(c.description||!c.workKey||!String(c.workKey).startsWith('/works/'))return c;
-    try{const r=await fetch(`https://openlibrary.org${c.workKey}.json`);if(!r.ok)return c;const d=await r.json();const desc=typeof d.description==='string'?d.description:d.description?.value;if(desc)c.description=stripHtml(desc);if(!c.category&&Array.isArray(d.subjects))c.category=d.subjects.slice(0,4).join(', ')}catch(e){}
+    try{const r=await fetch(`https://openlibrary.org${c.workKey}.json`);if(!r.ok)return c;const d=await r.json();const desc=typeof d.description==='string'?d.description:d.description?.value;if(desc)c.description=cleanBookPlotDescription(desc);if(!c.category&&Array.isArray(d.subjects))c.category=d.subjects.slice(0,4).join(', ')}catch(e){}
     return c
   }
 

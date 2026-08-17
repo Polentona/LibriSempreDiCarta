@@ -196,11 +196,12 @@ function categoryFrom(text,title=''){
   return''
 }
 function descriptionFrom(text){
+  const sanitize=v=>typeof window.__LIB_CLEAN_BOOK_PLOT==='function'?window.__LIB_CLEAN_BOOK_PLOT(v):plain(v).replace(/\s+/g,' ').trim();
   const lines=String(text||'').split(/\n/),heads=['descrizione','descrizione libro','descrizione del libro','sinossi','trama'];
   for(let i=0;i<lines.length;i++){
     const h=normText(cleanLine(lines[i]));if(!heads.some(x=>h===x||h.startsWith(x+' ')))continue;
     const out=[];for(let j=i+1;j<lines.length&&out.join(' ').length<2200;j++){const raw=lines[j],c=cleanLine(raw);if(!c)continue;if(/^\s*#{1,5}\s+/.test(raw)&&out.length)break;if(/^(dettagli|informazioni|recensioni|consegna|acquista|compra|prodotti correlati|scheda)/i.test(c)&&out.length)break;out.push(c)}
-    let d=plain(out.join(' ')).replace(/\s+/g,' ').trim();if(d.length>80){if(d.length>1800)d=d.slice(0,1800).replace(/\s+\S*$/,'')+'…';if(!/aggiungi al carrello|cookie|privacy policy|tutti i libri/i.test(d))return d}
+    let d=sanitize(out.join(' '));if(d.length>80){if(d.length>1800)d=d.slice(0,1800).replace(/\s+\S*$/,'')+'…';if(!/aggiungi al carrello|cookie|privacy policy|tutti i libri/i.test(d))return d}
   }
   return''
 }
