@@ -1,4 +1,4 @@
 Libri di Carta UI redesign
-Versione: 2026-08-18-v3
+Versione: 2026-08-18-v4
 Core: c928c324e664b8f53ff05e624d53979587e460f7
-Final check: workflow_run-after-pages
+Final check: inline-pages-live-check
