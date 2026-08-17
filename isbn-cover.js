@@ -597,9 +597,11 @@ function candidateRelationsIncomplete(candidate){
     const forcedCover=verifiedUiCover(code);if(forcedCover&&(!$x('editCover').value.trim()||autoFields.has('editCover')))setDraftCover(forcedCover,true);
     const coverAlready=$x('editCover').value.trim()&&!autoFields.has('editCover');
     if(type==='isbn'&&!coverAlready){
-      const exactOl={url:`https://covers.openlibrary.org/b/isbn/${encodeURIComponent(normalizeLoose(code))}-L.jpg?default=false`,source:'Open Library · ISBN'};
+      const exactEan=normalizeLoose(code);
+      const exactMessaggerie={url:`https://img.messaggerielibri.it/images/${encodeURIComponent(exactEan)}_0_500_0_0.jpg`,source:'Messaggerie Libri · EAN'};
+      const exactOl={url:`https://covers.openlibrary.org/b/isbn/${encodeURIComponent(exactEan)}-L.jpg?default=false`,source:'Open Library · ISBN'};
       const retail=await retailerCoversForIsbn(code,candidate.title||'',candidate.author||'');
-      candidate.covers=mergeCoverOptions(candidate.covers,[exactOl,...retail])
+      candidate.covers=mergeCoverOptions([exactMessaggerie,...(candidate.covers||[])],[exactOl,...retail])
     }
     let pickerOpened=false;if(!coverAlready&&candidate.covers?.length)pickerOpened=await showCoverPicker(candidate.covers,code);
     if(candidate.serialLevel)setStatus(`ISSN riconosciuto. Ho compilato i dati della testata; ricorda che l'ISSN identifica il periodico, non necessariamente il singolo numero. Controlla titolo e numero dell'uscita.`,'warn');
