@@ -1,0 +1,83 @@
+name: Pulisce titoli prequel e sequel
+on:
+  push:
+    paths:
+      - '.github/workflows/patch-clean-relation-titles-v1.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Applica normalizzazione generale
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          p=Path('isbn-cover.js')
+          s=p.read_text(encoding='utf-8')
+          old="function safeBookRelation(v){const x=String(v||'').replace(/\\s+/g,' ').trim();return x&&!screenMediaNoise(x)?x:''}"
+          new=r'''function stripRelationQualifier(v){
+            let x=String(v||'').replace(/\s+/g,' ').trim();if(!x)return'';
+            x=x.replace(/\s*[([](?=[^\])]*\b(?:novel|romanzo|book|libro)\b)[^\])]*[)\]]\s*$/i,'').trim();
+            return x
+          }
+          function cleanRelationTitle(v){
+            let x=String(v||'').replace(/\s+/g,' ').trim();if(!x)return'';
+            x=x.replace(/\s*[|•]\s*(?:Wikipedia|Amazon|IBS|Libraccio|Mondadori|Giunti|Google Books).*$/i,'').trim();
+            const wrapped=x.match(/^["“«]\s*(.{1,220}?)\s*["”»]\s*$/);
+            if(wrapped)x=stripRelationQualifier(wrapped[1]);
+            const doubled=x.match(/^(.{1,160}?)\s*["“«]\s*(.{1,220}?)\s*["”»]\s*$/);
+            if(doubled){
+              const outer=stripRelationQualifier(doubled[1]),inner=stripRelationQualifier(doubled[2]);
+              const no=normalizeText(outer),ni=normalizeText(inner);
+              if(no&&ni&&no===ni)x=outer;
+            }
+            x=stripRelationQualifier(x);
+            return x.replace(/\s+/g,' ').trim()
+          }
+          function safeBookRelation(v){const x=cleanRelationTitle(v);return x&&!screenMediaNoise(x)?x:''}'''
+          if old not in s:
+              if 'function cleanRelationTitle(v)' not in s:
+                  raise SystemExit('safeBookRelation originale non trovato')
+          else:
+              s=s.replace(old,new,1)
+          p.write_text(s,encoding='utf-8')
+
+          # Cache bust del file modificato nel loader.
+          p=Path('bg/bg8.js')
+          s=p.read_text(encoding='utf-8')
+          m=re.search(r'isbn-cover\.js\?v=(\d+)',s)
+          if not m: raise SystemExit('versione isbn-cover non trovata in bg8')
+          nv=int(m.group(1))+1
+          s=s[:m.start(1)]+str(nv)+s[m.end(1):]
+          p.write_text(s,encoding='utf-8')
+
+          # Cache bust del loader bg8 nell'HTML principale.
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          m=re.search(r'bg/bg\$\{i\}\.js\?v=(\d+)',s)
+          if not m: raise SystemExit('versione loader bg non trovata in index')
+          nv=int(m.group(1))+1
+          s=s[:m.start(1)]+str(nv)+s[m.end(1):]
+          p.write_text(s,encoding='utf-8')
+          print('CLEAN_RELATION_TITLES_OK')
+          PY
+      - name: Verifica casi generali
+        shell: bash
+        run: |
+          grep -F "function cleanRelationTitle(v)" isbn-cover.js
+          grep -F "stripRelationQualifier" isbn-cover.js
+          grep -F "no===ni" isbn-cover.js
+      - name: Commit
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add isbn-cover.js bg/bg8.js index.html
+          git diff --cached --quiet && exit 0
+          git commit -m "Normalizza titoli prequel e sequel"
+          git push
