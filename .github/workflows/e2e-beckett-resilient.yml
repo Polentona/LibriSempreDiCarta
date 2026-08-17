@@ -43,35 +43,23 @@ jobs:
               await page.locator('#editCode').waitFor({state:'visible',timeout:30000});
               await page.locator('#editCode').fill('9788845283253');
               await page.locator('#lookupMetadataBtn').click();
-              await page.waitForFunction(()=>{
-                const t=document.querySelector('#editTitle')?.value||'';
-                return /sussurri/i.test(t);
-              },null,{timeout:120000});
+              await page.waitForFunction(()=>/sussurri/i.test(document.querySelector('#editTitle')?.value||''),null,{timeout:120000});
               const overlay=page.locator('#metadataOverlay');
               if(await overlay.evaluate(el=>!!el.open).catch(()=>false)){
-                const choices=page.locator('[data-meta-choice]');const count=await choices.count();
-                let chosen=false;
-                for(let i=0;i<count;i++){
-                  const tx=await choices.nth(i).innerText();
-                  if(/sussurri della morte/i.test(tx)&&/beckett/i.test(tx)){await choices.nth(i).click();chosen=true;break}
-                }
+                const choices=page.locator('[data-meta-choice]');const count=await choices.count();let chosen=false;
+                for(let i=0;i<count;i++){const tx=await choices.nth(i).innerText();if(/sussurri della morte/i.test(tx)&&/beckett/i.test(tx)){await choices.nth(i).click();chosen=true;break}}
                 if(!chosen&&count===1)await choices.first().click();
               }
               const snapshot=()=>page.evaluate(()=>{
                 const val=id=>document.querySelector(id)?.value||'';
                 return {
                   title:val('#editTitle'),author:val('#editAuthor'),category:val('#editCategory'),publisher:val('#editPublisher'),
-                  publication:val('#editPublication'),saga:val('#editSaga'),prequel:val('#editPrequel'),sequel:val('#editSequel'),
-                  cover:val('#editCover'),plot:val('#editPlot'),diag:window.__LIB_RESILIENT_ISBN_LAST__||null
+                  publication:val('#editPublishedDate'),saga:val('#editSaga'),prequel:val('#editPrequel'),sequel:val('#editSequel'),
+                  cover:val('#editCover'),plot:val('#editPlot'),diag:window.__LIB_RESILIENT_ISBN_LAST__||null,bounded:window.__LIB_BOUNDED_SERIES_LAST__||null
                 };
               });
               let result={},last='',stable=0;
-              for(let i=0;i<45;i++){
-                result=await snapshot();const key=JSON.stringify(result);
-                if(key===last&&result.title)stable++;else stable=0;last=key;
-                if(stable>=4)break;
-                await page.waitForTimeout(2000);
-              }
+              for(let i=0;i<45;i++){result=await snapshot();const key=JSON.stringify(result);if(key===last&&result.title)stable++;else stable=0;last=key;if(stable>=4)break;await page.waitForTimeout(2000)}
               console.log('E2E_BECKETT_RESULT='+JSON.stringify(result));
               console.log('E2E_BECKETT_FAILED='+JSON.stringify(failed));
               console.log('E2E_BECKETT_CONSOLE='+JSON.stringify(consoleLines.slice(-60)));
