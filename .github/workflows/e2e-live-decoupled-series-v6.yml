@@ -1,0 +1,68 @@
+name: E2E live relazioni indipendenti dalla fonte v6
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/e2e-live-decoupled-series-v6.yml'
+permissions:
+  contents: read
+jobs:
+  test-relations:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Installa Playwright
+        run: |
+          mkdir -p /tmp/e2e-decoupled
+          cd /tmp/e2e-decoupled
+          npm init -y >/dev/null 2>&1
+          npm install playwright@1.55.0 >/dev/null 2>&1
+          npx playwright install --with-deps chromium >/dev/null
+      - name: Test Titolo e Autore sul sito pubblico
+        working-directory: /tmp/e2e-decoupled
+        run: |
+          cat > test.js <<'JS'
+          const { chromium }=require('playwright');
+          const cases=[
+            {title:'La voce dei morti',author:'Simon Beckett',saga:'David Hunter',prequel:'I sussurri della morte',sequel:'Acque morte'},
+            {title:'Torment',author:'Lauren Kate',saga:'Fallen',prequel:'Fallen',sequel:'Passion'}
+          ];
+          const norm=s=>String(s||'').replace(/[’‘]/g,"'").replace(/\s+/g,' ').trim().toLowerCase();
+          (async()=>{
+            const browser=await chromium.launch({headless:true});let failed=false;
+            for(const c of cases){
+              const page=await browser.newPage();const logs=[];
+              page.on('console',m=>logs.push(`[${m.type()}] ${m.text()}`));
+              page.on('pageerror',e=>logs.push(`[pageerror] ${e.message}`));
+              try{
+                await page.goto('https://polentona.github.io/LibriSempreDiCarta/?e2e-decoupled='+Date.now()+'-'+encodeURIComponent(c.title),{waitUntil:'domcontentloaded',timeout:60000});
+                await page.locator('#addBookBtn').waitFor({state:'visible',timeout:30000});
+                await page.locator('#addBookBtn').click();
+                await page.locator('#editTitle').waitFor({state:'visible',timeout:30000});
+                await page.locator('#editTitle').fill(c.title);
+                await page.locator('#editAuthor').fill(c.author);
+                await page.waitForFunction(()=>{
+                  const s=document.querySelector('#editSaga')?.value||'',p=document.querySelector('#editPrequel')?.value||'',q=document.querySelector('#editSequel')?.value||'';
+                  return !!s&&!!p&&!!q;
+                },null,{timeout:60000});
+                const r=await page.evaluate(()=>({
+                  saga:document.querySelector('#editSaga')?.value||'',
+                  prequel:document.querySelector('#editPrequel')?.value||'',
+                  sequel:document.querySelector('#editSequel')?.value||'',
+                  decoupled:window.__LIB_LAST_DECOUPLED_SERIES_RESULT__||null,
+                  universal:window.__LIB_UNIVERSAL_SERIES_LAST__||null,
+                  completeFn:typeof window.__LIB_COMPLETE_RELATIONS_FROM_FIELDS__
+                }));
+                console.log('DECOUPLED_RESULT='+JSON.stringify({input:c,result:r}));
+                const errs=[];for(const k of ['saga','prequel','sequel'])if(norm(r[k])!==norm(c[k]))errs.push(`${k}=${JSON.stringify(r[k])}`);
+                if(r.completeFn!=='function')errs.push('completeFn='+r.completeFn);
+                if(errs.length){failed=true;console.error('DECOUPLED_MISMATCH='+c.title+' '+errs.join(' | '))}
+              }catch(e){failed=true;console.error('DECOUPLED_ERROR='+c.title,e);console.error('DECOUPLED_LOGS='+JSON.stringify(logs.slice(-80)))}
+              await page.close();
+            }
+            await browser.close();if(failed)process.exitCode=1;
+          })();
+          JS
+          node test.js
