@@ -131,6 +131,7 @@ function boot(){
     }
     if(changed){saveBooks();render()}
   }
+  migrateVerifiedSavedBooks();
   function plausibleAuthorName(v){
     const a=String(v||'').trim(),n=normalizeText(a);if(!a||a.length>120||/\d|€|%|@|https?:|www\./i.test(a))return false;
     if(/\b(iva|ean|isbn|issn|sku|prezzo|sconto|spedizione|consegna|negozio|libreria|carrello|cookie|assistenza|editore|edizione|collana|pagine|formato|categoria|genere|reparto|provincia|regione|comune|disponibile|acquista|compra)\b/i.test(n))return false;
@@ -288,7 +289,16 @@ function boot(){
     candidate=normalizeCandidateMetadata(await enrichOpenLibrary(candidate));
     const verifiedMeta=verifiedBookMetadata(code);if(verifiedMeta)candidate=normalizeCandidateMetadata({...candidate,...verifiedMeta});
     setAutoField('editTitle',candidate.title);setAutoField('editSaga',candidate.saga);setAutoField('editAuthor',candidate.author);setAutoField('editPlot',candidate.description);setAutoField('editCategory',candidate.category);setAutoField('editPublisher',candidate.publisher);setAutoField('editPublishedDate',candidate.publishedDate);setAutoField('editPrequel',candidate.prequel);setAutoField('editSequel',candidate.sequel);
-    if(type==='isbn'&&typeof window.__LIB_FIND_RELATIONS==='function'&&candidate.title&&candidate.author){
+    /* __LIB_PRE_RELATION_NEIGHBORS_V5__ */
+    if(type==='isbn'&&typeof window.__LIB_RESOLVE_SERIES_NEIGHBORS==='function'&&candidate.title&&candidate.author&&candidate.saga&&(!candidate.prequel||!candidate.sequel)){
+      try{
+        const rel0=await window.__LIB_RESOLVE_SERIES_NEIGHBORS({code,title:candidate.title,author:candidate.author,saga:candidate.saga,description:candidate.description||''});
+        window.__LIB_LAST_NEIGHBORS_RESULT__=rel0||null;
+        if(rel0?.prequel){candidate.prequel=String(rel0.prequel).trim();setAutoField('editPrequel',candidate.prequel,true)}
+        if(rel0?.sequel){candidate.sequel=String(rel0.sequel).trim();setAutoField('editSequel',candidate.sequel,true)}
+      }catch(e){window.__LIB_LAST_NEIGHBORS_ERROR__=String(e&&e.message||e);console.warn('Resolver preliminare prequel/sequel non disponibile',e)}
+    }
+    if(type==='isbn'&&typeof window.__LIB_FIND_RELATIONS==='function'&&candidate.title&&candidate.author&&(!candidate.saga||!candidate.prequel||!candidate.sequel)){
       try{
         const rel=await window.__LIB_FIND_RELATIONS({code,title:candidate.title,author:candidate.author,saga:candidate.saga,description:candidate.description||''});
         if(rel?.sagaChecked){
@@ -424,5 +434,4 @@ function boot(){
 }
 
 boot();
-migrateVerifiedSavedBooks();
 })();
