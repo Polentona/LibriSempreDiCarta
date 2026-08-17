@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - 'tools/patch_plot_cover_quality_v7.py'
+      - '.github/workflows/run-plot-cover-quality-v7.yml'
 permissions:
   contents: write
 jobs:
