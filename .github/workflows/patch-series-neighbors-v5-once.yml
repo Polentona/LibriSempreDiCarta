@@ -17,26 +17,22 @@ jobs:
 
           p = Path('isbn-cover.js')
           s = p.read_text(encoding='utf-8')
-          marker = "window.__LIB_RESOLVE_SERIES_NEIGHBORS"
+          marker = 'window.__LIB_RESOLVE_SERIES_NEIGHBORS'
           if marker not in s:
-              needle = """      }catch(e){console.warn('Relazioni serie non disponibili',e)}
-    }
-    const forcedCover=verifiedUiCover(code);"""
-              replacement = """      }catch(e){console.warn('Relazioni serie non disponibili',e)}
-    }
-    if(type==='isbn'&&typeof window.__LIB_RESOLVE_SERIES_NEIGHBORS==='function'&&candidate.title&&candidate.author&&(!candidate.prequel||!candidate.sequel)){
-      try{
-        const rel2=await window.__LIB_RESOLVE_SERIES_NEIGHBORS({code,title:candidate.title,author:candidate.author,saga:candidate.saga,description:candidate.description||''});
-        window.__LIB_LAST_NEIGHBORS_RESULT__=rel2||null;
-        if(rel2?.saga&&!candidate.saga){candidate.saga=String(rel2.saga).trim();setAutoField('editSaga',candidate.saga,true)}
-        if(rel2?.prequel){candidate.prequel=String(rel2.prequel).trim();setAutoField('editPrequel',candidate.prequel,true)}
-        if(rel2?.sequel){candidate.sequel=String(rel2.sequel).trim();setAutoField('editSequel',candidate.sequel,true)}
-      }catch(e){window.__LIB_LAST_NEIGHBORS_ERROR__=String(e&&e.message||e);console.warn('Resolver finale prequel/sequel non disponibile',e)}
-    }
-    const forcedCover=verifiedUiCover(code);"""
+              needle = "      }catch(e){console.warn('Relazioni serie non disponibili',e)}\n    }\n    const forcedCover=verifiedUiCover(code);"
+              block = "      }catch(e){console.warn('Relazioni serie non disponibili',e)}\n    }\n"
+              block += "    if(type==='isbn'&&typeof window.__LIB_RESOLVE_SERIES_NEIGHBORS==='function'&&candidate.title&&candidate.author&&(!candidate.prequel||!candidate.sequel)){\n"
+              block += "      try{\n"
+              block += "        const rel2=await window.__LIB_RESOLVE_SERIES_NEIGHBORS({code,title:candidate.title,author:candidate.author,saga:candidate.saga,description:candidate.description||''});\n"
+              block += "        window.__LIB_LAST_NEIGHBORS_RESULT__=rel2||null;\n"
+              block += "        if(rel2?.saga&&!candidate.saga){candidate.saga=String(rel2.saga).trim();setAutoField('editSaga',candidate.saga,true)}\n"
+              block += "        if(rel2?.prequel){candidate.prequel=String(rel2.prequel).trim();setAutoField('editPrequel',candidate.prequel,true)}\n"
+              block += "        if(rel2?.sequel){candidate.sequel=String(rel2.sequel).trim();setAutoField('editSequel',candidate.sequel,true)}\n"
+              block += "      }catch(e){window.__LIB_LAST_NEIGHBORS_ERROR__=String(e&&e.message||e);console.warn('Resolver finale prequel/sequel non disponibile',e)}\n"
+              block += "    }\n    const forcedCover=verifiedUiCover(code);"
               if needle not in s:
                   raise SystemExit('Anchor applyCandidate non trovato')
-              s = s.replace(needle, replacement, 1)
+              s = s.replace(needle, block, 1)
               p.write_text(s, encoding='utf-8')
 
           p = Path('index.html')
@@ -53,9 +49,9 @@ jobs:
 
           p = Path('bg/bg8.js')
           s = p.read_text(encoding='utf-8')
-          if "isbn-cover.js?v=19" not in s and "isbn-cover.js?v=20" not in s:
+          if 'isbn-cover.js?v=19' not in s and 'isbn-cover.js?v=20' not in s:
               raise SystemExit('Versione isbn-cover non trovata in bg8')
-          s = s.replace("isbn-cover.js?v=19", "isbn-cover.js?v=20")
+          s = s.replace('isbn-cover.js?v=19', 'isbn-cover.js?v=20')
           p.write_text(s, encoding='utf-8')
       - name: Verifica sintassi e collegamenti
         run: |
