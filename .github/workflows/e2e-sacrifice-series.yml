@@ -36,6 +36,20 @@ jobs:
             page.on('pageerror', e=>consoleLines.push(`[pageerror] ${e.message}`));
             const url='https://polentona.github.io/LibriSempreDiCarta/?e2e='+Date.now();
             let result={url};
+            const snapshot=()=>page.evaluate(()=>({
+              title:document.querySelector('#editTitle')?.value||'',
+              author:document.querySelector('#editAuthor')?.value||'',
+              saga:document.querySelector('#editSaga')?.value||'',
+              prequel:document.querySelector('#editPrequel')?.value||'',
+              sequel:document.querySelector('#editSequel')?.value||'',
+              status:document.querySelector('#lookupStatus')?.textContent||'',
+              statusClass:document.querySelector('#lookupStatus')?.className||'',
+              lastNeighbors:window.__LIB_LAST_NEIGHBORS_RESULT__||null,
+              lastNeighborsError:window.__LIB_LAST_NEIGHBORS_ERROR__||null,
+              neighborsDiag:window.__LIB_SERIES_NEIGHBORS_LAST_DIAG__||null,
+              resolverLoaded:typeof window.__LIB_RESOLVE_SERIES_NEIGHBORS==='function',
+              relationsLoaded:typeof window.__LIB_FIND_RELATIONS==='function'
+            }));
             try{
               await page.goto(url,{waitUntil:'domcontentloaded',timeout:60000});
               await page.locator('#addBookBtn').waitFor({state:'visible',timeout:30000});
@@ -68,20 +82,15 @@ jobs:
                 return /Sacrifice/i.test(title)&&/Adornetto/i.test(author);
               },null,{timeout:60000});
 
-              await page.waitForTimeout(1500);
-              result=await page.evaluate(()=>({
-                title:document.querySelector('#editTitle')?.value||'',
-                author:document.querySelector('#editAuthor')?.value||'',
-                saga:document.querySelector('#editSaga')?.value||'',
-                prequel:document.querySelector('#editPrequel')?.value||'',
-                sequel:document.querySelector('#editSequel')?.value||'',
-                status:document.querySelector('#lookupStatus')?.textContent||'',
-                lastNeighbors:window.__LIB_LAST_NEIGHBORS_RESULT__||null,
-                lastNeighborsError:window.__LIB_LAST_NEIGHBORS_ERROR__||null,
-                neighborsDiag:window.__LIB_SERIES_NEIGHBORS_LAST_DIAG__||null,
-                resolverLoaded:typeof window.__LIB_RESOLVE_SERIES_NEIGHBORS==='function',
-                relationsLoaded:typeof window.__LIB_FIND_RELATIONS==='function'
-              }));
+              await page.waitForFunction(()=>{
+                const p=(document.querySelector('#editPrequel')?.value||'').trim();
+                const s=(document.querySelector('#editSequel')?.value||'').trim();
+                const status=document.querySelector('#lookupStatus');
+                const busy=status?.classList.contains('busy')||status?.classList.contains('lookup-busy')||!!status?.querySelector('.lookup-book-spinner');
+                return (p&&s)||window.__LIB_LAST_NEIGHBORS_RESULT__||window.__LIB_LAST_NEIGHBORS_ERROR__||!busy;
+              },null,{timeout:120000}).catch(()=>{});
+              await page.waitForTimeout(750);
+              result=await snapshot();
               await page.screenshot({path:'sacrifice-e2e.png',fullPage:true});
               fs.writeFileSync('sacrifice-e2e.json',JSON.stringify({result,consoleLines},null,2));
               console.log('E2E_RESULT='+JSON.stringify(result));
@@ -89,8 +98,11 @@ jobs:
               const ok=/^Rebel$/i.test(result.prequel.trim())&&/^Heaven$/i.test(result.sequel.trim())&&/^Rebel$/i.test(result.saga.trim());
               if(!ok)throw new Error(`Campi non corretti: saga=${JSON.stringify(result.saga)} prequel=${JSON.stringify(result.prequel)} sequel=${JSON.stringify(result.sequel)}`);
             }catch(e){
+              try{result=await snapshot()}catch(_){}
               try{await page.screenshot({path:'sacrifice-e2e.png',fullPage:true})}catch(_){}
               try{fs.writeFileSync('sacrifice-e2e.json',JSON.stringify({result,consoleLines,error:String(e&&e.stack||e)},null,2))}catch(_){}
+              console.error('E2E_RESULT_ON_FAILURE='+JSON.stringify(result));
+              console.error('E2E_CONSOLE='+JSON.stringify(consoleLines));
               console.error('E2E_FAILURE',e);
               process.exitCode=1;
             }finally{
