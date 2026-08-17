@@ -17,7 +17,6 @@ jobs:
           from pathlib import Path
           import re
 
-          # 1) Filtro finale generale contro frammenti wikitext/metadati.
           p=Path('isbn-cover.js')
           s=p.read_text(encoding='utf-8')
           old="function safeBookRelation(v){const x=cleanRelationTitle(v);return x&&!screenMediaNoise(x)?x:''}"
@@ -32,32 +31,27 @@ jobs:
               raise SystemExit('safeBookRelation non trovato')
           p.write_text(s,encoding='utf-8')
 
-          # 2) Fallback verificato per la trilogia Ring. La logica del catalogo
-          #    resta generica: la voce serve soltanto quando le fonti live sono bloccate.
           p=Path('series-authoritative-catalog-v1.js')
           s=p.read_text(encoding='utf-8')
           if "author:'Koji Suzuki'" not in s:
-              marker="""    {
-      author:'Stephen King',
-      saga:'',
-"""
-              entry="""    {
-      author:'Koji Suzuki',
-      saga:'Ring',
-      titles:['Ring','Spiral','Loop'],
-      codes:{'8842913316':1,'9788842913313':1},
-      sources:[
-        'https://www.penguinrandomhouse.com/books/175557/spiral-by-koji-suzuki/',
-        'https://kodansha.us/book/ring-trilogy/loop-paperback/'
-      ],
-      verified:'2026-08-17'
-    },
-"""
+              marker="    {\n      author:'Stephen King',\n      saga:'',\n"
+              entry=(
+                  "    {\n"
+                  "      author:'Koji Suzuki',\n"
+                  "      saga:'Ring',\n"
+                  "      titles:['Ring','Spiral','Loop'],\n"
+                  "      codes:{'8842913316':1,'9788842913313':1},\n"
+                  "      sources:[\n"
+                  "        'https://www.penguinrandomhouse.com/books/175557/spiral-by-koji-suzuki/',\n"
+                  "        'https://kodansha.us/book/ring-trilogy/loop-paperback/'\n"
+                  "      ],\n"
+                  "      verified:'2026-08-17'\n"
+                  "    },\n"
+              )
               if marker not in s: raise SystemExit('punto inserimento catalogo verificato non trovato')
               s=s.replace(marker,entry+marker,1)
           p.write_text(s,encoding='utf-8')
 
-          # 3) Cache bust di tutti i riferimenti ai file modificati.
           changed_loaders=False
           targets=['isbn-cover.js','series-authoritative-catalog-v1.js']
           for path in list(Path('.').glob('*.html'))+list(Path('bg').glob('*.js')):
@@ -65,13 +59,12 @@ jobs:
               original=text
               for target in targets:
                   pat=re.compile(re.escape(target)+r'\?v=(\d+)')
-                  def bump(m): return target+'?v='+str(int(m.group(1))+1)
+                  def bump(m, target=target): return target+'?v='+str(int(m.group(1))+1)
                   text=pat.sub(bump,text)
               if text!=original:
                   path.write_text(text,encoding='utf-8')
                   changed_loaders=True
 
-          # Forza anche il browser a ricaricare i chunk bg.
           p=Path('index.html')
           text=p.read_text(encoding='utf-8')
           m=re.search(r'bg/bg\$\{i\}\.js\?v=(\d+)',text)
