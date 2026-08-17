@@ -1,0 +1,91 @@
+name: E2E live ISBN resiliente Beckett
+on:
+  workflow_run:
+    workflows: ['Deploy GitHub Pages']
+    types: [completed]
+permissions:
+  contents: read
+jobs:
+  test-beckett:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Installa Playwright
+        shell: bash
+        run: |
+          mkdir -p /tmp/e2e-beckett
+          cd /tmp/e2e-beckett
+          npm init -y >/dev/null 2>&1
+          npm install playwright@1.55.0 >/dev/null 2>&1
+          npx playwright install --with-deps chromium >/dev/null
+      - name: Prova ISBN sul sito pubblico
+        shell: bash
+        working-directory: /tmp/e2e-beckett
+        run: |
+          cat > test.js <<'JS'
+          const { chromium } = require('playwright');
+          const norm=s=>String(s||'').replace(/[’‘]/g,"'").replace(/\s+/g,' ').trim();
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+            const page=await browser.newPage();
+            const failed=[]; const consoleLines=[];
+            page.on('response',r=>{if(r.status()>=400)failed.push({status:r.status(),url:r.url()})});
+            page.on('requestfailed',r=>failed.push({status:'FAILED',url:r.url(),error:r.failure()?.errorText||''}));
+            page.on('console',m=>consoleLines.push(`[${m.type()}] ${m.text()}`));
+            page.on('pageerror',e=>consoleLines.push(`[pageerror] ${e.message}`));
+            try{
+              await page.goto('https://polentona.github.io/LibriSempreDiCarta/?e2e-beckett='+Date.now(),{waitUntil:'domcontentloaded',timeout:60000});
+              await page.locator('#addBookBtn').waitFor({state:'visible',timeout:30000});
+              await page.locator('#addBookBtn').click();
+              await page.locator('#editCode').waitFor({state:'visible',timeout:30000});
+              await page.locator('#editCode').fill('9788845283253');
+              await page.locator('#lookupMetadataBtn').click();
+              await page.waitForFunction(()=>{
+                const t=document.querySelector('#editTitle')?.value||'';
+                return /sussurri/i.test(t);
+              },null,{timeout:120000});
+              const overlay=page.locator('#metadataOverlay');
+              if(await overlay.evaluate(el=>!!el.open).catch(()=>false)){
+                const choices=page.locator('[data-meta-choice]');const count=await choices.count();
+                let chosen=false;
+                for(let i=0;i<count;i++){
+                  const tx=await choices.nth(i).innerText();
+                  if(/sussurri della morte/i.test(tx)&&/beckett/i.test(tx)){await choices.nth(i).click();chosen=true;break}
+                }
+                if(!chosen&&count===1)await choices.first().click();
+              }
+              const snapshot=()=>page.evaluate(()=>{
+                const val=id=>document.querySelector(id)?.value||'';
+                return {
+                  title:val('#editTitle'),author:val('#editAuthor'),category:val('#editCategory'),publisher:val('#editPublisher'),
+                  publication:val('#editPublication'),saga:val('#editSaga'),prequel:val('#editPrequel'),sequel:val('#editSequel'),
+                  cover:val('#editCover'),plot:val('#editPlot'),diag:window.__LIB_RESILIENT_ISBN_LAST__||null
+                };
+              });
+              let result={},last='',stable=0;
+              for(let i=0;i<45;i++){
+                result=await snapshot();const key=JSON.stringify(result);
+                if(key===last&&result.title)stable++;else stable=0;last=key;
+                if(stable>=4)break;
+                await page.waitForTimeout(2000);
+              }
+              console.log('E2E_BECKETT_RESULT='+JSON.stringify(result));
+              console.log('E2E_BECKETT_FAILED='+JSON.stringify(failed));
+              console.log('E2E_BECKETT_CONSOLE='+JSON.stringify(consoleLines.slice(-60)));
+              const errors=[];
+              if(norm(result.title)!=='I sussurri della morte')errors.push('titolo='+JSON.stringify(result.title));
+              if(norm(result.author)!=='Simon Beckett')errors.push('autore='+JSON.stringify(result.author));
+              if(!/^Bompiani(?:\b|\s)/i.test(norm(result.publisher)))errors.push('editore='+JSON.stringify(result.publisher));
+              if(norm(result.publication)!=='2016')errors.push('pubblicazione='+JSON.stringify(result.publication));
+              if(/libraccio|\[\]\(https|https?:|thebanco\.it/i.test([result.title,result.author,result.category,result.publisher,result.saga,result.prequel,result.sequel].join(' | ')))errors.push('spazzatura nei campi');
+              if(norm(result.saga)!=='David Hunter')errors.push('saga='+JSON.stringify(result.saga));
+              if(norm(result.prequel)!=='Scritto nelle ossa')errors.push('prequel='+JSON.stringify(result.prequel));
+              if(norm(result.sequel)!=='La voce dei morti')errors.push('sequel='+JSON.stringify(result.sequel));
+              if(errors.length)throw new Error('E2E Beckett non corretto: '+errors.join(' | '));
+            } finally { await browser.close(); }
+          })().catch(e=>{console.error('E2E_BECKETT_FAILURE',e);process.exitCode=1});
+          JS
+          node test.js
