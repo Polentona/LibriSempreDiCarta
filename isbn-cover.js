@@ -103,7 +103,26 @@ function boot(){
     const n=normalizeText(v);if(!n)return false;
     return /\b(?:tv|television|televisione|televisivo|televisiva|episodio|episode|episodes|stagione|season|miniserie|mini series|film|movie|cinema|screenplay|teleplay|television play|made for tv|itv|bbc|hbo|netflix|prime video|disney plus|regia|director|starring|cast)\b/i.test(n)||/\b(?:s\d{1,2}e\d{1,2}|\d{1,2}x\d{1,2})\b/i.test(n)
   }
-  function safeBookRelation(v){const x=String(v||'').replace(/\s+/g,' ').trim();return x&&!screenMediaNoise(x)?x:''}
+  function stripRelationQualifier(v){
+  let x=String(v||'').replace(/\s+/g,' ').trim();if(!x)return'';
+  x=x.replace(/\s*[([](?=[^\])]*\b(?:novel|romanzo|book|libro)\b)[^\])]*[)\]]\s*$/i,'').trim();
+  return x
+}
+function cleanRelationTitle(v){
+  let x=String(v||'').replace(/\s+/g,' ').trim();if(!x)return'';
+  x=x.replace(/\s*[|•]\s*(?:Wikipedia|Amazon|IBS|Libraccio|Mondadori|Giunti|Google Books).*$/i,'').trim();
+  const wrapped=x.match(/^["“«]\s*(.{1,220}?)\s*["”»]\s*$/);
+  if(wrapped)x=stripRelationQualifier(wrapped[1]);
+  const doubled=x.match(/^(.{1,160}?)\s*["“«]\s*(.{1,220}?)\s*["”»]\s*$/);
+  if(doubled){
+    const outer=stripRelationQualifier(doubled[1]),inner=stripRelationQualifier(doubled[2]);
+    const no=normalizeText(outer),ni=normalizeText(inner);
+    if(no&&ni&&no===ni)x=outer;
+  }
+  x=stripRelationQualifier(x);
+  return x.replace(/\s+/g,' ').trim()
+}
+function safeBookRelation(v){const x=cleanRelationTitle(v);return x&&!screenMediaNoise(x)?x:''}
   function cleanCatalogTitle(v){
     let t=String(v||'').replace(/\s+/g,' ').trim();if(!t)return'';
     t=t.replace(/\s*[:|]\s*[^:|]{0,220}\bAmazon(?:\.it)?\b.*$/i,'').trim();
