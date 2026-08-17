@@ -1,0 +1,49 @@
+name: Applica redesign viste libreria v1
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - ".github/workflows/apply-library-redesign-v1.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Applica patch
+        run: python tools/redesign_library_views_v1.py
+      - name: Verifica JavaScript inline
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          text=Path('index.html').read_text(encoding='utf-8')
+          scripts=re.findall(r'<script(?![^>]*\bsrc=)[^>]*>(.*?)</script>',text,flags=re.S|re.I)
+          if not scripts:
+              raise SystemExit('Nessuno script inline trovato')
+          for i,code in enumerate(scripts):
+              Path(f'/tmp/index-inline-{i}.js').write_text(code,encoding='utf-8')
+          print('INLINE_SCRIPTS',len(scripts))
+          PY
+          for f in /tmp/index-inline-*.js; do node --check "$f"; done
+          git diff --check
+      - name: Verifica funzioni richieste
+        run: |
+          grep -q 'id="editInLibrary"' index.html
+          grep -q "currentView='home'" index.html
+          grep -q 'data-author-letter' index.html
+          grep -q 'id="categoryFilter"' index.html
+          grep -q 'class="series-row"' index.html
+          grep -q 'data-series-note' index.html
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git commit -m "Ridisegna Home, libreria, autori, categorie e saghe"
+          git push
