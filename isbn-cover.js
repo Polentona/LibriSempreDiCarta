@@ -227,12 +227,49 @@ function candidateRelationsIncomplete(candidate){
     img.onerror=()=>{box.innerHTML='<div class="cover-preview-empty">Copertina non disponibile</div>'};box.appendChild(img);
   }
   function setDraftCover(url,automatic=true){const resolved=absoluteCoverUrl(url);$x('editCover').value=resolved;draftCoverWasAuto=automatic;if(automatic)autoFields.add('editCover');showPreview(resolved)}
+  let universalRelationTimer=null,universalRelationToken=0;
+  async function completeUniversalRelationsFromFields(){
+    if(typeof window.__LIB_RESOLVE_UNIVERSAL_SERIES!=='function')return null;
+    const title=String($x('editTitle')?.value||'').trim(),author=String($x('editAuthor')?.value||'').trim();
+    if(!title||!author||!plausibleAuthorName(author))return null;
+    const existing={saga:$x('editSaga')?.value||'',prequel:$x('editPrequel')?.value||'',sequel:$x('editSequel')?.value||''};
+    if(!candidateRelationsIncomplete(existing))return null;
+    const signature=normalizeText(title)+'|'+normalizeText(author),token=++universalRelationToken;
+    try{
+      const rel=await window.__LIB_RESOLVE_UNIVERSAL_SERIES({
+        code:normalizeLoose($x('editCode')?.value||''),title,author,
+        publisher:String($x('editPublisher')?.value||'').trim(),
+        saga:safeSeriesName($x('editSaga')?.value||''),
+        description:String($x('editPlot')?.value||'').trim()
+      });
+      window.__LIB_LAST_DECOUPLED_SERIES_RESULT__=rel||null;
+      if(token!==universalRelationToken)return null;
+      const now=normalizeText($x('editTitle')?.value||'')+'|'+normalizeText($x('editAuthor')?.value||'');if(now!==signature)return null;
+      if(rel?.saga){const saga=safeSeriesName(rel.saga);if(saga)setAutoField('editSaga',saga,true)}
+      if(rel?.authoritative){
+        setAutoField('editPrequel',safeBookRelation(rel.prequel||''),true);
+        setAutoField('editSequel',safeBookRelation(rel.sequel||''),true);
+      }
+      return rel||null;
+    }catch(e){window.__LIB_LAST_DECOUPLED_SERIES_ERROR__=String(e&&e.message||e);console.warn('Completamento universale relazioni non disponibile',e);return null}
+  }
+  function scheduleUniversalRelations(delay=450){
+    clearTimeout(universalRelationTimer);
+    universalRelationTimer=setTimeout(()=>{completeUniversalRelationsFromFields()},delay)
+  }
   function setAutoField(id,value,allowEmpty=false){
     value=String(value||'').trim();
     const el=$x(id);if(!el)return;
     if(!value&&!allowEmpty)return;
-    if(!el.value.trim()||autoFields.has(id)){el.value=value;autoFields.add(id)}
+    if(!el.value.trim()||autoFields.has(id)){
+      el.value=value;autoFields.add(id);
+      if(id==='editTitle'||id==='editAuthor')scheduleUniversalRelations()
+    }
   }
+  for(const id of ['editTitle','editAuthor']){
+    const el=$x(id);if(el){el.addEventListener('input',()=>scheduleUniversalRelations(650));el.addEventListener('change',()=>scheduleUniversalRelations(120))}
+  }
+  window.__LIB_COMPLETE_RELATIONS_FROM_FIELDS__=completeUniversalRelationsFromFields;
   function hidePicker(){if(overlay.open)overlay.close();overlay.setAttribute('aria-hidden','true');$x('metadataChoices').innerHTML=''}
   function openPicker(title,text){$x('metadataPickerTitle').textContent=title;$x('metadataPickerText').textContent=text;overlay.setAttribute('aria-hidden','false');if(!overlay.open)overlay.showModal()}
   function imageWorks(url){return new Promise(resolve=>{const img=new Image();let done=false;const finish=v=>{if(done)return;done=true;clearTimeout(t);resolve(v)};const t=setTimeout(()=>finish(false),4200);img.onload=()=>finish(img.naturalWidth>20&&img.naturalHeight>20);img.onerror=()=>finish(false);img.src=url})}
