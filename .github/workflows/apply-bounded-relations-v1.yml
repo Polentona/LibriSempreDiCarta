@@ -1,0 +1,29 @@
+name: Integra resolver relazioni limitato
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/apply-bounded-relations-v1.yml']
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Applica patch
+        run: python tools/patch_bounded_relations_v1.py
+      - name: Verifica sintassi
+        run: |
+          node --check series-bounded-resolver-v1.js
+          node --check isbn-cover.js
+      - name: Commit
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html isbn-cover.js
+          git commit -m 'Usa relazioni editoriali bounded e disattiva cascade legacy ISBN'
+          git push
