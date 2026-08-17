@@ -5,6 +5,15 @@
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const norm=v=>clean(v).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[’‘]/g,"'").replace(/[^a-z0-9']+/g,' ').replace(/\s+/g,' ').trim();
   const same=(a,b)=>{const x=norm(a),y=norm(b);return !!x&&!!y&&(x===y||(x.length>=7&&y.startsWith(x+' '))||(y.length>=7&&x.startsWith(y+' ')))};
+  const escRe=v=>String(v||'').replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  function withoutSaga(title,saga){
+    let t=clean(title),s=clean(saga);if(!t||!s)return t;
+    const e=escRe(s);
+    t=t.replace(new RegExp('^\\s*'+e+'\\s*(?:[.:-]|[-–—])?\\s*','i'),'').trim();
+    t=t.replace(new RegExp('\\s*(?:[.:-]|[-–—])?\\s*'+e+'\\s*$','i'),'').trim();
+    return t;
+  }
+  const sameTitle=(candidate,canonical,saga)=>same(candidate,canonical)||same(withoutSaga(candidate,saga),canonical);
 
   const SERIES=[
     {
@@ -16,6 +25,17 @@
         'https://books.google.com/books/about/La_trilogia_di_Rebel.html?id=4sgKEAAAQBAJ'
       ],
       verified:'2026-08-17'
+    },
+    {
+      author:'Elizabeth Chandler',
+      saga:'Baciata da un angelo',
+      titles:["L'amore che non muore","Il potere dell'amore",'Anime gemelle','In fondo al cuore',"L'amore e l'odio",'Sarà per sempre'],
+      sources:[
+        'https://www.ibs.it/libri/traduttore/elizabeth-chandler',
+        'https://www.libreriauniversitaria.it/amore-odio-baciata-angelo-chandler/libro/9788854147317',
+        'https://www.libreriauniversitaria.it/sara-sempre-baciata-angelo-chandler/libro/9788854150706'
+      ],
+      verified:'2026-08-17'
     }
   ];
 
@@ -24,7 +44,7 @@
     if(!author||!saga||!title)return null;
     const entry=SERIES.find(x=>same(x.author,author)&&same(x.saga,saga));
     if(!entry)return null;
-    const idx=entry.titles.findIndex(x=>same(x,title));
+    const idx=entry.titles.findIndex(x=>sameTitle(title,x,entry.saga));
     if(idx<0)return null;
     const result={
       saga:entry.saga,
@@ -34,6 +54,8 @@
       sources:[...entry.sources],
       checked:true,
       authoritative:true,
+      terminal:idx===entry.titles.length-1,
+      initial:idx===0,
       verified:entry.verified
     };
     window.__LIB_AUTHORITATIVE_SERIES_LAST__={input:{title,author,saga},entry,result};
