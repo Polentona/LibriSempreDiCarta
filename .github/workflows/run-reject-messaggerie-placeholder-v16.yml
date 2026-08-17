@@ -28,3 +28,4 @@ jobs:
           git add isbn-cover.js index.html
           git commit -m "Scarta il placeholder Messaggerie e continua la ricerca copertina"
           git push
+# trigger v16
