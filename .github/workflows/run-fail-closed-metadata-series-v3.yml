@@ -1,0 +1,27 @@
+name: Hardening fail-closed metadata e saghe v3
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/run-fail-closed-metadata-series-v3.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Applica patch
+        run: python tools/fix_fail_closed_metadata_and_series_v3.py
+      - name: Verifica sintassi
+        run: |
+          node --check isbn-resilient-fallback-v1.js
+          node --check isbn-cover.js
+          node --check series-universal-resolver-v1.js
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add isbn-resilient-fallback-v1.js isbn-cover.js index.html
+          git commit -m "Accetta metadati solo da schede ISBN verificate"
+          git push
