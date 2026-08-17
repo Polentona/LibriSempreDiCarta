@@ -1,0 +1,27 @@
+name: Applica lookup universale ISBN e saghe v1b
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/run-universal-lookup-v1b.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Applica patch
+        run: python tools/apply_universal_lookup_v1.py
+      - name: Verifica sintassi
+        run: |
+          node --check isbn-resilient-fallback-v1.js
+          node --check series-universal-resolver-v1.js
+          node --check isbn-cover.js
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add isbn-resilient-fallback-v1.js series-universal-resolver-v1.js isbn-cover.js index.html
+          git commit -m "Rende generale la ricerca ISBN e delle saghe"
+          git push
