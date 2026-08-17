@@ -305,6 +305,15 @@ function boot(){
         setAutoField('editSequel',candidate.sequel,true);
       }catch(e){console.warn('Relazioni serie non disponibili',e)}
     }
+    if(type==='isbn'&&typeof window.__LIB_RESOLVE_SERIES_NEIGHBORS==='function'&&candidate.title&&candidate.author&&(!candidate.prequel||!candidate.sequel)){
+      try{
+        const rel2=await window.__LIB_RESOLVE_SERIES_NEIGHBORS({code,title:candidate.title,author:candidate.author,saga:candidate.saga,description:candidate.description||''});
+        window.__LIB_LAST_NEIGHBORS_RESULT__=rel2||null;
+        if(rel2?.saga&&!candidate.saga){candidate.saga=String(rel2.saga).trim();setAutoField('editSaga',candidate.saga,true)}
+        if(rel2?.prequel){candidate.prequel=String(rel2.prequel).trim();setAutoField('editPrequel',candidate.prequel,true)}
+        if(rel2?.sequel){candidate.sequel=String(rel2.sequel).trim();setAutoField('editSequel',candidate.sequel,true)}
+      }catch(e){window.__LIB_LAST_NEIGHBORS_ERROR__=String(e&&e.message||e);console.warn('Resolver finale prequel/sequel non disponibile',e)}
+    }
     const forcedCover=verifiedUiCover(code);if(forcedCover&&(!$x('editCover').value.trim()||autoFields.has('editCover')))setDraftCover(forcedCover,true);
     const coverAlready=$x('editCover').value.trim()&&!autoFields.has('editCover');
     if(type==='isbn'&&!coverAlready){const retail=await retailerCoversForIsbn(code,candidate.title||'',candidate.author||'');candidate.covers=mergeCoverOptions(candidate.covers,retail)}
