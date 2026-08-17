@@ -1,0 +1,27 @@
+name: Attiva Wikipedia contestuale v3
+on:
+  push:
+    paths:
+      - '.github/workflows/activate-wiki-authoritative-v3-once.yml'
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Applica correzione
+        run: python tools/activate_wiki_authoritative_v3.py
+      - name: Verifica JavaScript
+        run: |
+          node --check series-wikipedia-authoritative-v3.js
+          node --check lookup-lock.js
+          node --check isbn-cover.js
+      - name: Pubblica e pulisce file temporanei
+        run: |
+          rm -f tools/activate_wiki_authoritative_v3.py .github/workflows/activate-wiki-authoritative-v3-once.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Corregge fonti Wikipedia e blocca il form durante la ricerca"
+          git push
