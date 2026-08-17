@@ -7,7 +7,7 @@ const cache=new Map();
 const TRUSTED=[
   'thebanco.it','ibs.it','libraccio.it','mondadoristore.it','giunti.it','hoepli.it',
   'unilibro.it','libreriauniversitaria.it','eurolibro.it','abebooks.com','abebooks.it',
-  'bompiani.it','tealibri.it','feltrinellieditore.it','einaudi.it','rizzolilibri.it',
+  'bompiani.it','tealibri.it','feltrinellieditore.it','lafeltrinelli.it','einaudi.it','rizzolilibri.it',
   'adelphi.it','sellerio.it','newtoncompton.com','salani.it','longanesi.it','garzanti.it',
   'corbaccio.it','nord.it','piemme.it','sperling.it','fazi.it','harpercollins.it'
 ];
@@ -15,7 +15,7 @@ const SOURCE_NAMES={
   'thebanco.it':'TheBanco','ibs.it':'IBS','libraccio.it':'Libraccio','mondadoristore.it':'Mondadori Store',
   'giunti.it':'Giunti','hoepli.it':'Hoepli','unilibro.it':'Unilibro','libreriauniversitaria.it':'Libreria Universitaria',
   'eurolibro.it':'EuroLibro','abebooks.com':'AbeBooks','abebooks.it':'AbeBooks','bompiani.it':'Bompiani',
-  'tealibri.it':'TEA','feltrinellieditore.it':'Feltrinelli','einaudi.it':'Einaudi','rizzolilibri.it':'Rizzoli'
+  'tealibri.it':'TEA','feltrinellieditore.it':'Feltrinelli','lafeltrinelli.it':'Feltrinelli','einaudi.it':'Einaudi','rizzolilibri.it':'Rizzoli'
 };
 
 function normCode(v){return String(v||'').replace(/[^0-9Xx]/g,'').toUpperCase()}
@@ -152,7 +152,12 @@ async function discoverRetail(code){
   const add=u=>{if(domainOf(u)&&!links.includes(u))links.push(u)};
   // TheBanco usa AizShop: la ricerca per keyword e' interrogabile senza conoscere lo slug del prodotto.
   for(const u of [`https://thebanco.it/search?keyword=${encodeURIComponent(ean)}`,`https://thebanco.it/search?q=${encodeURIComponent(ean)}`]){const t=await jina(u,8500);for(const x of linksFrom(t))add(x);const sn=searchSnippetRecord(t,ean);if(sn){const enriched=await appleSearch(sn);if(enriched.score>=20)return enriched}const self=inspectPage(t,u,ean);if(self){const enriched=await appleSearch(self);if(enriched.score>=20)return enriched}}
-  const siteQ=`"${ean}" (site:thebanco.it OR site:ibs.it OR site:libraccio.it OR site:unilibro.it OR site:libreriauniversitaria.it OR site:hoepli.it OR site:abebooks.com OR site:bompiani.it)`;
+  // Ricerca diretta nei cataloghi che espongono EAN/ISBN nella scheda prodotto.
+  for(const u of [`https://www.lafeltrinelli.it/search?query=${encodeURIComponent(ean)}`,`https://www.mondadoristore.it/search?q=${encodeURIComponent(ean)}`]){
+    const t=await jina(u,8500);const sn=searchSnippetRecord(t,ean);if(sn){const enriched=await appleSearch(sn);if(enriched.score>=20)return enriched}
+    for(const x of linksFrom(t))add(x)
+  }
+  const siteQ=`"${ean}" (site:thebanco.it OR site:ibs.it OR site:libraccio.it OR site:unilibro.it OR site:libreriauniversitaria.it OR site:hoepli.it OR site:abebooks.com OR site:bompiani.it OR site:lafeltrinelli.it OR site:mondadoristore.it OR site:giunti.it)`;
   for(const q of [`"${ean}"`,`"${ean}" libro`,siteQ]){const b=await jina('https://www.bing.com/search?setlang=it-IT&q='+encodeURIComponent(q),8500);const sn=searchSnippetRecord(b,ean);if(sn){const enriched=await appleSearch(sn);if(enriched.score>=20)return enriched}for(const x of linksFrom(b))add(x);if(links.length>=8)break}const g=await jina('https://www.google.com/search?hl=it&num=10&q='+encodeURIComponent(`"${ean}" libro`),8500);const gsn=searchSnippetRecord(g,ean);if(gsn){const enriched=await appleSearch(gsn);if(enriched.score>=20)return enriched}for(const x of linksFrom(g))add(x);
   add(`https://www.eurolibro.it/libro/isbn/${encodeURIComponent(ean)}.html`);if(i10)add(`https://www.amazon.it/dp/${encodeURIComponent(i10)}`);
   const recs=(await Promise.all(links.slice(0,10).map(async u=>inspectPage(await jina(u,9500),u,ean)))).filter(Boolean).sort((a,b)=>b.score-a.score);
