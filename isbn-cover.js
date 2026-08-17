@@ -291,15 +291,22 @@ function boot(){
     setAutoField('editTitle',candidate.title);setAutoField('editSaga',candidate.saga);setAutoField('editAuthor',candidate.author);setAutoField('editPlot',candidate.description);setAutoField('editCategory',candidate.category);setAutoField('editPublisher',candidate.publisher);setAutoField('editPublishedDate',candidate.publishedDate);setAutoField('editPrequel',candidate.prequel);setAutoField('editSequel',candidate.sequel);
     /* __LIB_PRE_RELATION_NEIGHBORS_V5__ */
     /* __LIB_AUTHORITATIVE_PRELOOKUP_V1__ */
+    let authoritativeRelationsResolved=false;
     if(type==='isbn'&&typeof window.__LIB_RESOLVE_AUTHORITATIVE_SERIES_NEIGHBORS==='function'&&candidate.title&&candidate.author&&candidate.saga&&(!candidate.prequel||!candidate.sequel)){
       try{
         const localRel=window.__LIB_RESOLVE_AUTHORITATIVE_SERIES_NEIGHBORS({code,title:candidate.title,author:candidate.author,saga:candidate.saga});
         window.__LIB_LAST_AUTHORITATIVE_SERIES_RESULT__=localRel||null;
-        if(localRel?.prequel){candidate.prequel=String(localRel.prequel).trim();setAutoField('editPrequel',candidate.prequel,true)}
-        if(localRel?.sequel){candidate.sequel=String(localRel.sequel).trim();setAutoField('editSequel',candidate.sequel,true)}
+        authoritativeRelationsResolved=!!localRel?.authoritative;
+        if(localRel?.authoritative){
+          if(localRel.saga){candidate.saga=String(localRel.saga).trim();setAutoField('editSaga',candidate.saga,true)}
+          candidate.prequel=String(localRel.prequel||'').trim();
+          candidate.sequel=String(localRel.sequel||'').trim();
+          setAutoField('editPrequel',candidate.prequel,true);
+          setAutoField('editSequel',candidate.sequel,true);
+        }
       }catch(e){window.__LIB_LAST_AUTHORITATIVE_SERIES_ERROR__=String(e&&e.message||e);console.warn('Catalogo serie verificato non disponibile',e)}
     }
-    if(type==='isbn'&&typeof window.__LIB_RESOLVE_SERIES_NEIGHBORS==='function'&&candidate.title&&candidate.author&&candidate.saga&&(!candidate.prequel||!candidate.sequel)){
+    if(type==='isbn'&&!authoritativeRelationsResolved&&typeof window.__LIB_RESOLVE_SERIES_NEIGHBORS==='function'&&candidate.title&&candidate.author&&candidate.saga&&(!candidate.prequel||!candidate.sequel)){
       try{
         const rel0=await window.__LIB_RESOLVE_SERIES_NEIGHBORS({code,title:candidate.title,author:candidate.author,saga:candidate.saga,description:candidate.description||''});
         window.__LIB_LAST_NEIGHBORS_RESULT__=rel0||null;
@@ -307,7 +314,7 @@ function boot(){
         if(rel0?.sequel){candidate.sequel=String(rel0.sequel).trim();setAutoField('editSequel',candidate.sequel,true)}
       }catch(e){window.__LIB_LAST_NEIGHBORS_ERROR__=String(e&&e.message||e);console.warn('Resolver preliminare prequel/sequel non disponibile',e)}
     }
-    if(type==='isbn'&&typeof window.__LIB_FIND_RELATIONS==='function'&&candidate.title&&candidate.author&&(!candidate.saga||!candidate.prequel||!candidate.sequel)){
+    if(type==='isbn'&&!authoritativeRelationsResolved&&typeof window.__LIB_FIND_RELATIONS==='function'&&candidate.title&&candidate.author&&(!candidate.saga||!candidate.prequel||!candidate.sequel)){
       try{
         const rel=await window.__LIB_FIND_RELATIONS({code,title:candidate.title,author:candidate.author,saga:candidate.saga,description:candidate.description||''});
         if(rel?.sagaChecked){
@@ -324,7 +331,7 @@ function boot(){
         setAutoField('editSequel',candidate.sequel,true);
       }catch(e){console.warn('Relazioni serie non disponibili',e)}
     }
-    if(type==='isbn'&&typeof window.__LIB_RESOLVE_SERIES_NEIGHBORS==='function'&&candidate.title&&candidate.author&&(!candidate.prequel||!candidate.sequel)){
+    if(type==='isbn'&&!authoritativeRelationsResolved&&typeof window.__LIB_RESOLVE_SERIES_NEIGHBORS==='function'&&candidate.title&&candidate.author&&(!candidate.prequel||!candidate.sequel)){
       try{
         const rel2=await window.__LIB_RESOLVE_SERIES_NEIGHBORS({code,title:candidate.title,author:candidate.author,saga:candidate.saga,description:candidate.description||''});
         window.__LIB_LAST_NEIGHBORS_RESULT__=rel2||null;
@@ -426,6 +433,15 @@ function boot(){
     const pending=books.filter(b=>{const code=normalizeLoose(b.code||b.isbn||'');return code&&b.title&&b.author&&(Number(b.relationsLookupVersion||0)!==RELATIONS_LOOKUP_VERSION||!b.relationsLookupAt||now-Number(b.relationsLookupAt)>week)&&(!b.prequel||!b.sequel||Number(b.relationsLookupVersion||0)!==RELATIONS_LOOKUP_VERSION)}).slice(0,8);
     for(const b of pending){
       try{
+        const authoritativeRel=typeof window.__LIB_RESOLVE_AUTHORITATIVE_SERIES_NEIGHBORS==='function'?window.__LIB_RESOLVE_AUTHORITATIVE_SERIES_NEIGHBORS({code:b.code||b.isbn||'',title:b.title,author:b.author,saga:b.saga||''}):null;
+        if(authoritativeRel?.authoritative){
+          let changed=false;
+          const nextSaga=String(authoritativeRel.saga||b.saga||'').trim(),nextPrequel=String(authoritativeRel.prequel||'').trim(),nextSequel=String(authoritativeRel.sequel||'').trim();
+          if(String(b.saga||'').trim()!==nextSaga){b.saga=nextSaga;changed=true}
+          if(String(b.prequel||'').trim()!==nextPrequel){b.prequel=nextPrequel;changed=true}
+          if(String(b.sequel||'').trim()!==nextSequel){b.sequel=nextSequel;changed=true}
+          b.relationsLookupAt=now;b.relationsLookupVersion=RELATIONS_LOOKUP_VERSION;saveBooks();if(changed)render();continue
+        }
         const rel=await window.__LIB_FIND_RELATIONS({code:b.code||b.isbn||'',title:b.title,author:b.author,saga:b.saga||'',description:b.plot||b.description||''});let changed=false;
         if(rel?.sagaChecked){const nextSaga=String(rel.saga||'').trim();if(String(b.saga||'').trim()!==nextSaga){b.saga=nextSaga;changed=true}}
         const effectiveSaga=rel?.sagaChecked?String(rel.saga||'').trim():String(b.saga||'').trim();
