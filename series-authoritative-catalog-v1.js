@@ -65,6 +65,14 @@
       verified:'2026-08-17'
     },
     {
+      author:'Simon Beckett',
+      saga:'David Hunter',
+      titles:['La chimica della morte','Scritto nelle ossa','I sussurri della morte','La voce dei morti','Acque morte','Il profumo della morte'],
+      codes:{'9788845283253':2},
+      sources:['https://www.bompiani.it/catalogo/i-sussurri-della-morte-9788845279553','https://www.bompiani.it/autori/simon-beckett-524'],
+      verified:'2026-08-17'
+    },
+    {
       author:'Stephen King',
       saga:'',
       titles:['Shining','Doctor Sleep'],

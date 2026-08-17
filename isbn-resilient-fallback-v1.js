@@ -105,18 +105,46 @@ async function appleSearch(rec){
   if(!rec.category&&best.genres?.length)rec.category=safeCategory(best.genres[0]);
   rec.score=(rec.score||0)+7;rec.appleValidated=true;return rec
 }
+const PUBLISHER_DOMAINS=[
+  [/bompiani/i,'bompiani.it'],[/\btea\b/i,'tealibri.it'],[/feltrinelli/i,'feltrinellieditore.it'],[/einaudi/i,'einaudi.it'],
+  [/rizzoli/i,'rizzolilibri.it'],[/adelphi/i,'adelphi.it'],[/sellerio/i,'sellerio.it'],[/newton/i,'newtoncompton.com'],
+  [/salani/i,'salani.it'],[/longanesi/i,'longanesi.it'],[/garzanti/i,'garzanti.it'],[/corbaccio/i,'corbaccio.it'],
+  [/piemme/i,'piemme.it'],[/sperling/i,'sperling.it'],[/fazi/i,'fazi.it'],[/harpercollins/i,'harpercollins.it'],[/mondadori/i,'mondadori.it']
+];
+function publisherDomain(v){for(const [re,d] of PUBLISHER_DOMAINS)if(re.test(String(v||'')))return d;return''}
+function headingAuthor(body,title){
+  const lines=String(body||'').split(/\n/);let near=-1;
+  for(let i=0;i<lines.length;i++){const raw=String(lines[i]||''),x=cleanLine(raw);if(/^\s*#{1,3}\s+/.test(raw)&&titleSimilarity(x,title)>=0.55){near=i;break}}
+  if(near<0)return'';
+  for(let i=near+1;i<Math.min(lines.length,near+9);i++){const raw=String(lines[i]||''),x=cleanLine(raw);if(!/^\s*#{2,4}\s+/.test(raw))continue;if(validAuthor(x)&&titleSimilarity(x,title)<0.35)return x}
+  return''
+}
+async function enrichOfficial(rec){
+  if(!rec?.title)return rec;const domain=publisherDomain(rec.publisher);if(!domain)return rec;
+  const q=`site:${domain} \"${rec.title}\" ${rec.author?`\"${rec.author}\"`:''}`;
+  const b=await jina('https://www.bing.com/search?setlang=it-IT&q='+encodeURIComponent(q),8500);const urls=linksFrom(b).filter(u=>domainOf(u)===domain);
+  for(const u of urls.slice(0,4)){
+    const text=await jina(u,9000),body=bodyOnly(text);if(!body)continue;
+    const n=normText(body),words=titleWords(rec.title);if(words.filter(w=>n.includes(w)).length<Math.min(2,words.length))continue;
+    let a=headingAuthor(body,rec.title);if(!a){const lines=String(body).split(/\n/);a=field(lines,['Autore','Autori','Author','Scritto da'])}
+    if(a&&validAuthor(a))rec.author=clean(a);
+    const h=String(body).split(/\n/).map(cleanLine).find(x=>validTitle(x)&&titleSimilarity(x,rec.title)>=0.65);if(h)rec.title=cleanCommercialTitle(h);
+    rec.officialSource=u;rec.score=(rec.score||0)+8;break
+  }
+  return rec
+}
 async function discoverRetail(code){
   const ean=aliases(code).find(x=>/^97[89]\d{10}$/.test(x))||normCode(code),i10=aliases(code).find(x=>/^\d{9}[\dX]$/.test(x))||isbn13to10(ean),links=[];
   const add=u=>{if(domainOf(u)&&!links.includes(u))links.push(u)};
   // TheBanco usa AizShop: la ricerca per keyword e' interrogabile senza conoscere lo slug del prodotto.
   for(const u of [`https://thebanco.it/search?keyword=${encodeURIComponent(ean)}`,`https://thebanco.it/search?q=${encodeURIComponent(ean)}`]){const t=await jina(u,8500);for(const x of linksFrom(t))add(x);const self=inspectPage(t,u,ean);if(self){const enriched=await appleSearch(self);if(enriched.score>=20)return enriched}}
   const siteQ=`"${ean}" (site:thebanco.it OR site:ibs.it OR site:libraccio.it OR site:unilibro.it OR site:libreriauniversitaria.it OR site:hoepli.it OR site:abebooks.com OR site:bompiani.it)`;
-  const b=await jina('https://www.bing.com/search?setlang=it-IT&q='+encodeURIComponent(siteQ),8500);for(const x of linksFrom(b))add(x);
+  for(const q of [`"${ean}"`,`"${ean}" libro`,siteQ]){const b=await jina('https://www.bing.com/search?setlang=it-IT&q='+encodeURIComponent(q),8500);for(const x of linksFrom(b))add(x);if(links.length>=8)break}
   add(`https://www.eurolibro.it/libro/isbn/${encodeURIComponent(ean)}.html`);if(i10)add(`https://www.amazon.it/dp/${encodeURIComponent(i10)}`);
   const recs=(await Promise.all(links.slice(0,10).map(async u=>inspectPage(await jina(u,9500),u,ean)))).filter(Boolean).sort((a,b)=>b.score-a.score);
   if(!recs.length)return null;return await appleSearch(recs[0])
 }
-async function resilientLookup(code){if(cache.has(code))return cache.get(code);const p=(async()=>{const ol=await openLibrary(code);if(ol&&ol.author&&ol.publisher)return await appleSearch(ol);const web=await discoverRetail(code);if(web)return web;return ol})();cache.set(code,p);return p}
+async function resilientLookup(code){if(cache.has(code))return cache.get(code);const p=(async()=>{const ol=await openLibrary(code);if(ol&&ol.author&&ol.publisher)return await enrichOfficial(await appleSearch(ol));const web=await discoverRetail(code);if(web)return await enrichOfficial(web);return ol?await enrichOfficial(await appleSearch(ol)):null})();cache.set(code,p);return p}
 function toGoogle(rec,code){const ids=aliases(code).map(x=>({type:x.length===10?'ISBN_10':'ISBN_13',identifier:x})),v={title:rec.title,authors:rec.author?[rec.author]:[],publisher:rec.publisher||'',publishedDate:rec.year||'',language:'it',industryIdentifiers:ids,description:rec.description||'',categories:rec.category?[rec.category]:[]};if(rec.cover)v.imageLinks={thumbnail:rec.cover,smallThumbnail:rec.cover,medium:rec.cover,large:rec.cover};return {kind:'books#volumes',totalItems:1,items:[{id:'resilient-'+normCode(code),volumeInfo:v,__resilientSource:rec.source||'fallback'}]}}
 
 window.fetch=async function(input,init){

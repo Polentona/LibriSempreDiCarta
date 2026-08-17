@@ -214,10 +214,33 @@ function bestCover(text,title,pageUrl){
   const raw=/(https?:\/\/[^\s"'<>]+\.(?:jpg|jpeg|png|webp|avif)(?:\?[^\s"'<>]*)?)/gi;while((m=raw.exec(String(text||''))))add(m[1]);
   found.sort((a,b)=>b.score-a.score);let u=found[0]?.url||'';if(/^https?:\/\/(?:m\.media-amazon\.com|images(?:-na)?\.ssl-images-amazon\.com)\//i.test(u))u='https://images.weserv.nl/?url='+encodeURIComponent(u);return u
 }
+function jinaBody(text){
+  const s=String(text||''),mark='Markdown Content:',i=s.indexOf(mark);
+  return (i>=0?s.slice(i+mark.length):s).replace(/^URL Source:.*$/gmi,'').trim()
+}
+function trustworthyBookBody(text,code){
+  const body=jinaBody(text);if(!body||!codeAppears(body,code))return'';
+  const p=plain(body);let signals=0;
+  if(/\b(?:ISBN|EAN)\b/i.test(p))signals++;
+  if(/\b(?:Autore|Autori|Author|Scritto da)\b/i.test(p))signals++;
+  if(/\b(?:Editore|Publisher|Casa editrice)\b/i.test(p))signals++;
+  if(/\b(?:Anno|Pubblicazione|Pagine|Formato|Collana)\b/i.test(p))signals++;
+  return signals>=2?body:''
+}
+function validCatalogTitle(v,url){
+  const t=cleanBookTitleCandidate(v),n=normText(t),src=normText(sourceName(url));
+  if(!t||t.length<2||t.length>190||isNavigationTitle(t))return false;
+  if(/https?:|www\.|\[\]\(|^\W+$/.test(t))return false;
+  if(src&&n===src)return false;
+  if(/^(?:libraccio(?: it)?|ibs|amazon(?: it)?|mondadori(?: store)?|giunti|hoepli|unilibro|eurolibro|catalogo italiano|catalogo)$/i.test(n))return false;
+  return true
+}
 function inspectText(text,url,code){
-  if(!text||!codeAppears(text,code))return null;
-  const rawTitle=titleFrom(text,code),split=splitTitleSaga(rawTitle,text),title=split.title,saga=split.saga,author=authorFrom(text,rawTitle),publisher=cleanPublisherCandidate(publisherFrom(text)),year=yearFrom(text),description=descriptionFrom(text),category=categoryFrom(text,rawTitle),cover=bestCover(text,rawTitle,url);
-  if(!title)return null;
+  const body=trustworthyBookBody(text,code);if(!body)return null;
+  const rawTitle=titleFrom(body,code),split=splitTitleSaga(rawTitle,body),title=split.title,saga=split.saga,author=authorFrom(body,rawTitle),publisher=cleanPublisherCandidate(publisherFrom(body)),year=yearFrom(body),description=descriptionFrom(body),category=categoryFrom(body,rawTitle),cover=bestCover(body,rawTitle,url);
+  if(!validCatalogTitle(title,url))return null;
+  if(category&&(/https?:|\[\]\(|^\W+$/.test(category)||category.length>150))return null;
+  if(!author&&!publisher)return null;
   let score=4+(author?4:0)+(publisher?2:0)+(year?1:0)+(description?4:0)+(category?2:0)+(cover?2:0)+(saga?3:0);if(['Libraccio','Libreria Universitaria','Unilibro','IBS'].includes(sourceName(url)))score+=1;if(sourceName(url)==='Amazon Italia'&&(author||publisher||saga))score+=3;
   return {title,saga,author,publisher,year,description,category,cover,source:sourceName(url),score}
 }
@@ -412,7 +435,7 @@ async function findCatalog(code){
   const key=norm(code);if(cache.has(key))return cache.get(key);
   const promise=(async()=>{
     const a=aliases(key),ean=a.find(x=>/^97[89]\d{10}$/.test(x))||key,i10=a.find(x=>/^\d{9}[\dX]$/.test(x))||'';
-    const direct=[`https://www.eurolibro.it/libro/isbn/${encodeURIComponent(ean)}.html`,`https://www.libraccio.it/libro/${encodeURIComponent(ean)}/`];if(i10)direct.push(`https://www.amazon.it/dp/${encodeURIComponent(i10)}`);
+    const direct=[`https://www.eurolibro.it/libro/isbn/${encodeURIComponent(ean)}.html`];if(i10)direct.push(`https://www.amazon.it/dp/${encodeURIComponent(i10)}`);
     let pages=[...direct];
     const searches=[`https://www.google.com/search?hl=it&num=12&q=${encodeURIComponent('"'+ean+'"')}`,`https://www.bing.com/search?setlang=it-IT&q=${encodeURIComponent('"'+ean+'"')}`];
     const searchTexts=await Promise.all(searches.map(u=>reader(u,12000)));for(const t of searchTexts)for(const u of searchLinks(t))if(!pages.includes(u))pages.push(u);
