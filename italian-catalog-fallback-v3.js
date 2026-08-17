@@ -103,7 +103,7 @@ function titleFrom(text,code){
 }
 function isNavigationTitle(v){
   const n=normText(v);if(!n)return true;
-  return /^(?:skip to(?: .*)?|salta a(?: .*)?|main content|contenuto principale|keyboard shortcuts?|scorciatoie da tastiera|search|cerca|cart|carrello|navigation|navigazione|menu|home|libri|ricerca|risultati|descrizione|sinossi|trama|dettagli|informazioni|recensioni|libro di|un libro di|back to top|torna su|select your cookie preferences|cookie preferences|accessibility|accessibilita|amazon|amazon it|account e liste|resi e ordini|tutte le categorie|tutto|buy now|acquista ora|aggiungi al carrello)$/i.test(n)
+  return /^(?:skip to(?: .*)?|salta a(?: .*)?|main content|contenuto principale|keyboard shortcuts?|scorciatoie da tastiera|search|cerca|cart|carrello|navigation|navigazione|menu|home|libri|ricerca|risultati|descrizione|sinossi|trama|dettagli|informazioni|recensioni|product details|product information|book details|dettagli prodotto|informazioni prodotto|dettagli del prodotto|scheda prodotto|libro di|un libro di|back to top|torna su|select your cookie preferences|cookie preferences|accessibility|accessibilita|amazon|amazon it|account e liste|resi e ordini|tutte le categorie|tutto|buy now|acquista ora|aggiungi al carrello)$/i.test(n)
 }
 function cleanAuthorCandidate(v){
   let a=cleanLine(v)
