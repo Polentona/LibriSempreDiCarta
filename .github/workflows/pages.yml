@@ -3,6 +3,12 @@ name: Deploy GitHub Pages
 on:
   push:
     branches: ["main"]
+    paths-ignore:
+      - ".github/**"
+      - "tools/**"
+      - "scripts/**"
+      - "deploy-*.txt"
+      - "*-result.txt"
   workflow_dispatch:
 
 permissions:
