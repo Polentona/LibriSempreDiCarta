@@ -1,4 +1,4 @@
-name: E2E filtro globale trama e sinossi editore v9
+name: E2E filtro globale trama e sinossi editore v10
 on:
   push:
     branches: [main]
@@ -15,13 +15,13 @@ jobs:
           node-version: 20
       - name: Installa Playwright
         run: |
-          mkdir -p /tmp/e2e-plot-v9
-          cd /tmp/e2e-plot-v9
+          mkdir -p /tmp/e2e-plot-v10
+          cd /tmp/e2e-plot-v10
           npm init -y >/dev/null 2>&1
           npm install playwright@1.55.0 >/dev/null 2>&1
           npx playwright install --with-deps chromium >/dev/null
       - name: Verifica filtro e recupero sinossi sul sito pubblico
-        working-directory: /tmp/e2e-plot-v9
+        working-directory: /tmp/e2e-plot-v10
         run: |
           cat > test.js <<'JS'
           const { chromium }=require('playwright');
@@ -29,18 +29,15 @@ jobs:
             const browser=await chromium.launch({headless:true});let failed=false;
             const page=await browser.newPage();
             try{
-              await page.goto('https://polentona.github.io/LibriSempreDiCarta/?e2e-plot-v9='+Date.now(),{waitUntil:'domcontentloaded',timeout:60000});
-              await page.locator('#addBookBtn').waitFor({state:'visible',timeout:30000});
-              await page.locator('#addBookBtn').click();
+              await page.goto('https://polentona.github.io/LibriSempreDiCarta/?e2e-plot-v10='+Date.now(),{waitUntil:'domcontentloaded',timeout:60000});
+              await page.locator('#addBookBtn').waitFor({state:'visible',timeout:30000});await page.locator('#addBookBtn').click();
               await page.waitForFunction(()=>typeof window.__LIB_CLEAN_BOOK_PLOT==='function'&&typeof window.__LIB_RESOLVE_OFFICIAL_PLOT==='function',null,{timeout:30000});
-
               const review=`a mio parere nuova e ben sviluppata. Bello come finale della storia principale Read more Read less) Helpful Sending feedback...Thank you for your feedback. Sorry, we failed to record your vote. Please try again Report) Sending feedback...Thank you. We'll investigate in the next few days. Sorry, We failed to report this review. Please try again Sorry; we couldn't translate the review Translate review to English) Translated from Italian by Amazon See original) simone dominicis 4 out of 5 stars Appassionante Reviewed in Italy on 5 February 2023 Verified Purchase Brief content visible, double tap to read full content. Full content visible, double tap to read brief content. Rapture di Lauren Kate è un libro per giovani adulti che appartiene alla serie Fallen.`;
               const legitimate=`Luce e Daniel affrontano l'ultima tappa del loro viaggio mentre il tempo per fermare Lucifero sta per scadere. Insieme agli altri angeli devono ritrovare ciò che è stato perduto e impedire che il passato venga cancellato, affrontando scelte decisive per il loro amore e per il destino del mondo.`;
               const filtered=await page.evaluate(({review,legitimate})=>({review:window.__LIB_CLEAN_BOOK_PLOT(review),legitimate:window.__LIB_CLEAN_BOOK_PLOT(legitimate)}),{review,legitimate});
               console.log('GLOBAL_PLOT_FILTER='+JSON.stringify(filtered));
               if(filtered.review!==''){failed=true;console.error('USER_REVIEW_ACCEPTED='+JSON.stringify(filtered.review))}
               if(!filtered.legitimate||filtered.legitimate.length<100){failed=true;console.error('VALID_SYNOPSIS_REJECTED='+JSON.stringify(filtered.legitimate))}
-
               const official=await page.evaluate(()=>window.__LIB_RESOLVE_OFFICIAL_PLOT({title:'Rapture. Nuova ediz.',author:'Lauren Kate',publisher:'Rizzoli'}));
               console.log('OFFICIAL_RAPTURE_PLOT='+JSON.stringify(official));
               const noise=/a mio parere|reviewed in|verified purchase|helpful|sending feedback|read more|read less|double tap|translate review|simone dominicis|out of 5 stars/i;
