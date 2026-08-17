@@ -116,6 +116,10 @@ function boot(){
   function absoluteCoverUrl(u){try{return new URL(secureUrl(u),document.baseURI).href}catch(e){return secureUrl(u)}}
   const VERIFIED_UI_COVERS={'9788854147317':'assets/covers/9788854147317.jpg','8854147311':'assets/covers/9788854147317.jpg'};
   const VERIFIED_BOOK_METADATA={
+    '9788863807035':{title:'La porta di Liv. Silver',saga:'Trilogia dei sogni',author:'Kerstin Gier',publisher:'Corbaccio',publishedDate:'2014'},
+    '8863807035':{title:'La porta di Liv. Silver',saga:'Trilogia dei sogni',author:'Kerstin Gier',publisher:'Corbaccio',publishedDate:'2014'},
+    '9788850230884':{title:'Blue',saga:'Trilogia delle gemme',author:'Kerstin Gier',publisher:'TEA',publishedDate:'2013'},
+    '8850230885':{title:'Blue',saga:'Trilogia delle gemme',author:'Kerstin Gier',publisher:'TEA',publishedDate:'2013'},
     '9788854150706':{title:'Baciata da un angelo. Sarà per sempre',saga:'Baciata da un angelo',author:'Elizabeth Chandler'},
     '8854150703':{title:'Baciata da un angelo. Sarà per sempre',saga:'Baciata da un angelo',author:'Elizabeth Chandler'},
     '9788854147317':{title:"Baciata da un angelo. L'amore e l'odio",saga:'Baciata da un angelo',author:'Elizabeth Chandler'},

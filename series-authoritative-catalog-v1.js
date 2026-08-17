@@ -36,16 +36,39 @@
         'https://www.libreriauniversitaria.it/sara-sempre-baciata-angelo-chandler/libro/9788854150706'
       ],
       verified:'2026-08-17'
+    },
+    {
+      author:'Kerstin Gier',
+      saga:'Trilogia dei sogni',
+      titles:['Il libro dei sogni','La porta di Liv. Silver',"L'ultimo segreto"],
+      codes:{'9788863807035':1,'8863807035':1},
+      sources:['https://books.google.com/books/about/Silver_La_Trilogia.html?id=ydS2DQAAQBAJ','https://www.ibs.it/porta-di-liv-silver-trilogia-libro-kerstin-gier/e/9788863807035'],
+      verified:'2026-08-17'
+    },
+    {
+      author:'Kerstin Gier',
+      saga:'Trilogia delle gemme',
+      titles:['Red','Blue','Green'],
+      codes:{'9788850230884':1,'8850230885':1},
+      sources:['https://books.google.com/books/about/Red_Blue_Green_La_Trilogia.html?id=-HcFlavOcOgC','https://www.ibs.it/blue-trilogia-delle-gemme-vol-libro-kerstin-gier/e/9788850230884'],
+      verified:'2026-08-17'
     }
   ];
 
   function resolve(input={}){
-    const author=clean(input.author),saga=clean(input.saga),title=clean(input.title);
-    if(!author||!saga||!title)return null;
-    const entry=SERIES.find(x=>same(x.author,author)&&same(x.saga,saga));
-    if(!entry)return null;
-    const idx=entry.titles.findIndex(x=>sameTitle(title,x,entry.saga));
-    if(idx<0)return null;
+    const author=clean(input.author),saga=clean(input.saga),title=clean(input.title),code=clean(input.code).replace(/[^0-9Xx]/g,'').toUpperCase();
+    let entry=null,idx=-1;
+    if(code){
+      entry=SERIES.find(x=>x.codes&&Object.prototype.hasOwnProperty.call(x.codes,code))||null;
+      if(entry)idx=Number(entry.codes[code]);
+    }
+    if(!entry){
+      if(!author||!saga||!title)return null;
+      entry=SERIES.find(x=>same(x.author,author)&&same(x.saga,saga));
+      if(!entry)return null;
+      idx=entry.titles.findIndex(x=>sameTitle(title,x,entry.saga));
+    }
+    if(idx<0||idx>=entry.titles.length)return null;
     const result={
       saga:entry.saga,
       prequel:idx>0?entry.titles[idx-1]:'',
@@ -58,7 +81,7 @@
       initial:idx===0,
       verified:entry.verified
     };
-    window.__LIB_AUTHORITATIVE_SERIES_LAST__={input:{title,author,saga},entry,result};
+    window.__LIB_AUTHORITATIVE_SERIES_LAST__={input:{title,author,saga,code},entry,result};
     return result;
   }
 
