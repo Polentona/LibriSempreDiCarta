@@ -1,0 +1,47 @@
+name: Attiva resolver finale prequel sequel v4
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/enable-final-neighbors-v4-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Collega il resolver finale
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          text = p.read_text()
+          old = '<script src="lookup-lock.js?v=1"></script>'
+          new = '<script src="lookup-lock.js?v=1"></script>\n<script src="series-neighbors-v4.js?v=4"></script>'
+          if 'series-neighbors-v4.js?v=4' in text:
+              raise SystemExit('Resolver v4 già collegato')
+          if old not in text:
+              raise SystemExit('Punto di inserimento non trovato')
+          p.write_text(text.replace(old, new, 1))
+          PY
+
+      - name: Verifica collegamento e sintassi
+        run: |
+          node --check series-neighbors-v4.js
+          grep -q 'series-neighbors-v4.js?v=4' index.html
+
+      - name: Pubblica modifica e rimuove workflow temporaneo
+        run: |
+          rm -f .github/workflows/enable-final-neighbors-v4-once.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html .github/workflows/enable-final-neighbors-v4-once.yml
+          git commit -m "Attiva resolver finale verificato per prequel e sequel"
+          git push origin main
