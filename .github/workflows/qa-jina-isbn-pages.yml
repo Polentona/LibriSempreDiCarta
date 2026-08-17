@@ -1,0 +1,23 @@
+name: QA pagine ISBN via Jina
+on:
+  push:
+    branches: [qa-isbn-9788845283253]
+    paths: ['.github/workflows/qa-jina-isbn-pages.yml']
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Leggi sorgenti
+        shell: bash
+        run: |
+          node <<'JS'
+          const targets=[
+            'https://www.bing.com/search?setlang=it-IT&q='+encodeURIComponent('"9788845283253"'),
+            'https://thebanco.it/product/sussurri-della-morte-grande-distrib-3RZZj',
+            'https://www.comprovendolibri.it/vendeanche.asp?Vuserid=belfusto'
+          ];
+          (async()=>{for(const t of targets){const u='https://r.jina.ai/'+t;try{const r=await fetch(u,{headers:{Accept:'text/plain'}});const tx=await r.text();console.log('\nTARGET='+t+'\nSTATUS='+r.status+'\nBODY='+tx.slice(0,18000))}catch(e){console.log('ERR',t,String(e))}}})();
+          JS
