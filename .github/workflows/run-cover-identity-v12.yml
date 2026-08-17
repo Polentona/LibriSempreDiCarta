@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - 'tools/fix_cover_identity_v12.py'
+      - '.github/workflows/run-cover-identity-v12.yml'
 permissions:
   contents: write
 jobs:
