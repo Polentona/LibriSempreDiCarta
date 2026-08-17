@@ -28,3 +28,4 @@ jobs:
           git add isbn-cover.js index.html
           git commit -m "Usa copertine Messaggerie collegate direttamente all EAN"
           git push
+# trigger v13
