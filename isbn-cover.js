@@ -335,6 +335,7 @@ function candidateRelationsIncomplete(candidate){
     };
     img.src=coverProbeUrl(url)
   })}
+  window.__LIB_INSPECT_FRONT_COVER=inspectFrontCover;
   function imageWorks(url){return inspectFrontCover(url).then(x=>!!x.ok)}
   async function usableCovers(covers){
     const seen=new Set(),list=[];
@@ -452,6 +453,13 @@ function candidateRelationsIncomplete(candidate){
     candidate=normalizeCandidateMetadata(await enrichOpenLibrary(candidate));
     const verifiedMeta=verifiedBookMetadata(code);if(verifiedMeta)candidate=normalizeCandidateMetadata({...candidate,...verifiedMeta});
     setAutoField('editTitle',candidate.title);setAutoField('editSaga',candidate.saga);setAutoField('editAuthor',candidate.author);setAutoField('editPlot',candidate.description);setAutoField('editCategory',candidate.category);setAutoField('editPublisher',candidate.publisher);setAutoField('editPublishedDate',candidate.publishedDate);setAutoField('editPrequel',candidate.prequel);setAutoField('editSequel',candidate.sequel);
+    /* OFFICIAL_PLOT_RECOVERY_V1: la trama viene recuperata separatamente dai metadati ISBN e mai da recensioni. */
+    if(type==='isbn'&&!cleanBookPlotDescription(candidate.description||'')&&typeof window.__LIB_RESOLVE_OFFICIAL_PLOT==='function'&&candidate.title&&candidate.publisher){
+      try{
+        const officialPlot=cleanBookPlotDescription(await window.__LIB_RESOLVE_OFFICIAL_PLOT({title:candidate.title,author:candidate.author||'',publisher:candidate.publisher||''}));
+        if(officialPlot){candidate.description=officialPlot;setAutoField('editPlot',officialPlot)}
+      }catch(e){console.warn('Trama ufficiale editore non disponibile',e)}
+    }
     /* __LIB_PRE_RELATION_NEIGHBORS_V5__ */
     /* __LIB_AUTHORITATIVE_PRELOOKUP_V1__ */
     let authoritativeRelationsResolved=false;

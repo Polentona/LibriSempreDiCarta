@@ -121,6 +121,12 @@ const PUBLISHER_DOMAINS=[
   [/piemme/i,'piemme.it'],[/sperling/i,'sperling.it'],[/fazi/i,'fazi.it'],[/harpercollins/i,'harpercollins.it'],[/mondadori/i,'mondadori.it']
 ];
 function publisherDomain(v){for(const [re,d] of PUBLISHER_DOMAINS)if(re.test(String(v||'')))return d;return''}
+function publisherDirectUrls(rec,domain){
+  let title=cleanCommercialTitle(rec?.title||'').replace(/\s*[.:-]\s*(?:nuova\s+ediz(?:ione)?\.?|nuova\s+edizione|ediz(?:ione)?\.?\s*\d*)\s*$/i,'').trim();
+  const slug=normText(title).replace(/\s+/g,'-');const out=[];
+  if(domain==='rizzolilibri.it'&&slug)out.push(`https://www.rizzolilibri.it/libri/${slug}/`);
+  return out
+}
 function headingAuthor(body,title){
   const lines=String(body||'').split(/\n/);let near=-1;
   for(let i=0;i<lines.length;i++){const raw=String(lines[i]||''),x=cleanLine(raw);if(/^\s*#{1,3}\s+/.test(raw)&&titleSimilarity(x,title)>=0.55){near=i;break}}
@@ -131,7 +137,7 @@ function headingAuthor(body,title){
 async function enrichOfficial(rec){
   if(!rec?.title)return rec;const domain=publisherDomain(rec.publisher);if(!domain)return rec;
   const q=`site:${domain} \"${rec.title}\" ${rec.author?`\"${rec.author}\"`:''}`;
-  const b=await jina('https://www.bing.com/search?setlang=it-IT&q='+encodeURIComponent(q),8500);const urls=linksFrom(b).filter(u=>domainOf(u)===domain);
+  const direct=publisherDirectUrls(rec,domain),b=await jina('https://www.bing.com/search?setlang=it-IT&q='+encodeURIComponent(q),8500),urls=[...direct,...linksFrom(b).filter(u=>domainOf(u)===domain)].filter((u,i,a)=>a.indexOf(u)===i);
   for(const u of urls.slice(0,4)){
     const text=await jina(u,9000),body=bodyOnly(text);if(!body)continue;
     const n=normText(body),words=titleWords(rec.title);if(words.filter(w=>n.includes(w)).length<Math.min(2,words.length))continue;
@@ -143,6 +149,13 @@ async function enrichOfficial(rec){
   }
   return rec
 }
+window.__LIB_RESOLVE_OFFICIAL_PLOT=async function(input={}){
+  try{
+    const rec={title:cleanCommercialTitle(input.title||''),author:clean(input.author||''),publisher:cleanPublisher(input.publisher||''),description:''};
+    if(!rec.title||!rec.publisher)return'';
+    const out=await enrichOfficial(rec);return cleanPlot(out?.description||'')
+  }catch(e){return''}
+};
 function searchSnippetRecord(text,code){
   const s=String(text||''),aa=aliases(code),matches=[];const re=/\[([^\]]{2,240})\]\((https?:\/\/[^)\s]+)\)/g;let m;
   while((m=re.exec(s)))matches.push({title:m[1],url:decodeBing(m[2].replace(/&amp;/g,'&')),start:m.index,end:re.lastIndex});
