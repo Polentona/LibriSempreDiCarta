@@ -152,7 +152,7 @@ window.__LIB_FIND_RELATIONS=async function(input={}){
       prequel:cleanBookTitle(extra.prequel)||cleanBookTitle(base?.prequel)||'',
       sequel:cleanBookTitle(extra.sequel)||cleanBookTitle(base?.sequel)||'',
       saga:cleanSeriesName(extra.saga)||cleanSeriesName(base?.saga)||'',
-      sagaChecked:Boolean(base?.sagaChecked||extra.checked||extra.saga),
+      sagaChecked:Boolean(base?.sagaChecked||extra.saga),
       source:extra.source||base?.source||''
     };
   })();cache.set(key,promise);return promise;
