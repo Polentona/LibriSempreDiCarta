@@ -1,0 +1,2 @@
+Deploy redesign libreria
+Core commit: c928c324e664b8f53ff05e624d53979587e460f7
