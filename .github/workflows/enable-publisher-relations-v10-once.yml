@@ -1,0 +1,56 @@
+name: Attiva fonti editore per saghe v10
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/enable-publisher-relations-v10-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Collega la nuova ricerca alle fonti editoriali
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          bg = Path('bg/bg8.js')
+          text = bg.read_text()
+          old = "w.onload=loadIsbn;w.onerror=loadIsbn;document.head.appendChild(w)"
+          new = "const loadPublisher=()=>{const u=document.createElement('script');u.src='series-publisher-sources-v1.js?v=1';u.dataset.publisherRelations='1';u.onload=loadIsbn;u.onerror=loadIsbn;document.head.appendChild(u)};w.onload=loadPublisher;w.onerror=loadPublisher;document.head.appendChild(w)"
+          if old not in text:
+              raise SystemExit('Loader strutturato atteso non trovato in bg/bg8.js')
+          bg.write_text(text.replace(old, new, 1))
+
+          index = Path('index.html')
+          html = index.read_text()
+          old_version = "bg/bg${i}.js?v=17"
+          new_version = "bg/bg${i}.js?v=18"
+          if old_version not in html:
+              raise SystemExit('Versione cache bg v17 non trovata in index.html')
+          index.write_text(html.replace(old_version, new_version, 1))
+          PY
+
+      - name: Verifica JavaScript e collegamento
+        run: |
+          node --check series-publisher-sources-v1.js
+          node --check bg/bg8.js
+          grep -q "series-publisher-sources-v1.js?v=1" bg/bg8.js
+          grep -q 'bg/bg${i}.js?v=18' index.html
+
+      - name: Pubblica e rimuove il workflow temporaneo
+        run: |
+          rm -f .github/workflows/enable-publisher-relations-v10-once.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add bg/bg8.js index.html .github/workflows/enable-publisher-relations-v10-once.yml
+          git commit -m "Attiva ricerca editoriale per saga prequel e sequel"
+          git push origin main
