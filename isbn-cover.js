@@ -127,9 +127,16 @@ function relationMarkupNoise(v){
   return /[{}]/.test(x)||/\|\s*[a-z][a-z0-9 _-]{1,45}\s*=/i.test(x)||/\b(?:followed by|preceded by|website|publisher|author|language|isbn|issn|homepage|url)\s*=/i.test(x)||/\b(?:infobox|cite book|cite web|birth date|website)\b/i.test(n)
 }
 function safeBookRelation(v){const x=cleanRelationTitle(v);return x&&!screenMediaNoise(x)&&!relationMarkupNoise(x)?x:''}
+function safeSeriesName(v){
+  const x=safeBookRelation(v),n=normalizeText(x);if(!x||x.length>100)return'';
+  if(/['’]{2}|[`{}\[\]|]|https?:|www\.|[<>]/i.test(x))return'';
+  if(/\b(?:released|published|same year|publication|romanzo|novel|book|libro|volume|chapter|capitolo|preceded|followed|autore|author|publisher|editore|isbn|ean)\b/i.test(n))return'';
+  if(n.split(' ').filter(Boolean).length>12)return'';
+  return x
+}
 function relationResolverComplete(rel){
   if(!rel?.authoritative)return false;
-  const saga=safeBookRelation(rel.saga||''),pre=safeBookRelation(rel.prequel||''),seq=safeBookRelation(rel.sequel||'');
+  const saga=safeSeriesName(rel.saga||''),pre=safeBookRelation(rel.prequel||''),seq=safeBookRelation(rel.sequel||'');
   if(!saga)return false;
   if(rel.initial&&rel.terminal)return true;
   if(rel.initial)return !!seq;
@@ -137,7 +144,7 @@ function relationResolverComplete(rel){
   return !!pre&&!!seq;
 }
 function candidateRelationsIncomplete(candidate){
-  return !safeBookRelation(candidate?.saga||'')||!safeBookRelation(candidate?.prequel||'')||!safeBookRelation(candidate?.sequel||'');
+  return !safeSeriesName(candidate?.saga||'')||!safeBookRelation(candidate?.prequel||'')||!safeBookRelation(candidate?.sequel||'');
 }
   function cleanCatalogTitle(v){
     let t=String(v||'').replace(/\s+/g,' ').trim();if(!t)return'';
@@ -205,7 +212,7 @@ function candidateRelationsIncomplete(candidate){
   }
   function normalizeCandidateMetadata(candidate){
     const c={...(candidate||{})};
-    c.saga=safeBookRelation(c.saga);c.prequel=safeBookRelation(c.prequel);c.sequel=safeBookRelation(c.sequel);
+    c.saga=safeSeriesName(c.saga);c.prequel=safeBookRelation(c.prequel);c.sequel=safeBookRelation(c.sequel);
     c.title=cleanCatalogTitle(seriesTitleWithSagaFirst(c.title,c.saga));
     if(c.author&&!plausibleAuthorName(c.author))c.author='';
     return c
@@ -352,7 +359,7 @@ function candidateRelationsIncomplete(candidate){
         window.__LIB_LAST_AUTHORITATIVE_SERIES_RESULT__=localRel||null;
         authoritativeRelationsResolved=relationResolverComplete(localRel);
         if(localRel?.authoritative){
-          candidate.saga=safeBookRelation(localRel.saga);setAutoField('editSaga',candidate.saga,true)
+          candidate.saga=safeSeriesName(localRel.saga);setAutoField('editSaga',candidate.saga,true)
           candidate.prequel=safeBookRelation(localRel.prequel);
           candidate.sequel=safeBookRelation(localRel.sequel);
           setAutoField('editPrequel',candidate.prequel,true);
@@ -366,7 +373,7 @@ function candidateRelationsIncomplete(candidate){
         const boundedRel=await window.__LIB_RESOLVE_BOUNDED_RELATIONS({code,title:candidate.title,author:candidate.author,publisher:candidate.publisher||'',saga:candidate.saga||'',description:candidate.description||''});
         window.__LIB_LAST_BOUNDED_RELATIONS_RESULT__=boundedRel||null;
         if(boundedRel?.authoritative){
-          candidate.saga=safeBookRelation(boundedRel.saga||'');
+          candidate.saga=safeSeriesName(boundedRel.saga||'');
           candidate.prequel=safeBookRelation(boundedRel.prequel||'');
           candidate.sequel=safeBookRelation(boundedRel.sequel||'');
           setAutoField('editSaga',candidate.saga,true);
@@ -385,7 +392,7 @@ function candidateRelationsIncomplete(candidate){
       try{
         const universalRel=await window.__LIB_RESOLVE_UNIVERSAL_SERIES({code,title:candidate.title,author:candidate.author,publisher:candidate.publisher||'',saga:candidate.saga||'',description:candidate.description||''});
         window.__LIB_LAST_UNIVERSAL_SERIES_RESULT__=universalRel||null;
-        if(universalRel?.saga){candidate.saga=safeBookRelation(universalRel.saga);setAutoField('editSaga',candidate.saga,true)}
+        if(universalRel?.saga){candidate.saga=safeSeriesName(universalRel.saga);setAutoField('editSaga',candidate.saga,true)}
         if(universalRel?.authoritative){
           candidate.prequel=safeBookRelation(universalRel.prequel||'');candidate.sequel=safeBookRelation(universalRel.sequel||'');
           setAutoField('editPrequel',candidate.prequel,true);setAutoField('editSequel',candidate.sequel,true);
@@ -399,7 +406,7 @@ function candidateRelationsIncomplete(candidate){
       try{
         const structuredRel=await window.__LIB_FIND_RELATIONS({code,title:candidate.title,author:candidate.author,saga:candidate.saga||'',description:candidate.description||''});
         window.__LIB_LAST_STRUCTURED_RELATIONS_RESULT__=structuredRel||null;
-        if(structuredRel?.sagaChecked&&structuredRel.saga){candidate.saga=safeBookRelation(structuredRel.saga);setAutoField('editSaga',candidate.saga,true)}
+        if(structuredRel?.sagaChecked&&structuredRel.saga){const cleanSaga=safeSeriesName(structuredRel.saga);if(cleanSaga){candidate.saga=cleanSaga;setAutoField('editSaga',candidate.saga,true)}}
         if(structuredRel?.prequel){candidate.prequel=safeBookRelation(structuredRel.prequel);setAutoField('editPrequel',candidate.prequel,true)}
         if(structuredRel?.sequel){candidate.sequel=safeBookRelation(structuredRel.sequel);setAutoField('editSequel',candidate.sequel,true)}
       }catch(e){window.__LIB_LAST_STRUCTURED_RELATIONS_ERROR__=String(e&&e.message||e);console.warn('Resolver Wikipedia strutturato non disponibile',e)}
