@@ -1,0 +1,38 @@
+name: Diagnostica resolver universale Wikipedia
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/diagnose-universal-wiki.yml'
+permissions:
+  contents: read
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Analizza bibliografie reali
+        run: |
+          node <<'JS'
+          global.window=global;
+          require('./series-universal-resolver-v1.js');
+          const api='https://it.wikipedia.org/w/api.php';
+          async function inspect(author,title){
+            console.log('\n===',author,'/ ',title,'===');
+            const qs=new URLSearchParams({action:'query',list:'search',srsearch:`intitle:"${author}"`,srnamespace:'0',srlimit:'6',format:'json',origin:'*'});
+            const r=await fetch(api+'?'+qs); console.log('search status',r.status); const d=await r.json(); console.log('hits',(d.query?.search||[]).map(x=>x.title));
+            for(const h of (d.query?.search||[]).slice(0,3)){
+              const p=new URLSearchParams({action:'parse',page:h.title,prop:'wikitext',format:'json',origin:'*'});
+              const rr=await fetch(api+'?'+p); console.log('parse',h.title,rr.status); const pd=await rr.json(); const wt=pd.parse?.wikitext?.['*']||'';
+              const lines=wt.split(/\n/); console.log('headings',lines.filter(x=>/^={2,6}.*={2,6}$/.test(x)).slice(-30));
+              console.log('series/list lines',lines.filter(x=>/serie|saga|trilog|ciclo|^\s*[*#]/i.test(x)).slice(-80));
+            }
+            const result=await global.__LIB_RESOLVE_UNIVERSAL_SERIES({title,author});
+            console.log('RESOLVE',JSON.stringify(result));
+            console.log('DIAG',JSON.stringify(global.__LIB_UNIVERSAL_SERIES_LAST__));
+          }
+          (async()=>{await inspect('Simon Beckett','La voce dei morti');await inspect('Lauren Kate','Torment')})().catch(e=>{console.error(e);process.exitCode=1});
+          JS
