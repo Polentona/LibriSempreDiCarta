@@ -290,7 +290,7 @@ function boot(){
     setAutoField('editTitle',candidate.title);setAutoField('editSaga',candidate.saga);setAutoField('editAuthor',candidate.author);setAutoField('editPlot',candidate.description);setAutoField('editCategory',candidate.category);setAutoField('editPublisher',candidate.publisher);setAutoField('editPublishedDate',candidate.publishedDate);setAutoField('editPrequel',candidate.prequel);setAutoField('editSequel',candidate.sequel);
     if(type==='isbn'&&typeof window.__LIB_FIND_RELATIONS==='function'&&candidate.title&&candidate.author){
       try{
-        const rel=await window.__LIB_FIND_RELATIONS({code,title:candidate.title,author:candidate.author,saga:candidate.saga});
+        const rel=await window.__LIB_FIND_RELATIONS({code,title:candidate.title,author:candidate.author,saga:candidate.saga,description:candidate.description||''});
         if(rel?.sagaChecked){
           candidate.saga=String(rel.saga||'').trim();
           setAutoField('editSaga',candidate.saga,true);
@@ -394,11 +394,11 @@ function boot(){
 
   async function enrichSavedRelations(){
     if(typeof window.__LIB_FIND_RELATIONS!=='function')return;
-    const RELATIONS_LOOKUP_VERSION=7,now=Date.now(),week=7*24*60*60*1000;
+    const RELATIONS_LOOKUP_VERSION=8,now=Date.now(),week=7*24*60*60*1000;
     const pending=books.filter(b=>{const code=normalizeLoose(b.code||b.isbn||'');return code&&b.title&&b.author&&(Number(b.relationsLookupVersion||0)!==RELATIONS_LOOKUP_VERSION||!b.relationsLookupAt||now-Number(b.relationsLookupAt)>week)&&(!b.prequel||!b.sequel||Number(b.relationsLookupVersion||0)!==RELATIONS_LOOKUP_VERSION)}).slice(0,8);
     for(const b of pending){
       try{
-        const rel=await window.__LIB_FIND_RELATIONS({code:b.code||b.isbn||'',title:b.title,author:b.author,saga:b.saga||''});let changed=false;
+        const rel=await window.__LIB_FIND_RELATIONS({code:b.code||b.isbn||'',title:b.title,author:b.author,saga:b.saga||'',description:b.plot||b.description||''});let changed=false;
         if(rel?.sagaChecked){const nextSaga=String(rel.saga||'').trim();if(String(b.saga||'').trim()!==nextSaga){b.saga=nextSaga;changed=true}}
         const effectiveSaga=rel?.sagaChecked?String(rel.saga||'').trim():String(b.saga||'').trim();
         if(effectiveSaga){const fullTitle=seriesTitleWithSagaFirst(b.title,effectiveSaga);if(fullTitle&&fullTitle!==b.title){b.title=fullTitle;changed=true}}
