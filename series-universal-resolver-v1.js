@@ -78,7 +78,7 @@ function wikiSectionRelations(wikitext,title,source){
   for(let i=0;i<sections.length;i++){
     const s=sections[i],h=clean(s.title);if(!/\b(?:serie|saga|trilogia|ciclo)\b/i.test(h))continue;
     const list=[];
-    for(const line of s.lines){if(/^\s*[#*]+\s+/.test(line))list.push(line)}
+    for(const line of s.lines){if(/^\s*[#*]+(?=\s|''|\[\[|[A-Za-zÀ-ÿ])/.test(line))list.push(line)}
     // Alcune pagine mettono una sottosezione di serie e poi un'altra sottosezione: non oltrepassarla.
     const r=relation(list,title,h,source,'wikipedia-author-section');if(r)results.push(r);
   }
