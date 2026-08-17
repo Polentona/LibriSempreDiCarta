@@ -44,34 +44,68 @@ jobs:
                 await page.locator('#addBookBtn').click();
                 await page.locator('#editCode').waitFor({state:'visible',timeout:30000});
                 await page.locator('#editCode').fill(c.isbn);
-                await page.locator('#lookupMetadataBtn').click();
+
+                // La UI avvia automaticamente la ricerca dopo 650ms. Il pulsante e' solo fallback.
+                await page.waitForTimeout(1000);
+                const started=await page.evaluate(()=>{
+                  const t=document.querySelector('#editTitle')?.value||'';
+                  const o=document.querySelector('#metadataOverlay');
+                  const st=document.querySelector('#lookupStatus');
+                  return !!t||!!o?.open||!!st?.classList.contains('lookup-busy')||/non ho trovato dati affidabili/i.test(st?.textContent||'');
+                });
+                if(!started&&await page.locator('#lookupMetadataBtn').isEnabled())await page.locator('#lookupMetadataBtn').click();
+
                 await page.waitForFunction(()=>{
                   const t=document.querySelector('#editTitle')?.value||'';
                   const o=document.querySelector('#metadataOverlay');
                   const st=document.querySelector('#lookupStatus')?.textContent||'';
                   return !!t||(o&&o.open)||/non ho trovato dati affidabili/i.test(st);
                 },null,{timeout:150000});
+
                 if(await page.locator('#metadataOverlay').evaluate(el=>!!el.open).catch(()=>false)){
                   const choices=page.locator('[data-meta-choice]');const n=await choices.count();let chosen=false;
-                  for(let i=0;i<n;i++){const txt=await choices.nth(i).innerText();if(norm(txt).includes(norm(c.title))&&norm(txt).includes(norm(c.author))){await choices.nth(i).click();chosen=true;break}}
+                  for(let i=0;i<n;i++){
+                    const txt=await choices.nth(i).innerText();
+                    if(norm(txt).includes(norm(c.title))&&norm(txt).includes(norm(c.author))){await choices.nth(i).click();chosen=true;break}
+                  }
                   if(!chosen&&n===1)await choices.first().click();
                 }
+
                 await page.waitForFunction(()=>{
-                  const st=document.querySelector('#lookupStatus');return !(st?.classList.contains('lookup-busy')||st?.querySelector('.lookup-book-spinner'));
-                },null,{timeout:150000}).catch(()=>{});
-                await page.waitForFunction(()=>{
-                  const s=document.querySelector('#editSaga')?.value||'',p=document.querySelector('#editPrequel')?.value||'',q=document.querySelector('#editSequel')?.value||'';return !!s&&!!p&&!!q;
-                },null,{timeout:30000}).catch(()=>{});
+                  const st=document.querySelector('#lookupStatus');
+                  const txt=st?.textContent||'';
+                  return !(st?.classList.contains('lookup-busy')||st?.querySelector('.lookup-book-spinner')||/sto cercando|completamento/i.test(txt));
+                },null,{timeout:180000}).catch(()=>{});
+                await page.waitForTimeout(600);
+
                 result=await page.evaluate(()=>({
-                  title:document.querySelector('#editTitle')?.value||'',author:document.querySelector('#editAuthor')?.value||'',publisher:document.querySelector('#editPublisher')?.value||'',publishedDate:document.querySelector('#editPublishedDate')?.value||'',saga:document.querySelector('#editSaga')?.value||'',prequel:document.querySelector('#editPrequel')?.value||'',sequel:document.querySelector('#editSequel')?.value||'',status:document.querySelector('#lookupStatus')?.textContent||'',universal:window.__LIB_LAST_UNIVERSAL_SERIES_RESULT__||null,universalDiag:window.__LIB_UNIVERSAL_SERIES_LAST__||null,resilient:window.__LIB_RESILIENT_ISBN_LAST__||null,resilientError:window.__LIB_RESILIENT_ISBN_DIRECT_ERROR__||null
+                  title:document.querySelector('#editTitle')?.value||'',
+                  author:document.querySelector('#editAuthor')?.value||'',
+                  publisher:document.querySelector('#editPublisher')?.value||'',
+                  publishedDate:document.querySelector('#editPublishedDate')?.value||'',
+                  saga:document.querySelector('#editSaga')?.value||'',
+                  prequel:document.querySelector('#editPrequel')?.value||'',
+                  sequel:document.querySelector('#editSequel')?.value||'',
+                  status:document.querySelector('#lookupStatus')?.textContent||'',
+                  local:window.__LIB_LAST_AUTHORITATIVE_SERIES_RESULT__||null,
+                  bounded:window.__LIB_LAST_BOUNDED_RELATIONS_RESULT__||null,
+                  universal:window.__LIB_LAST_UNIVERSAL_SERIES_RESULT__||null,
+                  universalDiag:window.__LIB_UNIVERSAL_SERIES_LAST__||null,
+                  universalFn:typeof window.__LIB_RESOLVE_UNIVERSAL_SERIES,
+                  structured:window.__LIB_LAST_STRUCTURED_RELATIONS_RESULT__||null,
+                  resilient:window.__LIB_RESILIENT_ISBN_LAST__||null,
+                  resilientError:window.__LIB_RESILIENT_ISBN_DIRECT_ERROR__||null,
+                  universalError:window.__LIB_LAST_UNIVERSAL_SERIES_ERROR__||null,
+                  structuredError:window.__LIB_LAST_STRUCTURED_RELATIONS_ERROR__||null
                 }));
                 const errs=[];
                 for(const k of ['title','author','saga','prequel','sequel'])if(norm(result[k])!==norm(c[k]))errs.push(`${k}=${JSON.stringify(result[k])}`);
                 if(/non ho trovato dati affidabili/i.test(result.status))errs.push('lookup senza dati affidabili');
-                all.push({case:c,result,consoleLines:consoleLines.slice(-80),errors:errs});
+                if(/!\[|https?:|i tuoi ordini in negozio|product details|dettagli prodotto/i.test(result.title))errs.push('titolo contaminato='+JSON.stringify(result.title));
+                all.push({case:c,result,consoleLines:consoleLines.slice(-100),errors:errs});
                 console.log('E2E_UNIVERSAL_RESULT='+c.isbn+' '+JSON.stringify(result));
                 if(errs.length){failed=true;console.error('E2E_UNIVERSAL_MISMATCH='+c.isbn+' '+errs.join(' | '))}
-              }catch(e){failed=true;all.push({case:c,result,consoleLines:consoleLines.slice(-80),error:String(e&&e.stack||e)});console.error('E2E_UNIVERSAL_ERROR='+c.isbn,e)}
+              }catch(e){failed=true;all.push({case:c,result,consoleLines:consoleLines.slice(-100),error:String(e&&e.stack||e)});console.error('E2E_UNIVERSAL_ERROR='+c.isbn,e)}
               await page.close();
             }
             fs.writeFileSync('universal-three.json',JSON.stringify(all,null,2));
