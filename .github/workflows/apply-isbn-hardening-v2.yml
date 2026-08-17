@@ -1,0 +1,148 @@
+name: Applica robustezza ISBN v2
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/apply-isbn-hardening-v2.yml']
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Applica correzioni generali
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          # 1) Vecchio fallback: non accettare pagine generiche che contengono l'ISBN solo nell'header/URL Jina.
+          p=Path('italian-catalog-fallback-v3.js')
+          s=p.read_text()
+          old="""function inspectText(text,url,code){
+  if(!text||!codeAppears(text,code))return null;
+  const rawTitle=titleFrom(text,code),split=splitTitleSaga(rawTitle,text),title=split.title,saga=split.saga,author=authorFrom(text,rawTitle),publisher=cleanPublisherCandidate(publisherFrom(text)),year=yearFrom(text),description=descriptionFrom(text),category=categoryFrom(text,rawTitle),cover=bestCover(text,rawTitle,url);
+  if(!title)return null;
+  let score=4+(author?4:0)+(publisher?2:0)+(year?1:0)+(description?4:0)+(category?2:0)+(cover?2:0)+(saga?3:0);if(['Libraccio','Libreria Universitaria','Unilibro','IBS'].includes(sourceName(url)))score+=1;if(sourceName(url)==='Amazon Italia'&&(author||publisher||saga))score+=3;
+  return {title,saga,author,publisher,year,description,category,cover,source:sourceName(url),score}
+}"""
+          new="""function jinaBody(text){
+  const s=String(text||''),mark='Markdown Content:',i=s.indexOf(mark);
+  return (i>=0?s.slice(i+mark.length):s).replace(/^URL Source:.*$/gmi,'').trim()
+}
+function trustworthyBookBody(text,code){
+  const body=jinaBody(text);if(!body||!codeAppears(body,code))return'';
+  const p=plain(body);let signals=0;
+  if(/\\b(?:ISBN|EAN)\\b/i.test(p))signals++;
+  if(/\\b(?:Autore|Autori|Author|Scritto da)\\b/i.test(p))signals++;
+  if(/\\b(?:Editore|Publisher|Casa editrice)\\b/i.test(p))signals++;
+  if(/\\b(?:Anno|Pubblicazione|Pagine|Formato|Collana)\\b/i.test(p))signals++;
+  return signals>=2?body:''
+}
+function validCatalogTitle(v,url){
+  const t=cleanBookTitleCandidate(v),n=normText(t),src=normText(sourceName(url));
+  if(!t||t.length<2||t.length>190||isNavigationTitle(t))return false;
+  if(/https?:|www\\.|\\[\\]\\(|^\\W+$/.test(t))return false;
+  if(src&&n===src)return false;
+  if(/^(?:libraccio(?: it)?|ibs|amazon(?: it)?|mondadori(?: store)?|giunti|hoepli|unilibro|eurolibro|catalogo italiano|catalogo)$/i.test(n))return false;
+  return true
+}
+function inspectText(text,url,code){
+  const body=trustworthyBookBody(text,code);if(!body)return null;
+  const rawTitle=titleFrom(body,code),split=splitTitleSaga(rawTitle,body),title=split.title,saga=split.saga,author=authorFrom(body,rawTitle),publisher=cleanPublisherCandidate(publisherFrom(body)),year=yearFrom(body),description=descriptionFrom(body),category=categoryFrom(body,rawTitle),cover=bestCover(body,rawTitle,url);
+  if(!validCatalogTitle(title,url))return null;
+  if(category&&(/https?:|\\[\\]\\(|^\\W+$/.test(category)||category.length>150))return null;
+  if(!author&&!publisher)return null;
+  let score=4+(author?4:0)+(publisher?2:0)+(year?1:0)+(description?4:0)+(category?2:0)+(cover?2:0)+(saga?3:0);if(['Libraccio','Libreria Universitaria','Unilibro','IBS'].includes(sourceName(url)))score+=1;if(sourceName(url)==='Amazon Italia'&&(author||publisher||saga))score+=3;
+  return {title,saga,author,publisher,year,description,category,cover,source:sourceName(url),score}
+}"""
+          if old not in s:
+              raise SystemExit('Blocco inspectText non trovato')
+          s=s.replace(old,new)
+          s=s.replace("const direct=[`https://www.eurolibro.it/libro/isbn/${encodeURIComponent(ean)}.html`,`https://www.libraccio.it/libro/${encodeURIComponent(ean)}/`];if(i10)direct.push(`https://www.amazon.it/dp/${encodeURIComponent(i10)}`);","const direct=[`https://www.eurolibro.it/libro/isbn/${encodeURIComponent(ean)}.html`];if(i10)direct.push(`https://www.amazon.it/dp/${encodeURIComponent(i10)}`);")
+          p.write_text(s)
+
+          # 2) Fallback resiliente: più query Bing + arricchimento sul sito ufficiale dell'editore.
+          p=Path('isbn-resilient-fallback-v1.js')
+          s=p.read_text()
+          marker="async function discoverRetail(code){"
+          helper=r'''const PUBLISHER_DOMAINS=[
+  [/bompiani/i,'bompiani.it'],[/\btea\b/i,'tealibri.it'],[/feltrinelli/i,'feltrinellieditore.it'],[/einaudi/i,'einaudi.it'],
+  [/rizzoli/i,'rizzolilibri.it'],[/adelphi/i,'adelphi.it'],[/sellerio/i,'sellerio.it'],[/newton/i,'newtoncompton.com'],
+  [/salani/i,'salani.it'],[/longanesi/i,'longanesi.it'],[/garzanti/i,'garzanti.it'],[/corbaccio/i,'corbaccio.it'],
+  [/piemme/i,'piemme.it'],[/sperling/i,'sperling.it'],[/fazi/i,'fazi.it'],[/harpercollins/i,'harpercollins.it'],[/mondadori/i,'mondadori.it']
+];
+function publisherDomain(v){for(const [re,d] of PUBLISHER_DOMAINS)if(re.test(String(v||'')))return d;return''}
+function headingAuthor(body,title){
+  const lines=String(body||'').split(/\n/);const target=normText(title);let near=-1;
+  for(let i=0;i<lines.length;i++){const raw=String(lines[i]||''),x=cleanLine(raw);if(/^\s*#{1,3}\s+/.test(raw)&&titleSimilarity(x,title)>=0.55){near=i;break}}
+  if(near<0)return'';
+  for(let i=near+1;i<Math.min(lines.length,near+9);i++){const raw=String(lines[i]||''),x=cleanLine(raw);if(!/^\s*#{2,4}\s+/.test(raw))continue;if(validAuthor(x)&&normText(x)!==target)return x}
+  return''
+}
+async function enrichOfficial(rec){
+  if(!rec?.title)return rec;const domain=publisherDomain(rec.publisher);if(!domain)return rec;
+  const q=`site:${domain} \"${rec.title}\" ${rec.author?`\"${rec.author}\"`:''}`;
+  const b=await jina('https://www.bing.com/search?setlang=it-IT&q='+encodeURIComponent(q),8500);const urls=linksFrom(b).filter(u=>domainOf(u)===domain);
+  for(const u of urls.slice(0,4)){
+    const text=await jina(u,9000),body=bodyOnly(text);if(!body)continue;
+    const n=normText(body),words=titleWords(rec.title);if(words.filter(w=>n.includes(w)).length<Math.min(2,words.length))continue;
+    let a=headingAuthor(body,rec.title);if(!a){const lines=String(body).split(/\n/);a=field(lines,['Autore','Autori','Author','Scritto da'])}
+    if(a&&validAuthor(a))rec.author=clean(a);
+    const h=String(body).split(/\n/).map(cleanLine).find(x=>validTitle(x)&&titleSimilarity(x,rec.title)>=0.65);if(h)rec.title=cleanCommercialTitle(h);
+    if(!rec.description){const lines=String(body).split(/\n/).map(cleanLine).filter(Boolean);const start=lines.findIndex(x=>titleSimilarity(x,rec.title)>=0.65);if(start>=0){const paras=[];for(let i=start+1;i<Math.min(lines.length,start+30)&&paras.join(' ').length<1800;i++){const x=lines[i];if(x===rec.author)continue;if(/^(?:Formato|Legatura|Pagine|In libreria da|Isbn|Traduttore|Scopri di più)$/i.test(x))break;if(x.length>70)paras.push(x)}const d=clean(paras.join(' '));if(d.length>100)rec.description=d}}
+    rec.officialSource=u;rec.score=(rec.score||0)+8;break
+  }
+  return rec
+}
+'''
+          if marker not in s:
+              raise SystemExit('discoverRetail non trovato')
+          s=s.replace(marker,helper+marker,1)
+          oldq="""  const siteQ=`\"${ean}\" (site:thebanco.it OR site:ibs.it OR site:libraccio.it OR site:unilibro.it OR site:libreriauniversitaria.it OR site:hoepli.it OR site:abebooks.com OR site:bompiani.it)`;
+  const b=await jina('https://www.bing.com/search?setlang=it-IT&q='+encodeURIComponent(siteQ),8500);for(const x of linksFrom(b))add(x);"""
+          newq="""  const siteQ=`\"${ean}\" (site:thebanco.it OR site:ibs.it OR site:libraccio.it OR site:unilibro.it OR site:libreriauniversitaria.it OR site:hoepli.it OR site:abebooks.com OR site:bompiani.it)`;
+  for(const q of [`\"${ean}\"`,`\"${ean}\" libro`,siteQ]){const b=await jina('https://www.bing.com/search?setlang=it-IT&q='+encodeURIComponent(q),8500);for(const x of linksFrom(b))add(x);if(links.length>=8)break}"""
+          if oldq not in s:
+              raise SystemExit('siteQ non trovato')
+          s=s.replace(oldq,newq)
+          oldlookup="async function resilientLookup(code){if(cache.has(code))return cache.get(code);const p=(async()=>{const ol=await openLibrary(code);if(ol&&ol.author&&ol.publisher)return await appleSearch(ol);const web=await discoverRetail(code);if(web)return web;return ol})();cache.set(code,p);return p}"
+          newlookup="async function resilientLookup(code){if(cache.has(code))return cache.get(code);const p=(async()=>{const ol=await openLibrary(code);if(ol&&ol.author&&ol.publisher)return await enrichOfficial(await appleSearch(ol));const web=await discoverRetail(code);if(web)return await enrichOfficial(web);return ol?await enrichOfficial(await appleSearch(ol)):null})();cache.set(code,p);return p}"
+          if oldlookup not in s:
+              raise SystemExit('resilientLookup non trovato')
+          s=s.replace(oldlookup,newlookup)
+          p.write_text(s)
+
+          # 3) Relazione verificata della serie David Hunter: supplemento al resolver generale.
+          p=Path('series-authoritative-catalog-v1.js')
+          s=p.read_text()
+          anchor="""    {
+      author:'Stephen King',"""
+          entry="""    {
+      author:'Simon Beckett',
+      saga:'David Hunter',
+      titles:['La chimica della morte','Scritto nelle ossa','I sussurri della morte','La voce dei morti','Acque morte','Il profumo della morte'],
+      codes:{'9788845283253':2},
+      sources:['https://www.bompiani.it/catalogo/i-sussurri-della-morte-9788845279553','https://www.bompiani.it/autori/simon-beckett-524'],
+      verified:'2026-08-17'
+    },
+"""
+          if "'9788845283253':2" not in s:
+              if anchor not in s: raise SystemExit('Anchor Stephen King non trovato')
+              s=s.replace(anchor,entry+anchor,1)
+          p.write_text(s)
+
+          # 4) Cache busting: vecchi wrapper e nuovi moduli.
+          p=Path('bg/bg8.js');s=p.read_text();s=s.replace("italian-catalog-fallback-v3.js?v=13","italian-catalog-fallback-v3.js?v=14");p.write_text(s)
+          p=Path('index.html');s=p.read_text();s=s.replace('isbn-resilient-fallback-v1.js?v=2','isbn-resilient-fallback-v1.js?v=3').replace('series-bounded-resolver-v1.js?v=1','series-bounded-resolver-v1.js?v=2').replace('bg${i}.js?v=27','bg${i}.js?v=28');p.write_text(s)
+          PY
+          node --check italian-catalog-fallback-v3.js
+          node --check isbn-resilient-fallback-v1.js
+          node --check series-authoritative-catalog-v1.js
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add italian-catalog-fallback-v3.js isbn-resilient-fallback-v1.js series-authoritative-catalog-v1.js bg/bg8.js index.html
+          git commit -m 'Rendi robusto il recupero ISBN e blocca pagine generiche'
+          git push
