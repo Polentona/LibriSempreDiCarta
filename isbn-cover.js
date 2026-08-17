@@ -600,8 +600,11 @@ function candidateRelationsIncomplete(candidate){
       const exactEan=normalizeLoose(code);
       const exactMessaggerie={url:`https://img.messaggerielibri.it/images/${encodeURIComponent(exactEan)}_0_500_0_0.jpg`,source:'Messaggerie Libri · EAN'};
       const exactOl={url:`https://covers.openlibrary.org/b/isbn/${encodeURIComponent(exactEan)}-L.jpg?default=false`,source:'Open Library · ISBN'};
-      const retail=await retailerCoversForIsbn(code,candidate.title||'',candidate.author||'');
-      candidate.covers=mergeCoverOptions([exactMessaggerie,...(candidate.covers||[])],[exactOl,...retail])
+      const messaggerieOk=await imageWorks(exactMessaggerie.url);
+      let retail=[];
+      if(!messaggerieOk)retail=await retailerCoversForIsbn(code,candidate.title||'',candidate.author||'');
+      candidate.covers=mergeCoverOptions(messaggerieOk?[exactMessaggerie,...(candidate.covers||[])]:candidate.covers,[exactOl,...retail]);
+      window.__LIB_EXACT_EAN_COVER__={code:exactEan,url:exactMessaggerie.url,ok:messaggerieOk,retailerFallback:!messaggerieOk}
     }
     let pickerOpened=false;if(!coverAlready&&candidate.covers?.length)pickerOpened=await showCoverPicker(candidate.covers,code);
     if(candidate.serialLevel)setStatus(`ISSN riconosciuto. Ho compilato i dati della testata; ricorda che l'ISSN identifica il periodico, non necessariamente il singolo numero. Controlla titolo e numero dell'uscita.`,'warn');
