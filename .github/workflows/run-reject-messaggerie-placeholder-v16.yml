@@ -1,0 +1,30 @@
+name: Scarta placeholder Messaggerie v16
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/reject_messaggerie_placeholder_v16.py'
+      - '.github/workflows/run-reject-messaggerie-placeholder-v16.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Applica patch
+        run: python tools/reject_messaggerie_placeholder_v16.py
+      - name: Verifica sintassi
+        run: node --check isbn-cover.js
+      - name: Verifica patch
+        run: |
+          grep -q "messaggerie-placeholder" isbn-cover.js
+          grep -q "ean-content-unverified" isbn-cover.js
+          grep -q "isbn-cover.js?v=20260817-16" index.html
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add isbn-cover.js index.html
+          git commit -m "Scarta il placeholder Messaggerie e continua la ricerca copertina"
+          git push
