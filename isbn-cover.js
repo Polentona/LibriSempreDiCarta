@@ -290,6 +290,15 @@ function boot(){
     const verifiedMeta=verifiedBookMetadata(code);if(verifiedMeta)candidate=normalizeCandidateMetadata({...candidate,...verifiedMeta});
     setAutoField('editTitle',candidate.title);setAutoField('editSaga',candidate.saga);setAutoField('editAuthor',candidate.author);setAutoField('editPlot',candidate.description);setAutoField('editCategory',candidate.category);setAutoField('editPublisher',candidate.publisher);setAutoField('editPublishedDate',candidate.publishedDate);setAutoField('editPrequel',candidate.prequel);setAutoField('editSequel',candidate.sequel);
     /* __LIB_PRE_RELATION_NEIGHBORS_V5__ */
+    /* __LIB_AUTHORITATIVE_PRELOOKUP_V1__ */
+    if(type==='isbn'&&typeof window.__LIB_RESOLVE_AUTHORITATIVE_SERIES_NEIGHBORS==='function'&&candidate.title&&candidate.author&&candidate.saga&&(!candidate.prequel||!candidate.sequel)){
+      try{
+        const localRel=window.__LIB_RESOLVE_AUTHORITATIVE_SERIES_NEIGHBORS({code,title:candidate.title,author:candidate.author,saga:candidate.saga});
+        window.__LIB_LAST_AUTHORITATIVE_SERIES_RESULT__=localRel||null;
+        if(localRel?.prequel){candidate.prequel=String(localRel.prequel).trim();setAutoField('editPrequel',candidate.prequel,true)}
+        if(localRel?.sequel){candidate.sequel=String(localRel.sequel).trim();setAutoField('editSequel',candidate.sequel,true)}
+      }catch(e){window.__LIB_LAST_AUTHORITATIVE_SERIES_ERROR__=String(e&&e.message||e);console.warn('Catalogo serie verificato non disponibile',e)}
+    }
     if(type==='isbn'&&typeof window.__LIB_RESOLVE_SERIES_NEIGHBORS==='function'&&candidate.title&&candidate.author&&candidate.saga&&(!candidate.prequel||!candidate.sequel)){
       try{
         const rel0=await window.__LIB_RESOLVE_SERIES_NEIGHBORS({code,title:candidate.title,author:candidate.author,saga:candidate.saga,description:candidate.description||''});
