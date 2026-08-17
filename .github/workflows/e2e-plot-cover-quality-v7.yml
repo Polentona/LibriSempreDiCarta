@@ -1,4 +1,4 @@
-name: E2E filtro trama e copertine frontali v7
+name: E2E filtro trama globale e recupero editore v8
 on:
   push:
     branches: [main]
@@ -15,71 +15,31 @@ jobs:
           node-version: 20
       - name: Installa Playwright
         run: |
-          mkdir -p /tmp/e2e-plot-cover
-          cd /tmp/e2e-plot-cover
+          mkdir -p /tmp/e2e-plot-v8
+          cd /tmp/e2e-plot-v8
           npm init -y >/dev/null 2>&1
           npm install playwright@1.55.0 >/dev/null 2>&1
           npx playwright install --with-deps chromium >/dev/null
-      - name: Test sito pubblico
-        working-directory: /tmp/e2e-plot-cover
+      - name: Test filtro e trama ufficiale sul sito pubblico
+        working-directory: /tmp/e2e-plot-v8
         run: |
           cat > test.js <<'JS'
           const { chromium }=require('playwright');
           (async()=>{
             const browser=await chromium.launch({headless:true});let failed=false;
-            const page=await browser.newPage({viewport:{width:1440,height:1000}});
-            const logs=[];page.on('console',m=>logs.push(`[${m.type()}] ${m.text()}`));page.on('pageerror',e=>logs.push(`[pageerror] ${e.message}`));
+            const page=await browser.newPage();
             try{
-              await page.goto('https://polentona.github.io/LibriSempreDiCarta/?e2e-plot-cover-v7='+Date.now(),{waitUntil:'domcontentloaded',timeout:60000});
-              await page.locator('#addBookBtn').waitFor({state:'visible',timeout:30000});
-              await page.locator('#addBookBtn').click();
-              await page.locator('#editCode').waitFor({state:'visible',timeout:30000});
-              await page.waitForFunction(()=>typeof window.__LIB_CLEAN_BOOK_PLOT==='function',null,{timeout:30000});
-
-              const review=`a mio parere nuova e ben sviluppata. Bello come finale della storia principale Read more Read less) Helpful Sending feedback...Thank you for your feedback. Sorry, we failed to record your vote. Please try again Report) Sending feedback...Thank you. We'll investigate in the next few days. Verified Purchase simone dominicis 4 out of 5 stars Appassionante Reviewed in Italy on 5 February 2023. Rapture di Lauren Kate è un libro per giovani adulti che appartiene alla serie Fallen.`;
-              const legitimate=`Luce e Daniel affrontano l'ultima tappa del loro viaggio mentre il tempo per fermare Lucifero sta per scadere. Insieme agli altri angeli devono ritrovare ciò che è stato perduto e impedire che il passato venga cancellato, affrontando scelte decisive per il loro amore e per il destino del mondo.`;
-              const sanitize=await page.evaluate(({review,legitimate})=>({bad:window.__LIB_CLEAN_BOOK_PLOT(review),good:window.__LIB_CLEAN_BOOK_PLOT(legitimate)}),{review,legitimate});
-              console.log('PLOT_SANITIZER='+JSON.stringify(sanitize));
-              if(sanitize.bad!==''){failed=true;console.error('PLOT_REVIEW_NOT_REJECTED='+JSON.stringify(sanitize.bad))}
-              if(!sanitize.good||sanitize.good.length<60){failed=true;console.error('PLOT_LEGITIMATE_REJECTED='+JSON.stringify(sanitize.good))}
-
-              // Prova Rapture via ISBN: se la fonte ISBN e' disponibile, la trama non puo' contenere UI/recensioni.
-              await page.locator('#editCode').fill('9788817093958');
-              await page.waitForTimeout(1000);
-              await page.waitForFunction(()=>{
-                const t=document.querySelector('#editTitle')?.value||'',st=document.querySelector('#lookupStatus')?.textContent||'';
-                return !!t||/non ho trovato dati affidabili/i.test(st);
-              },null,{timeout:120000}).catch(()=>{});
-              await page.waitForTimeout(3500);
-              const rapture=await page.evaluate(()=>({title:document.querySelector('#editTitle')?.value||'',author:document.querySelector('#editAuthor')?.value||'',plot:document.querySelector('#editPlot')?.value||'',status:document.querySelector('#lookupStatus')?.textContent||''}));
-              console.log('RAPTURE_LIVE='+JSON.stringify(rapture));
-              if(rapture.plot){
-                const noise=/a mio parere|reviewed in|verified purchase|helpful|sending feedback|read more|read less|double tap|translate review|simone dominicis|out of 5 stars/i;
-                if(noise.test(rapture.plot)){failed=true;console.error('RAPTURE_PLOT_CONTAMINATED='+JSON.stringify(rapture.plot))}
-              }
-
-              // Nuova pagina per Torment e controllo della qualita' visiva delle copertine.
-              const p2=await browser.newPage({viewport:{width:1440,height:1000}});const logs2=[];p2.on('console',m=>logs2.push(`[${m.type()}] ${m.text()}`));p2.on('pageerror',e=>logs2.push(`[pageerror] ${e.message}`));
-              await p2.goto('https://polentona.github.io/LibriSempreDiCarta/?e2e-cover-torment-v7='+Date.now(),{waitUntil:'domcontentloaded',timeout:60000});
-              await p2.locator('#addBookBtn').waitFor({state:'visible',timeout:30000});await p2.locator('#addBookBtn').click();await p2.locator('#editCode').waitFor({state:'visible',timeout:30000});
-              await p2.locator('#editCode').fill('9788817045261');
-              await p2.waitForTimeout(1000);
-              await p2.waitForFunction(()=>Array.isArray(window.__LIB_LAST_COVER_QUALITY__)||/non ho trovato dati affidabili/i.test(document.querySelector('#lookupStatus')?.textContent||''),null,{timeout:150000}).catch(()=>{});
-              await p2.waitForTimeout(1200);
-              const coverState=await p2.evaluate(()=>{
-                const q=window.__LIB_LAST_COVER_QUALITY__||[];
-                const displayed=[...document.querySelectorAll('.cover-choice img')].map(img=>({src:img.src,w:img.naturalWidth,h:img.naturalHeight,ratio:img.naturalWidth/Math.max(1,img.naturalHeight)}));
-                return {quality:q,displayed,title:document.querySelector('#editTitle')?.value||'',cover:document.querySelector('#editCover')?.value||'',pickerOpen:!!document.querySelector('#metadataOverlay')?.open,status:document.querySelector('#lookupStatus')?.textContent||''};
-              });
-              console.log('TORMENT_COVER_STATE='+JSON.stringify(coverState));
-              for(const x of coverState.displayed){if(!(x.ratio>=0.43&&x.ratio<=0.86)){failed=true;console.error('DISPLAYED_NON_PORTRAIT='+JSON.stringify(x))}}
-              const badDisplayed=coverState.quality.filter(x=>!x.ok).some(x=>coverState.displayed.some(d=>d.src===x.url));
-              if(badDisplayed){failed=true;console.error('REJECTED_COVER_DISPLAYED')}
-              // Se abbiamo analizzato almeno una copertina, nessuna rifiutata deve finire nel picker.
-              if(coverState.quality.length&&!coverState.quality.some(x=>x.ok)&&coverState.displayed.length){failed=true;console.error('ONLY_BAD_COVERS_SHOWN')}
-              console.log('TORMENT_CONSOLE='+JSON.stringify(logs2.slice(-40)));
-              await p2.close();
-            }catch(e){failed=true;console.error('E2E_ERROR='+String(e&&e.stack||e));console.error('CONSOLE='+JSON.stringify(logs.slice(-80)))}
+              await page.goto('https://polentona.github.io/LibriSempreDiCarta/?e2e-plot-v8='+Date.now(),{waitUntil:'domcontentloaded',timeout:60000});
+              await page.locator('#addBookBtn').waitFor({state:'visible',timeout:30000});await page.locator('#addBookBtn').click();
+              await page.waitForFunction(()=>typeof window.__LIB_CLEAN_BOOK_PLOT==='function'&&typeof window.__LIB_RESOLVE_OFFICIAL_PLOT==='function',null,{timeout:30000});
+              const review=`a mio parere nuova e ben sviluppata. Bello come finale della storia principale Read more Read less) Helpful Sending feedback...Thank you for your feedback. Sorry, we failed to record your vote. Verified Purchase simone dominicis 4 out of 5 stars Appassionante Reviewed in Italy on 5 February 2023. Rapture di Lauren Kate è un libro per giovani adulti.`;
+              const bad=await page.evaluate(review=>window.__LIB_CLEAN_BOOK_PLOT(review),review);
+              console.log('GLOBAL_REVIEW_FILTER='+JSON.stringify(bad));if(bad!==''){failed=true;console.error('REVIEW_ACCEPTED='+JSON.stringify(bad))}
+              const official=await page.evaluate(()=>window.__LIB_RESOLVE_OFFICIAL_PLOT({title:'Rapture. Nuova ediz.',author:'Lauren Kate',publisher:'Rizzoli'}));
+              console.log('OFFICIAL_RAPTURE_PLOT='+JSON.stringify(official));
+              const noise=/a mio parere|reviewed in|verified purchase|helpful|sending feedback|read more|read less|double tap|translate review|out of 5 stars/i;
+              if(!official||official.length<150||noise.test(official)||!/Luce/i.test(official)||!/Daniel/i.test(official)){failed=true;console.error('OFFICIAL_PLOT_INVALID')}
+            }catch(e){failed=true;console.error(String(e&&e.stack||e))}
             await browser.close();if(failed)process.exitCode=1;
           })();
           JS
