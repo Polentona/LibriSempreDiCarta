@@ -1,0 +1,1 @@
+Fallback ISBN resiliente v2 - validazione titoli prodotto e cache busting.
