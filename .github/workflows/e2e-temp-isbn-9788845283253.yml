@@ -1,4 +1,4 @@
-name: QA diagnostica ISBN 9788845283253
+name: QA finale ISBN 9788845283253
 on:
   push:
     branches: [qa-isbn-9788845283253]
@@ -20,36 +20,65 @@ jobs:
           npm init -y >/dev/null 2>&1
           npm install playwright@1.55.0 >/dev/null 2>&1
           npx playwright install --with-deps chromium >/dev/null
-      - name: Diagnostica scoperta fonti
+      - name: Test finale sul sito pubblico
         shell: bash
         working-directory: /tmp/e2e-isbn
         run: |
           cat > test.js <<'JS'
           const { chromium } = require('playwright');
+          const norm=s=>String(s||'').replace(/[’‘]/g,"'").replace(/\s+/g,' ').trim();
           (async()=>{
             const browser=await chromium.launch({headless:true});
             const page=await browser.newPage();
-            await page.goto('https://polentona.github.io/LibriSempreDiCarta/?qa-source='+Date.now(),{waitUntil:'domcontentloaded',timeout:60000});
-            const data=await page.evaluate(async()=>{
-              const q='"9788845283253" (site:thebanco.it OR site:ibs.it OR site:libraccio.it OR site:bompiani.it)';
-              const urls=[
-                'https://r.jina.ai/https://www.bing.com/search?setlang=it-IT&q='+encodeURIComponent(q),
-                'https://r.jina.ai/https://thebanco.it/search?keyword=9788845283253',
-                'https://r.jina.ai/https://thebanco.it/search?q=9788845283253'
-              ];
-              const out=[];
-              for(const url of urls){
-                try{const r=await fetch(url);const t=await r.text();out.push({url,status:r.status,text:t.slice(0,12000)})}
-                catch(e){out.push({url,error:String(e)})}
+            const failed=[];const consoleLines=[];
+            page.on('response',r=>{ if(r.status()>=400) failed.push({status:r.status(),url:r.url()}); });
+            page.on('requestfailed',r=>failed.push({status:'FAILED',url:r.url(),error:r.failure()?.errorText||''}));
+            page.on('console',m=>consoleLines.push(`[${m.type()}] ${m.text()}`));
+            page.on('pageerror',e=>consoleLines.push(`[pageerror] ${e.message}`));
+            await page.goto('https://polentona.github.io/LibriSempreDiCarta/?qa-final-9788845283253='+Date.now(),{waitUntil:'domcontentloaded',timeout:60000});
+            await page.locator('#addBookBtn').waitFor({state:'visible',timeout:30000});
+            await page.locator('#addBookBtn').click();
+            await page.locator('#editCode').fill('9788845283253');
+            await page.locator('#lookupMetadataBtn').click();
+            await page.waitForFunction(()=>{
+              const t=document.querySelector('#editTitle')?.value||'';
+              const o=document.querySelector('#metadataOverlay');
+              return !!t || (o&&o.open);
+            },null,{timeout:90000}).catch(()=>{});
+            if(await page.locator('#metadataOverlay').evaluate(el=>!!el.open).catch(()=>false)){
+              const choices=page.locator('[data-meta-choice]');const count=await choices.count();let chosen=false;
+              for(let i=0;i<count;i++){
+                const text=await choices.nth(i).innerText();
+                if(/sussurri della morte/i.test(text)&&/Simon Beckett/i.test(text)){await choices.nth(i).click();chosen=true;break}
               }
-              return out;
-            });
-            for(const x of data){
-              console.log('SRC_URL='+x.url);
-              console.log('SRC_STATUS='+(x.status||x.error));
-              console.log('SRC_TEXT='+String(x.text||'').replace(/\n/g,'\\n'));
+              if(!chosen&&count===1)await choices.first().click();
             }
+            await page.waitForFunction(()=>/sussurri della morte/i.test(document.querySelector('#editTitle')?.value||''),null,{timeout:120000}).catch(()=>{});
+            await page.waitForTimeout(8000);
+            const result=await page.evaluate(()=>{
+              const val=id=>document.querySelector(id)?.value||'';
+              return {
+                title:val('#editTitle'),author:val('#editAuthor'),category:val('#editCategory'),publisher:val('#editPublisher'),publication:val('#editPublishedDate'),saga:val('#editSaga'),prequel:val('#editPrequel'),sequel:val('#editSequel'),cover:val('#editCover'),plot:val('#editPlot'),
+                resilient:window.__LIB_RESILIENT_ISBN_LAST__||null,
+                authoritative:window.__LIB_AUTHORITATIVE_SERIES_LAST__||null,
+                bounded:window.__LIB_BOUNDED_SERIES_LAST__||null
+              };
+            });
+            console.log('ISBN_FINAL_RESULT='+JSON.stringify(result));
+            console.log('ISBN_FINAL_FAILED='+JSON.stringify(failed));
+            console.log('ISBN_FINAL_CONSOLE='+JSON.stringify(consoleLines.slice(-60)));
+            const errors=[];
+            if(norm(result.title).toLowerCase()!=='i sussurri della morte')errors.push('titolo='+JSON.stringify(result.title));
+            if(norm(result.author)!=='Simon Beckett')errors.push('autore='+JSON.stringify(result.author));
+            if(!/Bompiani/i.test(result.publisher))errors.push('editore='+JSON.stringify(result.publisher));
+            if(!/2016/.test(result.publication))errors.push('pubblicazione='+JSON.stringify(result.publication));
+            if(norm(result.saga)!=='David Hunter')errors.push('saga='+JSON.stringify(result.saga));
+            if(norm(result.prequel)!=='Scritto nelle ossa')errors.push('prequel='+JSON.stringify(result.prequel));
+            if(norm(result.sequel)!=='La voce dei morti')errors.push('sequel='+JSON.stringify(result.sequel));
+            if(/libraccio\.it/i.test(result.title))errors.push('titolo generico Libraccio');
+            if(/https?:|\[\]\(/i.test(result.category))errors.push('categoria sporca='+JSON.stringify(result.category));
+            if(errors.length)throw new Error('ISBN 9788845283253 non corretto: '+errors.join(' | '));
             await browser.close();
-          })().catch(e=>{console.error(e);process.exitCode=1});
+          })().catch(e=>{console.error('ISBN_FINAL_FAILURE',e);process.exitCode=1});
           JS
           node test.js
