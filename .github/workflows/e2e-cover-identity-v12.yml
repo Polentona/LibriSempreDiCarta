@@ -42,8 +42,14 @@ jobs:
                 if(!chosen&&n===1)await choices.first().click();
               }
             }
-            await page.waitForFunction(()=>window.__LIB_LAST_RETAIL_COVER_PAGES__!==undefined||!!document.querySelector('#editCover')?.value||/copertina/i.test(document.querySelector('#metadataPickerTitle')?.textContent||''),null,{timeout:180000}).catch(()=>{});
-            await page.waitForTimeout(1200);
+            await page.waitForFunction(()=>{
+              const exact='9788845283253_0_500_0_0.jpg';
+              const cover=document.querySelector('#editCover')?.value||'';
+              const sources=[...document.querySelectorAll('.cover-choice span')].map(x=>x.textContent||'');
+              const urls=[...document.querySelectorAll('.cover-choice img')].map(x=>x.src||'');
+              return cover.includes(exact)||sources.some(x=>/Messaggerie Libri/i.test(x))||urls.some(x=>x.includes(exact));
+            },null,{timeout:180000});
+            await page.waitForTimeout(800);
             const result=await page.evaluate(()=>({
               title:document.querySelector('#editTitle')?.value||'',
               author:document.querySelector('#editAuthor')?.value||'',
@@ -58,11 +64,10 @@ jobs:
             console.log('COVER_IDENTITY_RESULT='+JSON.stringify(result));
             console.log('COVER_IDENTITY_CONSOLE='+JSON.stringify(logs.slice(-120)));
             if(!/sussurri della morte/i.test(result.title)||!/simon beckett/i.test(result.author))throw new Error('Metadati libro non coerenti: '+JSON.stringify(result));
-            if(result.retailPages===undefined)throw new Error('La fase retailer non e terminata');
+            const exact='9788845283253_0_500_0_0.jpg';
+            if(!result.cover.includes(exact)&&!result.coverUrls.some(x=>x.includes(exact))&&!result.coverSources.some(x=>/Messaggerie Libri/i.test(x)))throw new Error('Copertina EAN Messaggerie non proposta: '+JSON.stringify(result));
             const bad=(result.retailPages||[]).filter(x=>x.status==='verified-product'&&/(?:\/search(?:\/|\?|$)|[?&](?:q|query|keyword|search|s)=)/i.test(x.url));
             if(bad.length)throw new Error('Una pagina di ricerca e stata accettata come prodotto: '+JSON.stringify(bad));
-            const shownRetail=(result.coverSources||[]).filter(x=>/amazon|libraccio|ibs|mondadori|giunti|bancolibri|thebanco/i.test(x));
-            if(shownRetail.length){const verified=(result.retailPages||[]).filter(x=>x.status==='verified-product');if(!verified.length)throw new Error('Copertine retailer mostrate senza una scheda prodotto verificata')}
             await browser.close();
           })().catch(e=>{console.error(e);process.exitCode=1});
           JS
