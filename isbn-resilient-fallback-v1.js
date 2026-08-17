@@ -29,7 +29,7 @@ function domainOf(u){try{const h=new URL(u).hostname.toLowerCase().replace(/^www
 function sourceName(u){return SOURCE_NAMES[domainOf(u)]||domainOf(u)||'Catalogo'}
 function titleWords(v){return normText(v).split(' ').filter(w=>w.length>2&&!['the','del','della','delle','dei','degli','una','uno','con','per'].includes(w))}
 function titleSimilarity(a,b){const x=titleWords(a),y=titleWords(b);if(!x.length||!y.length)return 0;const xs=new Set(x),ys=new Set(y);const common=[...xs].filter(w=>ys.has(w)).length;return common/Math.max(xs.size,ys.size)}
-function validTitle(v){const t=clean(v),n=normText(t);if(!t||t.length<2||t.length>220)return false;if(/https?:|www\.|\[\]\(|^\W+$/.test(t))return false;if(/^(?:libraccio(?: it)?|ibs|amazon(?: it)?|mondadori(?: store)?|giunti|hoepli|unilibro|eurolibro|thebanco(?: it)?|abebooks|home|catalogo|libri|ricerca|search|just a moment|access denied)$/i.test(n))return false;if(/(?:cookie|carrello|privacy|accedi|registrati|spedizione|servizio clienti|security verification)/i.test(n))return false;return true}
+function validTitle(v){const t=clean(v),n=normText(t);if(!t||t.length<2||t.length>220)return false;if(/https?:|www\.|\[\]\(|^\W+$/.test(t))return false;if(/^(?:libraccio(?: it)?|ibs|amazon(?: it)?|mondadori(?: store)?|giunti|hoepli|unilibro|eurolibro|thebanco(?: it)?|abebooks|home|catalogo|libri|ricerca|search|just a moment|access denied)$/i.test(n))return false;if(/^(?:(?:\d+[,.]?)?\s*(?:recensioni?|reviews?|ratings?|valutazioni?)|libri universitari|libri scolastici|shopping cart|pronto alla spedizione|esaurito|disponibile|venditori?|condizione|prezzo)$/i.test(n))return false;if(/(?:cookie|carrello|privacy|accedi|registrati|servizio clienti|security verification)/i.test(n))return false;return true}
 function validAuthor(v){const a=clean(v),n=normText(a);if(!a||a.length<2||a.length>140||/\d|https?:|www\.|€|@/.test(a))return false;if(/(?:editore|publisher|isbn|ean|prezzo|sconto|traduttore|categoria|genere|libraccio|amazon|thebanco|bompiani varia)/i.test(n))return false;return /^[A-Za-zÀ-ÿ'’.\- ]+$/.test(a)}
 function cleanCommercialTitle(v){let t=clean(v);t=t.replace(/\s*\((?:grande\s+distrib[^)]*|ediz(?:ione)?[^)]*|vol\.?\s*\d+[^)]*)\)?\s*$/i,'').trim();t=t.replace(/\s+(?:grande\s+distrib(?:uzione)?|ediz(?:ione)?\s+economica)\s*$/i,'').trim();return t}
 function cleanPublisher(v){let p=clean(v).replace(/^(?:editore|publisher|casa editrice)\s*:?\s*/i,'').trim();if(/^[A-ZÀ-Ý0-9 .&'’-]{3,}$/.test(p))p=p.toLowerCase().replace(/(^|\s|[-'’])([a-zà-ÿ])/g,(m,a,b)=>a+b.toUpperCase());p=p.replace(/\s+(?:Varia|Editore|Edizioni)$/i,m=>/editore|edizioni/i.test(m)?'':m).trim();return p}
@@ -56,7 +56,28 @@ function cleanLine(v){return clean(String(v||'').replace(/^\s*#{1,6}\s*/,'').rep
 function explicitCodeInBody(body,code){const compact=normCode(body),aa=aliases(code);return aa.some(x=>compact.includes(x))}
 function field(lines,names){for(const raw of lines){const line=cleanLine(raw);for(const name of names){const re=new RegExp('^'+name+'\\s*[:|]?\\s*(.+)$','i'),m=line.match(re);if(m&&clean(m[1]))return cleanLine(m[1])}}return''}
 function nearbyLines(body,code){const lines=String(body||'').split(/\n/),aa=aliases(code);let idx=-1;for(let i=0;i<lines.length;i++){const n=normCode(lines[i]);if(aa.some(x=>x&&n.includes(x))){idx=i;break}}if(idx<0)return lines.slice(0,100);return lines.slice(Math.max(0,idx-30),Math.min(lines.length,idx+45))}
-function titleNearCode(lines){for(let i=0;i<lines.length;i++){if(!/\b(?:ISBN|EAN)\b/i.test(lines[i]))continue;for(let j=i-1;j>=Math.max(0,i-12);j--){const raw=lines[j],x=cleanLine(raw),n=normText(x);if(!x||!validTitle(x))continue;if(/^(?:isbn|ean|anno|editore|publisher|autore|author|prezzo|venditori|condizione|categoria|genere)\b/i.test(n))continue;if(/^di\s+/i.test(x)||/\b\d{4}\b/.test(x)&&/,/.test(x))continue;if(x===x.toUpperCase()&&x.length<45)continue;return cleanCommercialTitle(x)}}return''}
+function titleNearCode(lines){
+  for(let i=0;i<lines.length;i++){
+    if(!/\b(?:ISBN|EAN)\b/i.test(lines[i]))continue;
+    const start=Math.max(0,i-14);
+    // Prima scelta: un vero heading di prodotto vicino al codice.
+    for(let j=i-1;j>=start;j--){
+      const raw=String(lines[j]||''),x=cleanLine(raw),n=normText(x);
+      if(!/^\s*#{1,4}\s+/.test(raw)||!x||!validTitle(x))continue;
+      if(/^(?:isbn|ean|anno|editore|publisher|autore|author|prezzo|venditori|condizione|categoria|genere|recensioni?|reviews?)\b/i.test(n))continue;
+      return cleanCommercialTitle(x)
+    }
+    // Seconda scelta: testo bibliografico, mai elementi UI o contatori.
+    for(let j=i-1;j>=start;j--){
+      const x=cleanLine(lines[j]),n=normText(x);if(!x||!validTitle(x))continue;
+      if(/^(?:isbn|ean|anno|editore|publisher|autore|author|prezzo|venditori|condizione|categoria|genere|recensioni?|reviews?|libri universitari|libri scolastici)\b/i.test(n))continue;
+      if(/^di\s+/i.test(x)||/\b\d{4}\b/.test(x)&&/,/.test(x))continue;
+      if(x===x.toUpperCase()&&x.length<45)continue;
+      return cleanCommercialTitle(x)
+    }
+  }
+  return''
+}
 function compactRecord(lines){for(const raw of lines){const x=cleanLine(raw),m=x.match(/^di\s+(.{2,100}?),\s*((?:18|19|20)\d{2}),\s*(.{2,100})$/i);if(m)return {author:clean(m[1]),year:m[2],publisher:cleanPublisher(m[3])}}return {}}
 function inspectPage(text,url,code){
   const body=bodyOnly(text);if(!body||!explicitCodeInBody(body,code))return null;const lines=nearbyLines(body,code),compactRec=compactRecord(lines);
