@@ -1,0 +1,27 @@
+name: Verifica copertina Messaggerie 9788845283253
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/check-messaggerie-cover-9788845283253.yml'
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Scarica immagine EAN
+        run: |
+          set -e
+          URL='https://img.messaggerielibri.it/images/9788845283253_0_500_0_0.jpg'
+          curl -fL --retry 2 --connect-timeout 15 --max-time 45 "$URL" -o /tmp/cover.jpg
+          file /tmp/cover.jpg
+          test $(stat -c%s /tmp/cover.jpg) -gt 5000
+      - name: Controlla dimensioni
+        run: |
+          python - <<'PY'
+          from PIL import Image
+          im=Image.open('/tmp/cover.jpg')
+          print('MESSAGGERIE_COVER=', im.format, im.size)
+          w,h=im.size
+          assert w>=100 and h>=150
+          assert 0.43 <= w/h <= 0.86, (w,h,w/h)
+          PY
