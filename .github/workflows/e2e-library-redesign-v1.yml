@@ -1,0 +1,110 @@
+name: E2E redesign libreria v1
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "deploy-library-redesign-20260818.txt"
+
+permissions:
+  contents: read
+
+jobs:
+  test-redesign:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Installa Playwright
+        run: |
+          mkdir -p /tmp/e2e-redesign && cd /tmp/e2e-redesign
+          npm init -y >/dev/null 2>&1
+          npm install playwright@1.55.0 >/dev/null 2>&1
+          npx playwright install --with-deps chromium >/dev/null
+      - name: Attendi Pages
+        run: sleep 45
+      - name: Test sito pubblico
+        working-directory: /tmp/e2e-redesign
+        run: |
+          cat > test.js <<'JS'
+          const {chromium}=require('playwright');
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+            const page=await browser.newPage({viewport:{width:1920,height:1080}});
+            const errors=[];page.on('pageerror',e=>errors.push(e.message));
+            const books=[
+              {id:1,title:'Fallen',author:'Lauren Kate',category:'Fantasy',saga:'Fallen',publishedDate:'2009',rating:4,inLibrary:true,read:true,cover:'',plot:'',notes:'',loanTo:'',loanDate:''},
+              {id:2,title:'Torment',author:'Lauren Kate',category:'Fantasy',saga:'Fallen',publishedDate:'2010',rating:5,inLibrary:false,read:true,cover:'',plot:'',notes:'',loanTo:'',loanDate:''},
+              {id:3,title:'Passion',author:'Lauren Kate',category:'Fantasy',saga:'Fallen',publishedDate:'2011',rating:3,inLibrary:true,read:false,cover:'',plot:'',notes:'',loanTo:'',loanDate:''},
+              {id:4,title:'Rapture',author:'Lauren Kate',category:'Fantasy',saga:'Fallen',publishedDate:'2012',rating:4,inLibrary:false,read:false,cover:'',plot:'',notes:'',loanTo:'',loanDate:''},
+              {id:5,title:'Unforgiven',author:'Lauren Kate',category:'Fantasy',saga:'Fallen',publishedDate:'2015',rating:0,inLibrary:true,read:false,cover:'',plot:'',notes:'',loanTo:'',loanDate:''},
+              {id:6,title:'Angels in the Dark',author:'Lauren Kate',category:'Fantasy',saga:'Fallen',publishedDate:'2013',rating:0,inLibrary:false,read:false,cover:'',plot:'',notes:'',loanTo:'',loanDate:''},
+              {id:7,title:'Fallen in Love',author:'Lauren Kate',category:'Fantasy',saga:'Fallen',publishedDate:'2012',rating:0,inLibrary:true,read:false,cover:'',plot:'',notes:'',loanTo:'',loanDate:''},
+              {id:8,title:'Shining',author:'Stephen King',category:'Horror',saga:'',publishedDate:'1977',rating:5,inLibrary:true,read:true,cover:'',plot:'',notes:'',loanTo:'',loanDate:''},
+              {id:9,title:'La voce dei morti',author:'Simon Beckett',category:'Thriller',saga:'David Hunter',publishedDate:'2011',rating:4,inLibrary:false,read:false,cover:'',plot:'',notes:'',loanTo:'',loanDate:''},
+              {id:10,title:'Sacrifice',author:'Alexandra Adornetto',category:'Fantasy',saga:'Rebel',publishedDate:'2012',rating:2,inLibrary:true,read:false,cover:'',plot:'',notes:'',loanTo:'',loanDate:''}
+            ];
+            try{
+              await page.goto('https://polentona.github.io/LibriSempreDiCarta/?e2e-redesign='+Date.now(),{waitUntil:'domcontentloaded',timeout:120000});
+              await page.evaluate(data=>{localStorage.setItem('libriDiCarta.books.v1',JSON.stringify(data));localStorage.removeItem('libriDiCarta.seriesNotes.v1')},books);
+              await page.reload({waitUntil:'domcontentloaded',timeout:120000});
+              await page.locator('#addBookBtn').waitFor({state:'visible',timeout:30000});
+
+              if((await page.locator('.links a.active').innerText()).trim()!=='Home')throw new Error('Home non è la vista iniziale');
+              if(await page.locator('.book').count()!==10)throw new Error('Home non mostra tutti i 10 libri');
+
+              const navBox=await page.locator('.nav').boundingBox(), addBox=await page.locator('#addBookBtn').boundingBox();
+              if(!navBox||!addBox||addBox.x+addBox.width>navBox.x+navBox.width+1)throw new Error('Aggiungi libro sfora ancora dal banner');
+
+              await page.locator('[data-view="library"]').click();
+              if(await page.locator('.book').count()!==6)throw new Error('La mia libreria non filtra i soli libri In libreria');
+              if(/tutti i libri, uno sotto l.altro/i.test(await page.locator('.intro').innerText()))throw new Error('Sottotitolo vecchio ancora presente in La mia libreria');
+              if(/in libreria/i.test(await page.locator('.book').first().innerText()))throw new Error('La spunta In libreria è visibile nella card principale');
+
+              await page.locator('.book').first().locator('[data-edit]').click();
+              await page.locator('#editDialog[open]').waitFor({state:'visible',timeout:15000});
+              if(await page.locator('#editInLibrary').count()!==1)throw new Error('Checkbox In libreria assente dalla scheda libro');
+              await page.locator('#cancelEdit').click();
+
+              await page.locator('[data-view="authors"]').click();
+              if(await page.locator('.alphabet-btn').count()!==26)throw new Error('Il banner alfabetico non ha 26 lettere');
+              const names=await page.locator('.author-entry-name').allInnerTexts();
+              if(names.join('|')!=='Alexandra Adornetto|Simon Beckett|Lauren Kate|Stephen King')throw new Error('Autori non ordinati per cognome: '+names.join('|'));
+              await page.locator('[data-author-letter="K"]').click();
+              const kNames=await page.locator('.author-entry-name').allInnerTexts();
+              if(kNames.length!==1||kNames[0]!=='Lauren Kate')throw new Error('Filtro cognome K errato: '+kNames.join('|'));
+              if(/i libri ordinati per autore/i.test(await page.locator('.intro').innerText()))throw new Error('Sottotitolo vecchio Autori ancora presente');
+
+              await page.locator('[data-view="categories"]').click();
+              await page.locator('#categoryFilter').selectOption({label:'Fantasy'});
+              const catAuthors=await page.locator('.book .author').allInnerTexts();
+              if(catAuthors.length!==8)throw new Error('Filtro Fantasy ha '+catAuthors.length+' libri invece di 8');
+              const surnames=catAuthors.map(x=>x.trim().split(/\s+/).pop().toLowerCase());
+              for(let i=1;i<surnames.length;i++)if(surnames[i-1].localeCompare(surnames[i],'it')>0)throw new Error('Categorie non ordinate per cognome');
+              if(/le categorie saranno mostrate/i.test(await page.locator('.intro').innerText()))throw new Error('Sottotitolo vecchio Categorie ancora presente');
+
+              await page.locator('[data-view="series"]').click();
+              if(await page.locator('.series-row').count()!==3)throw new Error('Saghe non raggruppate: righe='+await page.locator('.series-row').count());
+              if(await page.locator('.book').count()!==0)throw new Error('Nella vista saghe compaiono ancora card di singoli libri');
+              const fallen=page.locator('.series-row').filter({has:page.locator('.series-name', {hasText:'FALLEN'})});
+              if(await fallen.locator('.series-cover-card').count()!==5)throw new Error('Fallen non mostra esattamente 5 copertine nella prima schermata');
+              const ownedLabels=await fallen.locator('.series-owned').allInnerTexts();
+              if(ownedLabels.filter(x=>/in libreria/i.test(x)).length<2)throw new Error('Etichette In libreria non presenti sotto le copertine possedute');
+              await fallen.locator('[data-series-dir="1"]').click();
+              const fallenAfter=page.locator('.series-row').filter({has:page.locator('.series-name', {hasText:'FALLEN'})});
+              if(await fallenAfter.locator('.series-cover-card').count()!==2)throw new Error('La freccia non mostra le 2 copertine successive di Fallen');
+              const note=fallenAfter.locator('[data-series-note]');await note.fill('Saga completa');await note.blur();
+              await page.locator('[data-view="home"]').click();await page.locator('[data-view="series"]').click();
+              const savedNote=page.locator('.series-row').filter({has:page.locator('.series-name', {hasText:'FALLEN'})}).locator('[data-series-note]');
+              if(await savedNote.inputValue()!=='Saga completa')throw new Error('Nota della saga non persistente');
+              if(/i libri appartenenti a saghe/i.test(await page.locator('.intro').innerText()))throw new Error('Sottotitolo vecchio Saghe ancora presente');
+
+              if(errors.length)throw new Error('Page errors: '+errors.join(' | '));
+              console.log('REDESIGN_RESULT='+JSON.stringify({home:10,library:6,authors:names,categoriesFantasy:catAuthors.length,series:3,fallenCarousel:'5->2',seriesNote:true,navContained:true}));
+            }catch(e){console.error('REDESIGN_ERROR='+e.message);process.exitCode=1}
+            await browser.close();
+          })();
+          JS
+          node test.js
