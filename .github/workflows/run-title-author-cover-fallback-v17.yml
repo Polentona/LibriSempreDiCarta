@@ -1,0 +1,30 @@
+name: Fallback copertine titolo autore v17
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/title_author_cover_fallback_v17.py'
+      - '.github/workflows/run-title-author-cover-fallback-v17.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Applica patch
+        run: python tools/title_author_cover_fallback_v17.py
+      - name: Verifica sintassi
+        run: node --check isbn-cover.js
+      - name: Verifica patch
+        run: |
+          grep -q "TITLE_AUTHOR_COVER_FALLBACK" isbn-cover.js
+          grep -q "Google Books · titolo/autore" isbn-cover.js
+          grep -q "isbn-cover.js?v=20260817-17" index.html
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add isbn-cover.js index.html
+          git commit -m "Aggiunge fallback copertine verificato per titolo e autore"
+          git push
