@@ -30,3 +30,5 @@ jobs:
           git add italian-catalog-fallback-v3.js isbn-resilient-fallback-v1.js series-authoritative-catalog-v1.js bg/bg8.js index.html
           git commit -m "Rende robusto il recupero ISBN e blocca pagine generiche"
           git push origin main
+
+# trigger v2b
