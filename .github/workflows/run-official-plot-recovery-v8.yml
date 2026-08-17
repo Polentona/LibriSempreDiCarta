@@ -1,9 +1,9 @@
-name: Applica parser sinossi editoriali v9
+name: Applica normalizzazione titoli editore v10
 on:
   push:
     branches: [main]
     paths:
-      - 'tools/patch_official_plot_structure_v9.py'
+      - 'tools/patch_publisher_title_matching_v10.py'
       - '.github/workflows/run-official-plot-recovery-v8.yml'
 permissions:
   contents: write
@@ -15,15 +15,14 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Applica patch
-        run: python3 tools/patch_official_plot_structure_v9.py
+        run: python3 tools/patch_publisher_title_matching_v10.py
       - name: Verifica sintassi
-        run: |
-          node --check isbn-resilient-fallback-v1.js
+        run: node --check isbn-resilient-fallback-v1.js
       - name: Commit
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add isbn-resilient-fallback-v1.js index.html
           if git diff --cached --quiet; then exit 0; fi
-          git commit -m 'Supporta sinossi editoriali senza heading descrizione'
+          git commit -m 'Normalizza i suffissi di edizione nella ricerca editoriale'
           git push
