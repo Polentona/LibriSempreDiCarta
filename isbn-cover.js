@@ -99,6 +99,19 @@ function boot(){
 
   function normalizeLoose(v){return String(v||'').replace(/[^0-9Xx]/g,'').toUpperCase()}
   function normalizeText(v){return String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim()}
+  function screenMediaNoise(v){
+    const n=normalizeText(v);if(!n)return false;
+    return /\b(?:tv|television|televisione|televisivo|televisiva|episodio|episode|episodes|stagione|season|miniserie|mini series|film|movie|cinema|screenplay|teleplay|television play|made for tv|itv|bbc|hbo|netflix|prime video|disney plus|regia|director|starring|cast)\b/i.test(n)||/\b(?:s\d{1,2}e\d{1,2}|\d{1,2}x\d{1,2})\b/i.test(n)
+  }
+  function safeBookRelation(v){const x=String(v||'').replace(/\s+/g,' ').trim();return x&&!screenMediaNoise(x)?x:''}
+  function cleanCatalogTitle(v){
+    let t=String(v||'').replace(/\s+/g,' ').trim();if(!t)return'';
+    t=t.replace(/\s*[:|]\s*[^:|]{0,220}\bAmazon(?:\.it)?\b.*$/i,'').trim();
+    t=t.replace(/\s*[|]\s*(?:Amazon|IBS|Libraccio|Mondadori|Giunti|Google Books).*$/i,'').trim();
+    t=t.replace(/\s*[([]\s*(?:vol\.?|volume)\s*\.?\s*#?\s*\d{1,3}\s*[)\]]\s*$/i,'').trim();
+    t=t.replace(/\s*(?:[-–—,:]\s*)?(?:vol\.?|volume)\s*\.?\s*#?\s*\d{1,3}\s*$/i,'').trim();
+    return t
+  }
   function formatIssn(v){const n=normalizeLoose(v);return n.length===8?`${n.slice(0,4)}-${n.slice(4)}`:String(v||'').trim()}
   function validIsbn10(v){const n=normalizeLoose(v);if(!/^\d{9}[\dX]$/.test(n))return false;let s=0;for(let i=0;i<10;i++)s+=(n[i]==='X'?10:Number(n[i]))*(10-i);return s%11===0}
   function validIsbn13(v){const n=normalizeLoose(v);if(!/^\d{13}$/.test(n))return false;let s=0;for(let i=0;i<12;i++)s+=Number(n[i])*(i%2?3:1);return (10-(s%10))%10===Number(n[12])}
@@ -155,8 +168,8 @@ function boot(){
   }
   function normalizeCandidateMetadata(candidate){
     const c={...(candidate||{})};
-    c.saga=String(c.saga||'').trim();c.prequel=String(c.prequel||'').trim();c.sequel=String(c.sequel||'').trim();
-    c.title=seriesTitleWithSagaFirst(c.title,c.saga);
+    c.saga=safeBookRelation(c.saga);c.prequel=safeBookRelation(c.prequel);c.sequel=safeBookRelation(c.sequel);
+    c.title=cleanCatalogTitle(seriesTitleWithSagaFirst(c.title,c.saga));
     if(c.author&&!plausibleAuthorName(c.author))c.author='';
     return c
   }
@@ -302,9 +315,9 @@ function boot(){
         window.__LIB_LAST_AUTHORITATIVE_SERIES_RESULT__=localRel||null;
         authoritativeRelationsResolved=!!localRel?.authoritative;
         if(localRel?.authoritative){
-          if(localRel.saga){candidate.saga=String(localRel.saga).trim();setAutoField('editSaga',candidate.saga,true)}
-          candidate.prequel=String(localRel.prequel||'').trim();
-          candidate.sequel=String(localRel.sequel||'').trim();
+          if(localRel.saga){candidate.saga=safeBookRelation(localRel.saga);setAutoField('editSaga',candidate.saga,true)}
+          candidate.prequel=safeBookRelation(localRel.prequel);
+          candidate.sequel=safeBookRelation(localRel.sequel);
           setAutoField('editPrequel',candidate.prequel,true);
           setAutoField('editSequel',candidate.sequel,true);
         }
@@ -314,23 +327,23 @@ function boot(){
       try{
         const rel0=await window.__LIB_RESOLVE_SERIES_NEIGHBORS({code,title:candidate.title,author:candidate.author,saga:candidate.saga,description:candidate.description||''});
         window.__LIB_LAST_NEIGHBORS_RESULT__=rel0||null;
-        if(rel0?.prequel){candidate.prequel=String(rel0.prequel).trim();setAutoField('editPrequel',candidate.prequel,true)}
-        if(rel0?.sequel){candidate.sequel=String(rel0.sequel).trim();setAutoField('editSequel',candidate.sequel,true)}
+        if(rel0?.prequel){candidate.prequel=safeBookRelation(rel0.prequel);setAutoField('editPrequel',candidate.prequel,true)}
+        if(rel0?.sequel){candidate.sequel=safeBookRelation(rel0.sequel);setAutoField('editSequel',candidate.sequel,true)}
       }catch(e){window.__LIB_LAST_NEIGHBORS_ERROR__=String(e&&e.message||e);console.warn('Resolver preliminare prequel/sequel non disponibile',e)}
     }
     if(type==='isbn'&&!authoritativeRelationsResolved&&typeof window.__LIB_FIND_RELATIONS==='function'&&candidate.title&&candidate.author&&(!candidate.saga||!candidate.prequel||!candidate.sequel)){
       try{
         const rel=await window.__LIB_FIND_RELATIONS({code,title:candidate.title,author:candidate.author,saga:candidate.saga,description:candidate.description||''});
         if(rel?.sagaChecked){
-          candidate.saga=String(rel.saga||'').trim();
+          candidate.saga=safeBookRelation(rel.saga);
           setAutoField('editSaga',candidate.saga,true);
           if(candidate.saga){
             const fullTitle=seriesTitleWithSagaFirst(candidate.title,candidate.saga);
             if(fullTitle&&fullTitle!==candidate.title){candidate.title=fullTitle;setAutoField('editTitle',fullTitle)}
           }
         }
-        candidate.prequel=String(rel?.prequel||'').trim();
-        candidate.sequel=String(rel?.sequel||'').trim();
+        candidate.prequel=safeBookRelation(rel?.prequel);
+        candidate.sequel=safeBookRelation(rel?.sequel);
         setAutoField('editPrequel',candidate.prequel,true);
         setAutoField('editSequel',candidate.sequel,true);
       }catch(e){console.warn('Relazioni serie non disponibili',e)}
@@ -339,9 +352,9 @@ function boot(){
       try{
         const rel2=await window.__LIB_RESOLVE_SERIES_NEIGHBORS({code,title:candidate.title,author:candidate.author,saga:candidate.saga,description:candidate.description||''});
         window.__LIB_LAST_NEIGHBORS_RESULT__=rel2||null;
-        if(rel2?.saga&&!candidate.saga){candidate.saga=String(rel2.saga).trim();setAutoField('editSaga',candidate.saga,true)}
-        if(rel2?.prequel){candidate.prequel=String(rel2.prequel).trim();setAutoField('editPrequel',candidate.prequel,true)}
-        if(rel2?.sequel){candidate.sequel=String(rel2.sequel).trim();setAutoField('editSequel',candidate.sequel,true)}
+        if(rel2?.saga&&!candidate.saga){candidate.saga=safeBookRelation(rel2.saga);setAutoField('editSaga',candidate.saga,true)}
+        if(rel2?.prequel){candidate.prequel=safeBookRelation(rel2.prequel);setAutoField('editPrequel',candidate.prequel,true)}
+        if(rel2?.sequel){candidate.sequel=safeBookRelation(rel2.sequel);setAutoField('editSequel',candidate.sequel,true)}
       }catch(e){window.__LIB_LAST_NEIGHBORS_ERROR__=String(e&&e.message||e);console.warn('Resolver finale prequel/sequel non disponibile',e)}
     }
     const forcedCover=verifiedUiCover(code);if(forcedCover&&(!$x('editCover').value.trim()||autoFields.has('editCover')))setDraftCover(forcedCover,true);

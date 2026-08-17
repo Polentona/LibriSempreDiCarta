@@ -2,7 +2,7 @@
 if(window.__LIB_FIND_RELATIONS)return;
 
 const relationCache=new Map();
-const BAD_HOSTS=/^(?:www\.)?(?:google\.[^/]+|bing\.com|youtube\.com|youtu\.be|facebook\.com|instagram\.com|tiktok\.com|pinterest\.[^/]+|x\.com|twitter\.com)$/i;
+const BAD_HOSTS=/^(?:www\.)?(?:google\.[^/]+|bing\.com|youtube\.com|youtu\.be|facebook\.com|instagram\.com|tiktok\.com|pinterest\.[^/]+|x\.com|twitter\.com|imdb\.com|themoviedb\.org|rottentomatoes\.com|tvguide\.com|thetvdb\.com)$/i;
 
 function clean(v){
   return String(v||'')
@@ -16,6 +16,10 @@ function clean(v){
 }
 function norm(v){
   return clean(v).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[’‘]/g,"'").replace(/[^a-z0-9']+/g,' ').replace(/\s+/g,' ').trim()
+}
+function screenMediaNoise(v){
+  const n=norm(v);if(!n)return false;
+  return /\b(?:tv|television|televisione|televisivo|televisiva|episodio|episode|episodes|stagione|season|miniserie|mini series|film|movie|cinema|screenplay|teleplay|television play|made for tv|itv|bbc|hbo|netflix|prime video|disney plus|regia|director|starring|cast)\b/i.test(n)||/\b(?:s\d{1,2}e\d{1,2}|\d{1,2}x\d{1,2})\b/i.test(n)
 }
 function escRe(v){return String(v||'').replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}
 function sourceKey(source){
@@ -64,6 +68,7 @@ function cleanRelatedTitle(v,saga=''){
     .trim();
   x=stripSaga(x,saga);
   x=x.replace(/\s*[|•]\s*(?:Amazon|IBS|Libraccio|Mondadori|Giunti|Google Books).*$/i,'').trim();
+  if(screenMediaNoise(x))return'';
   return x.length>=2&&x.length<=190?x:''
 }
 function splitSeriesList(v){
@@ -84,7 +89,7 @@ function relationFromItems(items,title,source='',score=6,saga=''){
 }
 function addSagaEvidence(out,name,source,strength,reason,items=[]){
   const value=clean(name).replace(/^["“”'«»\s]+|["“”'«»\s]+$/g,'').replace(/\s+/g,' ').trim();
-  const n=norm(value);if(!value||value.length<2||value.length>100)return;
+  const n=norm(value);if(!value||value.length<2||value.length>100||screenMediaNoise(value))return;
   if(/^(?:trilogia|saga|serie|ciclo|series|trilogy|romanzo|novel|libro|books?)$/i.test(n))return;
   out.push({value,source:sourceKey(source),strength,reason,items})
 }
@@ -178,6 +183,8 @@ function parseExplicitNeighbors(text,title,source,relations,baseScore=9){
     const e=escRe(v);
     if(!out.sequel){const mm=p.match(new RegExp(e+'[^.]{0,320}\\.\\s*(?:A questo|A esso|Al quale)\\s+(?:è|e)\\s+seguito\\s+["“”\']?([^"“”\'.;]{3,180})','i'));if(mm)out.sequel=cleanNeighbor(mm[1])}
     if(!out.sequel){const mm=p.match(new RegExp(e+'[^.]{0,260}\\.\\s*Del\\s+(?:18|19|20)\\d{2}\\s+(?:è|e)\\s+["“”\']?([^"“”\'.;]{3,180})','i'));if(mm)out.sequel=cleanNeighbor(mm[1])}
+    if(!out.sequel){const mm=p.match(new RegExp(e+'[^.]{0,180}?(?:continua|continuano|prosegue|proseguono)\\s+(?:nel|con\\s+il|con|in)\\s+(?:romanzo|libro)\\s+["“”\']?([^"“”\'.;]{3,180})','i'));if(mm)out.sequel=cleanNeighbor(mm[1])}
+    if(!out.sequel){const mm=p.match(new RegExp('["“”\']?([A-ZÀ-ÖØ-Ý][^"“”\'.;]{2,140})["“”\']?\\s*(?:,|-|–|—)?\\s*(?:il\\s+)?(?:sequel|seguito|follow-up)\\s+(?:di|del|della|to)\\s+(?:the\\s+)?'+e,'i'));if(mm)out.sequel=cleanNeighbor(mm[1])}
     if(!out.prequel){const mm=p.match(new RegExp('["“”\']?([^"“”\'.;]{3,180})["“”\']?\\.\\s*(?:A questo|A esso|Al quale)\\s+(?:è|e)\\s+seguito\\s+'+e,'i'));if(mm)out.prequel=cleanNeighbor(mm[1])}
   }
   if(out.prequel&&matchesTarget(out.prequel,title))out.prequel='';
@@ -201,7 +208,7 @@ async function googleBooksEvidence(title,author){
 }
 function chooseSaga(evidence){
   const groups=new Map();
-  for(const e of evidence||[]){const key=norm(e.value);if(!key)continue;const g=groups.get(key)||{value:e.value,max:0,total:0,sources:new Set()};g.max=Math.max(g.max,e.strength||0);g.total+=e.strength||0;g.sources.add(e.source||'unknown');groups.set(key,g)}
+  for(const e of evidence||[]){if(screenMediaNoise(e.value))continue;const key=norm(e.value);if(!key)continue;const g=groups.get(key)||{value:e.value,max:0,total:0,sources:new Set()};g.max=Math.max(g.max,e.strength||0);g.total+=e.strength||0;g.sources.add(e.source||'unknown');groups.set(key,g)}
   const ranked=[...groups.values()].sort((a,b)=>b.max-a.max||b.sources.size-a.sources.size||b.total-a.total);
   for(const g of ranked)if(g.max>=3.5||(g.max>=3&&g.sources.size>=1)||(g.sources.size>=2&&g.total>=4.5))return g.value;
   return''

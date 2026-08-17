@@ -20,6 +20,14 @@ function plain(v){return String(v||'')
 }
 function cleanLine(v){return plain(v).replace(/^\s*#{1,6}\s*/,'').replace(/^\s*[>•*-]+\s*/,'').replace(/\s+/g,' ').trim()}
 function normText(v){return String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim()}
+function screenMediaNoise(v){
+  const n=normText(v);if(!n)return false;
+  return /\b(?:tv|television|televisione|televisivo|televisiva|episodio|episode|episodes|stagione|season|miniserie|mini series|film|movie|cinema|screenplay|teleplay|television play|made for tv|itv|bbc|hbo|netflix|prime video|disney plus|regia|director|starring|cast)\b/i.test(n)||/\b(?:s\d{1,2}e\d{1,2}|\d{1,2}x\d{1,2})\b/i.test(n)
+}
+function validBookSeriesName(v){
+  const x=cleanLine(v),n=normText(x);
+  return !!x&&x.length>=2&&x.length<90&&!screenMediaNoise(x)&&!/^(?:vertigo|narrativa|libri|romanzo|fiction|books?|serie|series|saga|trilogia|trilogy|ciclo)$/i.test(n)
+}
 function isbn13to10(v){const n=norm(v);if(!/^978\d{10}$/.test(n))return'';const core=n.slice(3,12);let s=0;for(let i=0;i<9;i++)s+=Number(core[i])*(10-i);const c=(11-(s%11))%11;return core+(c===10?'X':String(c))}
 function isbn10to13(v){const n=norm(v);if(!/^\d{9}[\dX]$/.test(n))return'';const core='978'+n.slice(0,9);let s=0;for(let i=0;i<12;i++)s+=Number(core[i])*(i%2?3:1);return core+((10-(s%10))%10)}
 function aliases(code){const n=norm(code),out=[n];const i13=n.length===10?isbn10to13(n):n,i10=n.length===13?isbn13to10(n):n;if(i13&&!out.includes(i13))out.push(i13);if(i10&&!out.includes(i10))out.push(i10);return out.filter(Boolean)}
@@ -109,7 +117,7 @@ function cleanAuthorCandidate(v){
 }
 function validAuthor(v){
   const a=cleanAuthorCandidate(v),n=normText(a);
-  if(!a||a.length>140||/\d|€|%|@|https?:|www\./i.test(a))return false;
+  if(!a||a.length>140||/\d|€|%|@|https?:|www\./i.test(a)||screenMediaNoise(a))return false;
   if(/\b(spedizione|consegna|negozio|libreria|magazzino|disponibile|carrello|cookie|assistenza|ritiro|punti vendita|iva|ean|isbn|issn|eur|euro|sku|codice|prezzo|sconto|traduttore|traduzione|collana|pagine|formato|dati|dettagli|edizione|editore|publisher|categoria|genere|reparto|home|menu|newsletter|acquista|compra|offerta|usato|nuovo|provincia|regione|comune|copertina|formato kindle|formato cartaceo)\b/i.test(n))return false;
   if(/^[A-ZÀ-Ý]{2,5}$/.test(a))return false;
   const people=a.split(/\s*(?:&|\be\b|;|\/)\s*/i).filter(Boolean);
@@ -147,7 +155,7 @@ function sagaFrom(text,title){
   const cleanSaga=v=>{
     let x=cleanLine(v).replace(/^[\s:|•·–—-]+/,'').replace(/[\s|•·–—-]+$/,'').trim();
     x=x.replace(/\s+(?:Visualizza|Vedi|Scopri|Tutti i libri|All books).*$/i,'').trim();
-    if(!x||x.length<2||x.length>90||/^(vertigo|narrativa|libri|romanzo|fiction|books?|serie|saga|trilogia)$/i.test(x))return'';
+    if(!x||x.length<2||x.length>90||screenMediaNoise(x)||/^(vertigo|narrativa|libri|romanzo|fiction|books?|serie|saga|trilogia)$/i.test(x))return'';
     return x
   };
   const d=cleanSaga(direct);if(d)return d;
@@ -222,11 +230,24 @@ function chooseCatalogField(records,field,validator=v=>!!cleanLine(v)){
   }
   return [...groups.values()].sort((a,b)=>b.count-a.count||b.score-a.score)[0]?.value||''
 }
+function chooseCatalogAuthor(records){
+  const value=chooseCatalogField(records,'author',validAuthor);if(!value)return'';
+  const words=cleanAuthorCandidate(value).split(/\s+/).filter(Boolean);
+  if(words.length>1)return value;
+  const key=normText(value),count=(records||[]).filter(r=>normText(r?.author||'')===key).length;
+  return count>=2?value:''
+}
+function chooseCatalogSaga(records){
+  const groups=new Map();
+  for(const r of records||[]){const value=cleanLine(r?.saga||'');if(!validBookSeriesName(value))continue;const key=normText(value),g=groups.get(key)||{value,count:0,score:0};g.count++;g.score+=(r.score||0);groups.set(key,g)}
+  const best=[...groups.values()].sort((a,b)=>b.count-a.count||b.score-a.score)[0];
+  return best&&best.count>=2?best.value:''
+}
 function mergeCatalogRecords(records){
   if(!records?.length)return null;
   const out={...records[0]};
-  out.author=chooseCatalogField(records,'author',validAuthor)||out.author||'';
-  out.saga=chooseCatalogField(records,'saga',v=>v.length>=2&&v.length<90)||out.saga||'';
+  out.author=chooseCatalogAuthor(records);
+  out.saga=chooseCatalogSaga(records);
   out.publisher=cleanPublisherCandidate(chooseCatalogField(records,'publisher',v=>v.length<120)||out.publisher||'');
   out.year=chooseCatalogField(records,'year',v=>/^\d{4}$/.test(v))||out.year||'';
   out.category=chooseCatalogField(records,'category',v=>v.length<150)||out.category||'';
@@ -251,7 +272,7 @@ function searchSagaCandidates(text,title,author){
   const add=v=>{
     let x=cleanLine(v).replace(/^["“”'\s:;|•·–—-]+|["“”'\s:;|•·–—-]+$/g,'').trim();
     x=x.replace(/^(?:the|la|il)\s+/i,'').trim();
-    if(!x||x.length<2||x.length>70)return;
+    if(!x||x.length<2||x.length>70||screenMediaNoise(x))return;
     const n=normText(x);if(!n||n===normText(title)||n===normText(author)||/^(book|books|libro|libri|novel|novels|fiction|serie|series|saga|trilogy|trilogia|volume)$/i.test(n))return;
     out.push(x)
   };
@@ -275,7 +296,7 @@ function seriesListContainsTitle(list,title){
 function cleanSagaName(v){
   let x=cleanLine(v).replace(/^[\"“”'\s:;|•·–—-]+|[\"“”'\s:;|•·–—-]+$/g,'').trim();
   x=x.replace(/^(?:la|il|the)\s+/i,'').trim();
-  if(!x||x.length<2||x.length>70||/^(?:trilogia|saga|serie|ciclo|series|trilogy)$/i.test(x))return'';
+  if(!x||x.length<2||x.length>70||screenMediaNoise(x)||/^(?:trilogia|saga|serie|ciclo|series|trilogy)$/i.test(x))return'';
   return x
 }
 function explicitListedSeriesFromText(text,title){
@@ -350,7 +371,7 @@ async function confirmStandaloneSaga(rec){
     libraccioAuthorSeries(rec)
   ]);
 
-  const direct=[gbSaga,libraccioSaga].filter(Boolean);
+  const direct=[gbSaga,libraccioSaga].filter(validBookSeriesName);
   if(direct.length){
     const groups=new Map();for(const value of direct){const key=normText(value),x=groups.get(key)||{value,count:0};x.count++;groups.set(key,x)}
     const best=[...groups.values()].sort((a,b)=>b.count-a.count)[0];
@@ -402,7 +423,7 @@ async function findCatalog(code){
 }
 function makeGoogleItem(rec,code){
   const ids=aliases(code).map(id=>({type:id.length===10?'ISBN_10':'ISBN_13',identifier:id}));
-  const v={title:rec.title,seriesName:rec.saga||'',authors:rec.author?[rec.author]:[],publisher:rec.publisher||'',publishedDate:rec.year||'',language:'it',industryIdentifiers:ids,description:rec.description||'',categories:rec.category?[rec.category]:[]};
+  const v={title:rec.title,seriesName:validBookSeriesName(rec.saga)?rec.saga:'',authors:rec.author&&validAuthor(rec.author)?[rec.author]:[],publisher:rec.publisher||'',publishedDate:rec.year||'',language:'it',industryIdentifiers:ids,description:rec.description||'',categories:rec.category?[rec.category]:[]};
   if(rec.cover)v.imageLinks={extraLarge:rec.cover,large:rec.cover,medium:rec.cover,thumbnail:rec.cover,smallThumbnail:rec.cover};
   return {id:'catalog-v3-'+norm(code),volumeInfo:v}
 }
@@ -418,9 +439,13 @@ window.fetch=async function(input,init){
     const verified=makeGoogleItem(rec,code),vv=verified.volumeInfo||{};
     if(!(data.items||[]).length){data.items=[verified];data.totalItems=1;return jsonResponse(r,data)}
     const first=data.items[0],v=first.volumeInfo=first.volumeInfo||{};
-    if(rec.saga){v.title=rec.title||v.title;v.subtitle='';v.seriesName=rec.saga}
-    else if(rec.title&&!v.title)v.title=rec.title;
-    if(rec.author)v.authors=[rec.author];
+    if(rec.saga&&validBookSeriesName(rec.saga)){
+      if(!v.title&&rec.title)v.title=rec.title;
+      if(!v.seriesName)v.seriesName=rec.saga;
+    }else if(rec.title&&!v.title)v.title=rec.title;
+    const currentAuthors=(v.authors||[]).filter(validAuthor);
+    if(currentAuthors.length)v.authors=currentAuthors;
+    else if(rec.author&&validAuthor(rec.author))v.authors=[rec.author];
     if(rec.publisher)v.publisher=cleanPublisherCandidate(rec.publisher);
     if(rec.year&&!v.publishedDate)v.publishedDate=rec.year;
     if(rec.description&&!v.description)v.description=rec.description;
