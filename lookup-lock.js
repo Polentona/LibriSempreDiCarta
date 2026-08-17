@@ -14,8 +14,6 @@ function boot(){
       .manual-cover-btn:hover{background:#ead7bf}.manual-cover-btn.secondary{background:#fff8ef}
       .manual-cover-help{font-size:9px;line-height:1.45;color:#75685d;margin-top:4px}
       .manual-cover-file{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
-      .physical-library-check{grid-column:1/-1;display:flex;align-items:center;gap:8px;padding:8px 0 2px;font-size:12px;color:#2d251f}
-      .physical-library-check input{width:auto;accent-color:#607e56}
     `;
     document.head.appendChild(style);
 
@@ -91,73 +89,6 @@ function boot(){
       if(dialog.hasAttribute('open')&&/^data:image\//i.test(cover.value||''))setTimeout(()=>manualPreview(cover.value),0)
     }).observe(dialog,{attributes:true,attributeFilter:['open']});
   }
-
-  /* Stato privato: indica se il volume esiste fisicamente nella libreria.
-     Il campo vive solo nella scheda/modulo e non viene renderizzato nella pagina principale. */
-  let physical=document.getElementById('editPhysicalOwned');
-  if(!physical){
-    const grid=document.getElementById('editRating')?.closest('.edit-grid');
-    const readCheck=document.getElementById('editRead')?.closest('.edit-check');
-    if(grid){
-      const label=document.createElement('label');
-      label.className='physical-library-check';
-      label.innerHTML='<input id="editPhysicalOwned" type="checkbox"> Presente fisicamente nella mia libreria';
-      if(readCheck&&readCheck.parentElement===grid)grid.insertBefore(label,readCheck);else grid.appendChild(label);
-      physical=document.getElementById('editPhysicalOwned');
-    }
-  }
-
-  /* Estende la scheda completa anche quando viene riaperto un libro già salvato. */
-  if(physical&&typeof fillDialog==='function'&&!fillDialog.__physicalOwnedV1){
-    const previousFillDialog=fillDialog;
-    const wrappedFillDialog=function(b={}){
-      previousFillDialog(b);
-      physical.checked=b.physicalOwned===true;
-    };
-    wrappedFillDialog.__physicalOwnedV1=true;
-    fillDialog=wrappedFillDialog;
-  }
-
-  /* Salva la spunta sia in aggiunta sia in modifica, senza mostrarla nella card principale. */
-  const form=document.getElementById('editForm');
-  if(physical&&form&&form.onsubmit&&!form.onsubmit.__physicalOwnedV1){
-    const previousSubmit=form.onsubmit;
-    const wrappedSubmit=async function(e){
-      const modeBefore=typeof dialogMode!=='undefined'?dialogMode:'edit';
-      const idBefore=typeof editingId!=='undefined'?editingId:null;
-      const physicalBefore=!!physical.checked;
-      const result=await previousSubmit.call(form,e);
-      /* Se il modulo è ancora aperto, il salvataggio precedente non si è concluso
-         (ad esempio perché è aperto il selettore dei risultati). */
-      if(dialog.open)return result;
-      if(modeBefore==='add'){
-        if(Array.isArray(books)&&books[0]){books[0].physicalOwned=physicalBefore;saveBooks();render()}
-      }else{
-        const b=Array.isArray(books)?books.find(x=>x.id==idBefore):null;
-        if(b){b.physicalOwned=physicalBefore;saveBooks();render()}
-      }
-      return result
-    };
-    wrappedSubmit.__physicalOwnedV1=true;
-    form.onsubmit=wrappedSubmit;
-  }
-
-  /* Il vecchio pulsante "Modifica" apre già lo stesso dialog completo: lo rinominiamo
-     in modo esplicito e continuiamo ad applicare l'etichetta dopo ogni render. */
-  function labelBookOpenButtons(){
-    document.querySelectorAll('[data-edit]').forEach(btn=>{
-      btn.textContent='↗ Apri scheda';
-      btn.title='Riapri la scheda completa del libro';
-    });
-  }
-  const list=document.getElementById('list');
-  if(list){new MutationObserver(labelBookOpenButtons).observe(list,{childList:true,subtree:true});labelBookOpenButtons()}
-
-  new MutationObserver(()=>{
-    if(dialog.hasAttribute('open')&&typeof dialogMode!=='undefined'&&dialogMode==='edit'){
-      const title=document.getElementById('dialogTitle');if(title)title.textContent='Scheda del libro';
-    }
-  }).observe(dialog,{attributes:true,attributeFilter:['open']});
 
   let locked=false;
   const controls=()=>[...dialog.querySelectorAll('input,textarea,select,button[type="submit"]')];
