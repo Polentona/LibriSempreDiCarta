@@ -1,0 +1,45 @@
+name: Parser robusto bibliografie di serie v4
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/run-wikipedia-bibliography-parser-v4.yml'
+permissions:
+  contents: write
+jobs:
+  patch-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Applica patch
+        run: python tools/fix_wikipedia_bibliography_parser_v4.py
+      - name: Controlla sintassi
+        run: node --check series-universal-resolver-v1.js
+      - name: Testa due bibliografie reali senza whitelist produzione
+        run: |
+          node <<'JS'
+          global.window=global;
+          require('./series-universal-resolver-v1.js');
+          (async()=>{
+            const cases=[
+              {input:{title:'La voce dei morti',author:'Simon Beckett'},expected:{saga:'David Hunter',prequel:'I sussurri della morte',sequel:'Acque morte'}},
+              {input:{title:'Torment',author:'Lauren Kate'},expected:{saga:'Fallen',prequel:'Fallen',sequel:'Passion'}}
+            ];
+            for(const c of cases){
+              const r=await global.__LIB_RESOLVE_UNIVERSAL_SERIES(c.input);
+              console.log('RELATION_TEST',JSON.stringify({input:c.input,result:r}));
+              if(!r)throw new Error('Nessuna relazione per '+c.input.title);
+              for(const k of ['saga','prequel','sequel'])if(String(r[k]||'')!==c.expected[k])throw new Error(`${c.input.title}: ${k}=${JSON.stringify(r[k])}, atteso=${JSON.stringify(c.expected[k])}`);
+            }
+          })().catch(e=>{console.error(e);process.exitCode=1});
+          JS
+      - name: Commit solo se i test passano
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add series-universal-resolver-v1.js index.html
+          git commit -m "Legge titoli ordinati dalle bibliografie di serie"
+          git push
