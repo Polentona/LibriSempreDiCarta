@@ -1,0 +1,84 @@
+name: E2E live Kerstin due trilogie
+on:
+  workflow_run:
+    workflows: ["Deploy GitHub Pages"]
+    types: [completed]
+permissions:
+  contents: read
+jobs:
+  test-kerstin-series:
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Installa Playwright
+        run: |
+          mkdir -p /tmp/e2e-kerstin
+          cd /tmp/e2e-kerstin
+          npm init -y >/dev/null 2>&1
+          npm install playwright@1.55.0 >/dev/null 2>&1
+          npx playwright install --with-deps chromium >/dev/null
+      - name: Prova i due ISBN sul sito pubblico
+        working-directory: /tmp/e2e-kerstin
+        run: |
+          cat > test.js <<'JS'
+          const { chromium } = require('playwright');
+          const fs = require('fs');
+          const cases=[
+            ['9788863807035','La porta di Liv. Silver','Trilogia dei sogni','Il libro dei sogni',"L'ultimo segreto",/La porta di Liv/i],
+            ['9788850230884','Blue','Trilogia delle gemme','Red','Green',/\bBlue\b/i]
+          ];
+          const norm=s=>String(s||'').replace(/[’‘]/g,"'").replace(/\s+/g,' ').trim();
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+            const all=[];let failed=false;
+            try{
+              for(const [isbn,title,saga,prequel,sequel,pick] of cases){
+                const page=await browser.newPage();const consoleLines=[];let result={};
+                page.on('console',m=>consoleLines.push(`[${m.type()}] ${m.text()}`));
+                page.on('pageerror',e=>consoleLines.push(`[pageerror] ${e.message}`));
+                try{
+                  await page.goto('https://polentona.github.io/LibriSempreDiCarta/?e2e-kerstin='+isbn+'-'+Date.now(),{waitUntil:'domcontentloaded',timeout:60000});
+                  await page.locator('#addBookBtn').click();
+                  await page.locator('#editCode').waitFor({state:'visible',timeout:30000});
+                  await page.locator('#editCode').fill(isbn);
+                  await page.locator('#lookupMetadataBtn').click();
+                  await page.waitForFunction(()=>{const t=document.querySelector('#editTitle')?.value||'';const o=document.querySelector('#metadataOverlay');return !!t||(o&&o.open)},null,{timeout:90000});
+                  if(await page.locator('#metadataOverlay').evaluate(el=>!!el.open).catch(()=>false)){
+                    const choices=page.locator('[data-meta-choice]');const count=await choices.count();let chosen=false;
+                    for(let i=0;i<count;i++){const text=await choices.nth(i).innerText();if(pick.test(text)&&/Kerstin Gier/i.test(text)){await choices.nth(i).click();chosen=true;break}}
+                    if(!chosen&&count===1)await choices.first().click();
+                  }
+                  await page.waitForFunction(()=>/Kerstin Gier/i.test(document.querySelector('#editAuthor')?.value||''),null,{timeout:60000});
+                  await page.waitForFunction(()=>{const s=document.querySelector('#lookupStatus');return !(s?.classList.contains('lookup-busy')||s?.querySelector('.lookup-book-spinner'))},null,{timeout:120000}).catch(()=>{});
+                  await page.waitForTimeout(1400);
+                  result=await page.evaluate(()=>({title:editTitle.value,author:editAuthor.value,saga:editSaga.value,prequel:editPrequel.value,sequel:editSequel.value,authoritative:window.__LIB_LAST_AUTHORITATIVE_SERIES_RESULT__||null}));
+                  const expected={title,author:'Kerstin Gier',saga,prequel,sequel};
+                  const mismatches=Object.entries(expected).filter(([k,v])=>norm(result[k])!==norm(v));
+                  all.push({isbn,expected,result,consoleLines,mismatches});
+                  if(mismatches.length){failed=true;console.error('E2E_KERSTIN_MISMATCH='+isbn+' '+JSON.stringify({expected,result,mismatches}))}
+                  else console.log('E2E_KERSTIN_OK='+isbn+' '+JSON.stringify(result));
+                  await page.screenshot({path:`kerstin-${isbn}.png`,fullPage:true});
+                }catch(e){failed=true;all.push({isbn,result,consoleLines,error:String(e&&e.stack||e)});console.error('E2E_KERSTIN_ERROR='+isbn,e)}
+                await page.close();
+              }
+              fs.writeFileSync('kerstin-e2e.json',JSON.stringify(all,null,2));
+              if(failed)process.exitCode=1;
+            }finally{await browser.close()}
+          })();
+          JS
+          node test.js
+      - name: Carica diagnostica E2E
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kerstin-two-trilogies-e2e
+          path: |
+            /tmp/e2e-kerstin/kerstin-e2e.json
+            /tmp/e2e-kerstin/kerstin-9788863807035.png
+            /tmp/e2e-kerstin/kerstin-9788850230884.png
+          if-no-files-found: ignore
+          retention-days: 3
