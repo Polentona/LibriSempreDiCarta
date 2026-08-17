@@ -1,0 +1,27 @@
+name: Fix generale serie e fallback Feltrinelli v2
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/run-general-series-feltrinelli-v2.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Applica patch
+        run: python tools/fix_general_series_and_feltrinelli_v2.py
+      - name: Verifica sintassi JavaScript
+        run: |
+          node --check isbn-resilient-fallback-v1.js
+          node --check series-universal-resolver-v1.js
+          node --check isbn-cover.js
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add isbn-resilient-fallback-v1.js isbn-cover.js index.html
+          git commit -m "Continua la ricerca finché saga e relazioni non sono complete"
+          git push
