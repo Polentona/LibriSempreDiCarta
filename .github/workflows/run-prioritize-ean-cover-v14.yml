@@ -1,0 +1,28 @@
+name: Priorita copertina EAN v14
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/prioritize_exact_ean_cover_v14.py'
+      - '.github/workflows/run-prioritize-ean-cover-v14.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Applica patch
+        run: python tools/prioritize_exact_ean_cover_v14.py
+      - name: Verifica
+        run: |
+          node --check isbn-cover.js
+          grep -q "messaggerieOk=await imageWorks" isbn-cover.js
+          grep -q "isbn-cover.js?v=20260817-14" index.html
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add isbn-cover.js index.html
+          git commit -m "Dai priorita alla copertina associata direttamente all EAN"
+          git push
