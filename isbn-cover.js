@@ -368,6 +368,20 @@ function safeBookRelation(v){const x=cleanRelationTitle(v);return x&&!screenMedi
       }
     }
 
+    /* UNIVERSAL_SERIES_FALLBACK_V1 */
+    if(type==='isbn'&&!authoritativeRelationsResolved&&typeof window.__LIB_RESOLVE_UNIVERSAL_SERIES==='function'&&candidate.title&&candidate.author){
+      try{
+        const universalRel=await window.__LIB_RESOLVE_UNIVERSAL_SERIES({code,title:candidate.title,author:candidate.author,publisher:candidate.publisher||'',saga:candidate.saga||'',description:candidate.description||''});
+        window.__LIB_LAST_UNIVERSAL_SERIES_RESULT__=universalRel||null;
+        if(universalRel?.saga){candidate.saga=safeBookRelation(universalRel.saga);setAutoField('editSaga',candidate.saga,true)}
+        if(universalRel?.authoritative){
+          authoritativeRelationsResolved=true;
+          candidate.prequel=safeBookRelation(universalRel.prequel||'');candidate.sequel=safeBookRelation(universalRel.sequel||'');
+          setAutoField('editPrequel',candidate.prequel,true);setAutoField('editSequel',candidate.sequel,true);
+        }
+      }catch(e){window.__LIB_LAST_UNIVERSAL_SERIES_ERROR__=String(e&&e.message||e);console.warn('Resolver universale serie non disponibile',e)}
+    }
+
     if(type==='isbn'&&!authoritativeRelationsResolved&&window.__LIB_ALLOW_LEGACY_RELATION_SEARCH===true&&typeof window.__LIB_RESOLVE_SERIES_NEIGHBORS==='function'&&candidate.title&&candidate.author&&candidate.saga&&(!candidate.prequel||!candidate.sequel)){
       try{
         const rel0=await window.__LIB_RESOLVE_SERIES_NEIGHBORS({code,title:candidate.title,author:candidate.author,saga:candidate.saga,description:candidate.description||''});
@@ -422,6 +436,15 @@ function safeBookRelation(v){const x=cleanRelationTitle(v);return x&&!screenMedi
     if(type==='isbn'&&candidates.length){
       const exact=candidates.filter(c=>c.exact);if(exact.length)candidates=exact;
       const seriesVerified=candidates.filter(c=>c.saga&&c.author&&!/^(IVA|EAN|ISBN|EUR|SKU)$/i.test(c.author.trim()));if(seriesVerified.length)candidates=seriesVerified
+    }
+    /* UNIVERSAL_ISBN_DIRECT_FALLBACK_V1 */
+    if(type==='isbn'&&!candidates.length&&typeof window.__LIB_RESILIENT_ISBN_LOOKUP==='function'){
+      try{
+        const rec=await window.__LIB_RESILIENT_ISBN_LOOKUP(code);
+        if(rec?.title&&(rec.author||rec.publisher)){
+          candidates=[normalizeCandidateMetadata({title:rec.title||'',saga:'',author:rec.author||'',description:rec.description||'',category:rec.category||'',publisher:rec.publisher||'',publishedDate:rec.year||'',covers:rec.cover?[{url:rec.cover,source:rec.source||'Fonte ISBN verificata'}]:[],source:rec.source||'Fonte ISBN verificata',identifiers:[normalizeLoose(code)],exact:true})]
+        }
+      }catch(e){window.__LIB_RESILIENT_ISBN_DIRECT_ERROR__=String(e&&e.message||e);console.warn('Fallback ISBN resiliente diretto non disponibile',e)}
     }
     if(type==='isbn'&&!candidates.some(c=>c.covers?.length)){
       const direct=`https://covers.openlibrary.org/b/isbn/${encodeURIComponent(code)}-L.jpg?default=false`;

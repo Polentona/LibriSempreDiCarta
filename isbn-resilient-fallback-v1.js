@@ -31,7 +31,7 @@ function titleWords(v){return normText(v).split(' ').filter(w=>w.length>2&&!['th
 function titleSimilarity(a,b){const x=titleWords(a),y=titleWords(b);if(!x.length||!y.length)return 0;const xs=new Set(x),ys=new Set(y);const common=[...xs].filter(w=>ys.has(w)).length;return common/Math.max(xs.size,ys.size)}
 function validTitle(v){const t=clean(v),n=normText(t);if(!t||t.length<2||t.length>220)return false;if(/https?:|www\.|\[\]\(|^\W+$/.test(t))return false;if(/^(?:libraccio(?: it)?|ibs|amazon(?: it)?|mondadori(?: store)?|giunti|hoepli|unilibro|eurolibro|thebanco(?: it)?|abebooks|home|catalogo|libri|ricerca|search|just a moment|access denied|product details|product information|book details|details|dettagli prodotto|informazioni prodotto|dettagli del prodotto|scheda prodotto)$/i.test(n))return false;if(/^(?:(?:\d+[,.]?)?\s*(?:recensioni?|reviews?|ratings?|valutazioni?)|libri universitari|libri scolastici|shopping cart|pronto alla spedizione|esaurito|disponibile|venditori?|condizione|prezzo)$/i.test(n))return false;if(/(?:cookie|carrello|privacy|accedi|registrati|servizio clienti|security verification)/i.test(n))return false;return true}
 function validAuthor(v){const a=clean(v),n=normText(a);if(!a||a.length<2||a.length>140||/\d|https?:|www\.|€|@/.test(a))return false;if(/(?:editore|publisher|isbn|ean|prezzo|sconto|traduttore|categoria|genere|libraccio|amazon|thebanco|bompiani varia)/i.test(n))return false;return /^[A-Za-zÀ-ÿ'’.\- ]+$/.test(a)}
-function cleanCommercialTitle(v){let t=clean(v);t=t.replace(/\s*\((?:grande\s+distrib[^)]*|ediz(?:ione)?[^)]*|vol\.?\s*\d+[^)]*)\)?\s*$/i,'').trim();t=t.replace(/\s+(?:grande\s+distrib(?:uzione)?|ediz(?:ione)?\s+economica)\s*$/i,'').trim();return t}
+function cleanCommercialTitle(v){let t=clean(v);t=t.replace(/\s*\((?:grande\s+distrib[^)]*|ediz(?:ione)?[^)]*|vol\.?\s*\d+[^)]*)\)?\s*$/i,'').trim();t=t.replace(/\s*\((?:grande\s+distrib|ediz(?:ione)?|vol\.?\s*\d+).*$/i,'').trim();t=t.replace(/\s+(?:grande\s+distrib(?:uzione)?|ediz(?:ione)?\s+economica)\s*$/i,'').trim();t=t.replace(/\s*[-–—|]\s*(?:TheBanco(?:\.it)?|Libraccio(?:\.it)?|IBS|Amazon(?:\.it)?|Feltrinelli|Mondadori Store|Unilibro|Hoepli).*$/i,'').trim();return t}
 function cleanPublisher(v){let p=clean(v).replace(/^(?:editore|publisher|casa editrice)\s*:?\s*/i,'').trim();if(/^[A-ZÀ-Ý0-9 .&'’-]{3,}$/.test(p))p=p.toLowerCase().replace(/(^|\s|[-'’])([a-zà-ÿ])/g,(m,a,b)=>a+b.toUpperCase());p=p.replace(/\s+(?:Varia|Editore|Edizioni)$/i,m=>/editore|edizioni/i.test(m)?'':m).trim();return p}
 function safeCategory(v){const x=clean(v);if(!x||x.length>120||/https?:|\[\]\(|cookie|carrello/i.test(x))return'';const n=normText(x);if(/mystery|thriller|crime|gialli/.test(n))return 'Gialli e thriller';if(/horror/.test(n))return 'Horror';if(/fantasy/.test(n))return 'Fantasy';if(/science fiction|fantascienza/.test(n))return 'Fantascienza';if(/juvenile|young adult|ragazzi/.test(n))return 'Libri per ragazzi';if(/fiction|narrativa|letteratura/.test(n))return 'Narrativa';return x}
 function responseJson(data){return new Response(JSON.stringify(data),{status:200,headers:{'content-type':'application/json; charset=utf-8'}})}
@@ -133,18 +133,33 @@ async function enrichOfficial(rec){
   }
   return rec
 }
+function searchSnippetRecord(text,code){
+  const s=String(text||''),aa=aliases(code),matches=[];const re=/\[([^\]]{2,240})\]\((https?:\/\/[^)\s]+)\)/g;let m;
+  while((m=re.exec(s)))matches.push({title:m[1],url:decodeBing(m[2].replace(/&amp;/g,'&')),start:m.index,end:re.lastIndex});
+  for(let i=0;i<matches.length;i++){
+    const hit=matches[i];if(!domainOf(hit.url))continue;const end=i+1<matches.length?matches[i+1].start:Math.min(s.length,hit.start+2200),block=s.slice(hit.start,end),compact=normCode(block);
+    if(!aa.some(x=>x&&compact.includes(x)))continue;
+    const title=cleanCommercialTitle(htmlDecode(hit.title));if(!validTitle(title))continue;
+    let author='';const am=block.match(/(?:Autore|Author|scritto\s+da|di)\s*[:\-]?\s*([A-ZÀ-Ý][A-Za-zÀ-ÿ'’.-]+(?:\s+[A-ZÀ-Ý][A-Za-zÀ-ÿ'’.-]+){0,5})/i);if(am)author=clean(am[1]);if(author&&!validAuthor(author))author='';
+    let publisher='';const pm=block.match(/(?:Editore|Publisher|edita\s+da)\s*[:\-]?\s*([A-Za-zÀ-ÿ0-9 .&'’_-]{2,100})/i);if(pm)publisher=cleanPublisher(pm[1].split(/\s{2,}|\n/)[0]);
+    const year=block.match(/\b((?:18|19|20)\d{2})\b/)?.[1]||'';if(!author&&!publisher)continue;
+    return {title,author,publisher,year,category:'',description:'',cover:'',source:sourceName(hit.url)+' (risultato ISBN verificato)',url:hit.url,score:31};
+  }
+  return null
+}
 async function discoverRetail(code){
   const ean=aliases(code).find(x=>/^97[89]\d{10}$/.test(x))||normCode(code),i10=aliases(code).find(x=>/^\d{9}[\dX]$/.test(x))||isbn13to10(ean),links=[];
   const add=u=>{if(domainOf(u)&&!links.includes(u))links.push(u)};
   // TheBanco usa AizShop: la ricerca per keyword e' interrogabile senza conoscere lo slug del prodotto.
-  for(const u of [`https://thebanco.it/search?keyword=${encodeURIComponent(ean)}`,`https://thebanco.it/search?q=${encodeURIComponent(ean)}`]){const t=await jina(u,8500);for(const x of linksFrom(t))add(x);const self=inspectPage(t,u,ean);if(self){const enriched=await appleSearch(self);if(enriched.score>=20)return enriched}}
+  for(const u of [`https://thebanco.it/search?keyword=${encodeURIComponent(ean)}`,`https://thebanco.it/search?q=${encodeURIComponent(ean)}`]){const t=await jina(u,8500);for(const x of linksFrom(t))add(x);const sn=searchSnippetRecord(t,ean);if(sn){const enriched=await appleSearch(sn);if(enriched.score>=20)return enriched}const self=inspectPage(t,u,ean);if(self){const enriched=await appleSearch(self);if(enriched.score>=20)return enriched}}
   const siteQ=`"${ean}" (site:thebanco.it OR site:ibs.it OR site:libraccio.it OR site:unilibro.it OR site:libreriauniversitaria.it OR site:hoepli.it OR site:abebooks.com OR site:bompiani.it)`;
-  for(const q of [`"${ean}"`,`"${ean}" libro`,siteQ]){const b=await jina('https://www.bing.com/search?setlang=it-IT&q='+encodeURIComponent(q),8500);for(const x of linksFrom(b))add(x);if(links.length>=8)break}
+  for(const q of [`"${ean}"`,`"${ean}" libro`,siteQ]){const b=await jina('https://www.bing.com/search?setlang=it-IT&q='+encodeURIComponent(q),8500);const sn=searchSnippetRecord(b,ean);if(sn){const enriched=await appleSearch(sn);if(enriched.score>=20)return enriched}for(const x of linksFrom(b))add(x);if(links.length>=8)break}const g=await jina('https://www.google.com/search?hl=it&num=10&q='+encodeURIComponent(`"${ean}" libro`),8500);const gsn=searchSnippetRecord(g,ean);if(gsn){const enriched=await appleSearch(gsn);if(enriched.score>=20)return enriched}for(const x of linksFrom(g))add(x);
   add(`https://www.eurolibro.it/libro/isbn/${encodeURIComponent(ean)}.html`);if(i10)add(`https://www.amazon.it/dp/${encodeURIComponent(i10)}`);
   const recs=(await Promise.all(links.slice(0,10).map(async u=>inspectPage(await jina(u,9500),u,ean)))).filter(Boolean).sort((a,b)=>b.score-a.score);
   if(!recs.length)return null;return await appleSearch(recs[0])
 }
 async function resilientLookup(code){if(cache.has(code))return cache.get(code);const p=(async()=>{const ol=await openLibrary(code);if(ol&&ol.author&&ol.publisher)return await enrichOfficial(await appleSearch(ol));const web=await discoverRetail(code);if(web)return await enrichOfficial(web);return ol?await enrichOfficial(await appleSearch(ol)):null})();cache.set(code,p);return p}
+window.__LIB_RESILIENT_ISBN_LOOKUP=resilientLookup;
 function toGoogle(rec,code){const ids=aliases(code).map(x=>({type:x.length===10?'ISBN_10':'ISBN_13',identifier:x})),v={title:rec.title,authors:rec.author?[rec.author]:[],publisher:rec.publisher||'',publishedDate:rec.year||'',language:'it',industryIdentifiers:ids,description:rec.description||'',categories:rec.category?[rec.category]:[]};if(rec.cover)v.imageLinks={thumbnail:rec.cover,smallThumbnail:rec.cover,medium:rec.cover,large:rec.cover};return {kind:'books#volumes',totalItems:1,items:[{id:'resilient-'+normCode(code),volumeInfo:v,__resilientSource:rec.source||'fallback'}]}}
 
 window.fetch=async function(input,init){
