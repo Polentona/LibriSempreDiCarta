@@ -1,0 +1,25 @@
+name: Filtra titoli generici da pagine prodotto
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/run-generic-product-heading-filter.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - run: python tools/patch_generic_product_heading_filter.py
+      - run: |
+          node --check isbn-resilient-fallback-v1.js
+          node --check italian-catalog-fallback-v3.js
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add isbn-resilient-fallback-v1.js italian-catalog-fallback-v3.js bg/bg8.js index.html
+          git commit -m "Scarta intestazioni commerciali dai titoli libro"
+          git push origin main
