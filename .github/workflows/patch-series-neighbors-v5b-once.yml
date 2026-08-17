@@ -1,0 +1,70 @@
+name: Corregge ordine lookup prequel sequel v5b
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Applica patch
+        shell: python
+        run: |
+          from pathlib import Path
+
+          p=Path('isbn-cover.js')
+          s=p.read_text(encoding='utf-8')
+          pre_marker='__LIB_PRE_RELATION_NEIGHBORS_V5__'
+          if pre_marker not in s:
+              needle="    setAutoField('editTitle',candidate.title);setAutoField('editSaga',candidate.saga);setAutoField('editAuthor',candidate.author);setAutoField('editPlot',candidate.description);setAutoField('editCategory',candidate.category);setAutoField('editPublisher',candidate.publisher);setAutoField('editPublishedDate',candidate.publishedDate);setAutoField('editPrequel',candidate.prequel);setAutoField('editSequel',candidate.sequel);\n    if(type==='isbn'&&typeof window.__LIB_FIND_RELATIONS==='function'&&candidate.title&&candidate.author){"
+              block="    setAutoField('editTitle',candidate.title);setAutoField('editSaga',candidate.saga);setAutoField('editAuthor',candidate.author);setAutoField('editPlot',candidate.description);setAutoField('editCategory',candidate.category);setAutoField('editPublisher',candidate.publisher);setAutoField('editPublishedDate',candidate.publishedDate);setAutoField('editPrequel',candidate.prequel);setAutoField('editSequel',candidate.sequel);\n"
+              block+="    /* __LIB_PRE_RELATION_NEIGHBORS_V5__ */\n"
+              block+="    if(type==='isbn'&&typeof window.__LIB_RESOLVE_SERIES_NEIGHBORS==='function'&&candidate.title&&candidate.author&&candidate.saga&&(!candidate.prequel||!candidate.sequel)){\n"
+              block+="      try{\n"
+              block+="        const rel0=await window.__LIB_RESOLVE_SERIES_NEIGHBORS({code,title:candidate.title,author:candidate.author,saga:candidate.saga,description:candidate.description||''});\n"
+              block+="        window.__LIB_LAST_NEIGHBORS_RESULT__=rel0||null;\n"
+              block+="        if(rel0?.prequel){candidate.prequel=String(rel0.prequel).trim();setAutoField('editPrequel',candidate.prequel,true)}\n"
+              block+="        if(rel0?.sequel){candidate.sequel=String(rel0.sequel).trim();setAutoField('editSequel',candidate.sequel,true)}\n"
+              block+="      }catch(e){window.__LIB_LAST_NEIGHBORS_ERROR__=String(e&&e.message||e);console.warn('Resolver preliminare prequel/sequel non disponibile',e)}\n"
+              block+="    }\n"
+              block+="    if(type==='isbn'&&typeof window.__LIB_FIND_RELATIONS==='function'&&candidate.title&&candidate.author&&(!candidate.saga||!candidate.prequel||!candidate.sequel)){"
+              if needle not in s:
+                  raise SystemExit('Anchor applyCandidate iniziale non trovato')
+              s=s.replace(needle,block,1)
+
+          inside="    if(changed){saveBooks();render()}\n  }\n  function plausibleAuthorName"
+          if '  migrateVerifiedSavedBooks();\n  function plausibleAuthorName' not in s:
+              if inside not in s:
+                  raise SystemExit('Anchor migrazione interna non trovato')
+              s=s.replace(inside,"    if(changed){saveBooks();render()}\n  }\n  migrateVerifiedSavedBooks();\n  function plausibleAuthorName",1)
+          s=s.replace("boot();\nmigrateVerifiedSavedBooks();\n})();","boot();\n})();")
+          p.write_text(s,encoding='utf-8')
+
+          p=Path('bg/bg8.js')
+          s=p.read_text(encoding='utf-8')
+          if 'isbn-cover.js?v=20' not in s and 'isbn-cover.js?v=21' not in s:
+              raise SystemExit('Versione isbn-cover attesa non trovata')
+          s=s.replace('isbn-cover.js?v=20','isbn-cover.js?v=21')
+          p.write_text(s,encoding='utf-8')
+
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8').replace('bg${i}.js?v=19','bg${i}.js?v=20')
+          p.write_text(s,encoding='utf-8')
+      - name: Verifica
+        run: |
+          node --check isbn-cover.js
+          grep -F '__LIB_PRE_RELATION_NEIGHBORS_V5__' isbn-cover.js
+          grep -F 'isbn-cover.js?v=21' bg/bg8.js
+          grep -F 'bg${i}.js?v=20' index.html
+          ! tail -n 5 isbn-cover.js | grep -F 'migrateVerifiedSavedBooks();'
+      - name: Commit
+        run: |
+          rm -f .github/workflows/patch-series-neighbors-v5b-once.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add isbn-cover.js bg/bg8.js index.html .github/workflows/patch-series-neighbors-v5b-once.yml
+          git commit -m 'Esegue resolver saga prima del lookup legacy e corregge migrazione'
+          git push
