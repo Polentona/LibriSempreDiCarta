@@ -1,0 +1,1 @@
+Deploy completamento Saga/Prequel/Sequel indipendente dalla fonte metadati - 2026-08-17
