@@ -1,0 +1,92 @@
+name: Verifica live redesign libreria v1
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - ".github/workflows/e2e-library-redesign-live-report-v1.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Installa Playwright
+        run: |
+          mkdir -p /tmp/e2e-redesign-live && cd /tmp/e2e-redesign-live
+          npm init -y >/dev/null 2>&1
+          npm install playwright@1.55.0 >/dev/null 2>&1
+          npx playwright install --with-deps chromium >/dev/null
+      - name: Attendi propagazione Pages
+        run: sleep 75
+      - name: E2E
+        id: e2e
+        continue-on-error: true
+        working-directory: /tmp/e2e-redesign-live
+        run: |
+          cat > test.js <<'JS'
+          const {chromium}=require('playwright');
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+            const page=await browser.newPage({viewport:{width:1920,height:1080}});
+            const pageErrors=[];page.on('pageerror',e=>pageErrors.push(e.message));
+            const books=[
+              {id:1,title:'Fallen',author:'Lauren Kate',category:'Fantasy',saga:'Fallen',publishedDate:'2009',rating:4,inLibrary:true,read:true,cover:'',plot:'',notes:'',loanTo:'',loanDate:''},
+              {id:2,title:'Torment',author:'Lauren Kate',category:'Fantasy',saga:'Fallen',publishedDate:'2010',rating:5,inLibrary:false,read:true,cover:'',plot:'',notes:'',loanTo:'',loanDate:''},
+              {id:3,title:'Passion',author:'Lauren Kate',category:'Fantasy',saga:'Fallen',publishedDate:'2011',rating:3,inLibrary:true,read:false,cover:'',plot:'',notes:'',loanTo:'',loanDate:''},
+              {id:4,title:'Rapture',author:'Lauren Kate',category:'Fantasy',saga:'Fallen',publishedDate:'2012',rating:4,inLibrary:false,read:false,cover:'',plot:'',notes:'',loanTo:'',loanDate:''},
+              {id:5,title:'Fallen in Love',author:'Lauren Kate',category:'Fantasy',saga:'Fallen',publishedDate:'2012',rating:0,inLibrary:true,read:false,cover:'',plot:'',notes:'',loanTo:'',loanDate:''},
+              {id:6,title:'Angels in the Dark',author:'Lauren Kate',category:'Fantasy',saga:'Fallen',publishedDate:'2013',rating:0,inLibrary:false,read:false,cover:'',plot:'',notes:'',loanTo:'',loanDate:''},
+              {id:7,title:'Unforgiven',author:'Lauren Kate',category:'Fantasy',saga:'Fallen',publishedDate:'2015',rating:0,inLibrary:true,read:false,cover:'',plot:'',notes:'',loanTo:'',loanDate:''},
+              {id:8,title:'Shining',author:'Stephen King',category:'Horror',saga:'',publishedDate:'1977',rating:5,inLibrary:true,read:true,cover:'',plot:'',notes:'',loanTo:'',loanDate:''},
+              {id:9,title:'La voce dei morti',author:'Simon Beckett',category:'Thriller',saga:'David Hunter',publishedDate:'2011',rating:4,inLibrary:false,read:false,cover:'',plot:'',notes:'',loanTo:'',loanDate:''},
+              {id:10,title:'Sacrifice',author:'Alexandra Adornetto',category:'Fantasy',saga:'Rebel',publishedDate:'2012',rating:2,inLibrary:true,read:false,cover:'',plot:'',notes:'',loanTo:'',loanDate:''}
+            ];
+            const result={};
+            try{
+              await page.goto('https://polentona.github.io/LibriSempreDiCarta/?live-redesign='+Date.now(),{waitUntil:'domcontentloaded',timeout:120000});
+              await page.evaluate(data=>{localStorage.setItem('libriDiCarta.books.v1',JSON.stringify(data));localStorage.removeItem('libriDiCarta.seriesNotes.v1')},books);
+              await page.reload({waitUntil:'domcontentloaded',timeout:120000});
+              await page.locator('#addBookBtn').waitFor({state:'visible',timeout:30000});
+              result.home=await page.locator('.book').count();if(result.home!==10)throw new Error('HOME='+result.home);
+              const nav=await page.locator('.nav').boundingBox(),add=await page.locator('#addBookBtn').boundingBox();result.navContained=!!(nav&&add&&add.x+add.width<=nav.x+nav.width+1);if(!result.navContained)throw new Error('NAV_OVERFLOW');
+              await page.locator('[data-view="library"]').click();result.library=await page.locator('.book').count();if(result.library!==6)throw new Error('LIBRARY='+result.library);
+              await page.locator('.book').first().locator('[data-edit]').click();result.inLibraryField=await page.locator('#editInLibrary').count();if(result.inLibraryField!==1)throw new Error('NO_IN_LIBRARY_FIELD');await page.locator('#cancelEdit').click();
+              await page.locator('[data-view="authors"]').click();result.letters=await page.locator('.alphabet-btn').count();result.authors=await page.locator('.author-entry-name').allInnerTexts();if(result.letters!==26||result.authors.join('|')!=='Alexandra Adornetto|Simon Beckett|Lauren Kate|Stephen King')throw new Error('AUTHORS='+JSON.stringify(result.authors));
+              await page.locator('[data-author-letter="K"]').click();const k=await page.locator('.author-entry-name').allInnerTexts();if(k.join('|')!=='Lauren Kate')throw new Error('LETTER_K='+k.join('|'));
+              await page.locator('[data-view="categories"]').click();await page.locator('#categoryFilter').selectOption({label:'Fantasy'});result.fantasy=await page.locator('.book').count();if(result.fantasy!==8)throw new Error('FANTASY='+result.fantasy);
+              await page.locator('[data-view="series"]').click();result.series=await page.locator('.series-row').count();if(result.series!==3)throw new Error('SERIES='+result.series);
+              const fallen=page.locator('.series-row').filter({hasText:'FALLEN'}).first();result.firstCovers=await fallen.locator('.series-cover-card').count();if(result.firstCovers!==5)throw new Error('FIRST_COVERS='+result.firstCovers);
+              await fallen.locator('[data-series-dir="1"]').click();const fallen2=page.locator('.series-row').filter({hasText:'FALLEN'}).first();result.nextCovers=await fallen2.locator('.series-cover-card').count();if(result.nextCovers!==2)throw new Error('NEXT_COVERS='+result.nextCovers);
+              const note=fallen2.locator('[data-series-note]');await note.fill('Saga completa');await note.blur();await page.locator('[data-view="home"]').click();await page.locator('[data-view="series"]').click();result.note=await page.locator('.series-row').filter({hasText:'FALLEN'}).first().locator('[data-series-note]').inputValue();if(result.note!=='Saga completa')throw new Error('NOTE_NOT_SAVED');
+              if(pageErrors.length)throw new Error('PAGE_ERRORS='+pageErrors.join('|'));
+              console.log('LIVE_RESULT='+JSON.stringify(result));
+            }catch(e){console.error('LIVE_ERROR='+e.message);console.error('LIVE_PARTIAL='+JSON.stringify(result));process.exitCode=1}
+            await browser.close();
+          })();
+          JS
+          node test.js 2>&1 | tee /tmp/redesign-live.log
+          test ${PIPESTATUS[0]} -eq 0
+      - name: Scrivi risultato
+        if: always()
+        run: |
+          {
+            echo "outcome=${{ steps.e2e.outcome }}"
+            echo "date=$(date -u +%FT%TZ)"
+            echo "--- log ---"
+            cat /tmp/redesign-live.log 2>/dev/null || true
+          } > e2e-library-redesign-result.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add e2e-library-redesign-result.txt
+          git commit -m "Registra risultato E2E redesign libreria"
+          git push
+      - name: Fallisci se E2E non passa
+        if: steps.e2e.outcome != 'success'
+        run: exit 1
