@@ -1,0 +1,46 @@
+name: QA modulo ISBN resiliente
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/qa-resilient-module.yml']
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Controlla sintassi
+        run: node --check isbn-resilient-fallback-v1.js
+      - name: Installa browser
+        shell: bash
+        run: |
+          mkdir -p /tmp/qa-resilient && cd /tmp/qa-resilient
+          npm init -y >/dev/null 2>&1
+          npm install playwright@1.55.0 >/dev/null 2>&1
+          npx playwright install --with-deps chromium >/dev/null
+      - name: Diagnostica sito pubblico
+        shell: bash
+        working-directory: /tmp/qa-resilient
+        run: |
+          cat > diag.js <<'JS'
+          const {chromium}=require('playwright');
+          (async()=>{
+            const b=await chromium.launch({headless:true});const p=await b.newPage();
+            const logs=[],failed=[];
+            p.on('console',m=>logs.push(`[${m.type()}] ${m.text()}`));p.on('pageerror',e=>logs.push(`[pageerror] ${e.message}`));
+            p.on('response',r=>{if(r.status()>=400)failed.push({s:r.status(),u:r.url()})});
+            await p.goto('https://polentona.github.io/LibriSempreDiCarta/?qa-resilient='+Date.now(),{waitUntil:'domcontentloaded',timeout:60000});
+            const loaded=await p.evaluate(()=>({flag:!!window.__LIB_ISBN_RESILIENT_V1,script:[...document.scripts].map(s=>s.src).filter(Boolean).filter(x=>/isbn-resilient/.test(x))}));
+            console.log('QA_MODULE_LOADED='+JSON.stringify(loaded));
+            await p.locator('#addBookBtn').click();await p.locator('#editCode').fill('9788845283253');await p.locator('#lookupMetadataBtn').click();
+            for(const sec of [5,15,30,60]){
+              await p.waitForTimeout(sec===5?5000:(sec===15?10000:(sec===30?15000:30000)));
+              const x=await p.evaluate(()=>({title:editTitle?.value||'',author:editAuthor?.value||'',publisher:editPublisher?.value||'',status:document.querySelector('#lookupStatus')?.textContent||'',diag:window.__LIB_RESILIENT_ISBN_LAST__||null}));
+              console.log('QA_AT_'+sec+'='+JSON.stringify(x));
+            }
+            console.log('QA_FAILED='+JSON.stringify(failed));console.log('QA_CONSOLE='+JSON.stringify(logs));await b.close();
+          })().catch(e=>{console.error(e);process.exitCode=1});
+          JS
+          node diag.js
