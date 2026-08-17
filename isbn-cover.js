@@ -346,7 +346,27 @@ function safeBookRelation(v){const x=cleanRelationTitle(v);return x&&!screenMedi
         }
       }catch(e){window.__LIB_LAST_AUTHORITATIVE_SERIES_ERROR__=String(e&&e.message||e);console.warn('Catalogo serie verificato non disponibile',e)}
     }
-    if(type==='isbn'&&!authoritativeRelationsResolved&&typeof window.__LIB_RESOLVE_SERIES_NEIGHBORS==='function'&&candidate.title&&candidate.author&&candidate.saga&&(!candidate.prequel||!candidate.sequel)){
+    /* BOUNDED_PUBLISHER_RELATIONS_V1: una sola ricerca editoriale verificabile, poi stop. */
+    if(type==='isbn'&&!authoritativeRelationsResolved&&typeof window.__LIB_RESOLVE_BOUNDED_RELATIONS==='function'&&candidate.title&&candidate.author){
+      try{
+        const boundedRel=await window.__LIB_RESOLVE_BOUNDED_RELATIONS({code,title:candidate.title,author:candidate.author,publisher:candidate.publisher||'',saga:candidate.saga||'',description:candidate.description||''});
+        window.__LIB_LAST_BOUNDED_RELATIONS_RESULT__=boundedRel||null;
+        if(boundedRel?.authoritative){
+          authoritativeRelationsResolved=true;
+          candidate.saga=safeBookRelation(boundedRel.saga||'');
+          candidate.prequel=safeBookRelation(boundedRel.prequel||'');
+          candidate.sequel=safeBookRelation(boundedRel.sequel||'');
+          setAutoField('editSaga',candidate.saga,true);
+          setAutoField('editPrequel',candidate.prequel,true);
+          setAutoField('editSequel',candidate.sequel,true);
+        }
+      }catch(e){
+        window.__LIB_LAST_BOUNDED_RELATIONS_ERROR__=String(e&&e.message||e);
+        console.warn('Resolver editoriale limitato non disponibile',e)
+      }
+    }
+
+    if(type==='isbn'&&!authoritativeRelationsResolved&&window.__LIB_ALLOW_LEGACY_RELATION_SEARCH===true&&typeof window.__LIB_RESOLVE_SERIES_NEIGHBORS==='function'&&candidate.title&&candidate.author&&candidate.saga&&(!candidate.prequel||!candidate.sequel)){
       try{
         const rel0=await window.__LIB_RESOLVE_SERIES_NEIGHBORS({code,title:candidate.title,author:candidate.author,saga:candidate.saga,description:candidate.description||''});
         window.__LIB_LAST_NEIGHBORS_RESULT__=rel0||null;
@@ -354,7 +374,7 @@ function safeBookRelation(v){const x=cleanRelationTitle(v);return x&&!screenMedi
         if(rel0?.sequel){candidate.sequel=safeBookRelation(rel0.sequel);setAutoField('editSequel',candidate.sequel,true)}
       }catch(e){window.__LIB_LAST_NEIGHBORS_ERROR__=String(e&&e.message||e);console.warn('Resolver preliminare prequel/sequel non disponibile',e)}
     }
-    if(type==='isbn'&&!authoritativeRelationsResolved&&typeof window.__LIB_FIND_RELATIONS==='function'&&candidate.title&&candidate.author&&(!candidate.saga||!candidate.prequel||!candidate.sequel)){
+    if(type==='isbn'&&!authoritativeRelationsResolved&&window.__LIB_ALLOW_LEGACY_RELATION_SEARCH===true&&typeof window.__LIB_FIND_RELATIONS==='function'&&candidate.title&&candidate.author&&(!candidate.saga||!candidate.prequel||!candidate.sequel)){
       try{
         const rel=await window.__LIB_FIND_RELATIONS({code,title:candidate.title,author:candidate.author,saga:candidate.saga,description:candidate.description||''});
         if(rel?.sagaChecked){
@@ -371,7 +391,7 @@ function safeBookRelation(v){const x=cleanRelationTitle(v);return x&&!screenMedi
         setAutoField('editSequel',candidate.sequel,true);
       }catch(e){console.warn('Relazioni serie non disponibili',e)}
     }
-    if(type==='isbn'&&!authoritativeRelationsResolved&&typeof window.__LIB_RESOLVE_SERIES_NEIGHBORS==='function'&&candidate.title&&candidate.author&&(!candidate.prequel||!candidate.sequel)){
+    if(type==='isbn'&&!authoritativeRelationsResolved&&window.__LIB_ALLOW_LEGACY_RELATION_SEARCH===true&&typeof window.__LIB_RESOLVE_SERIES_NEIGHBORS==='function'&&candidate.title&&candidate.author&&(!candidate.prequel||!candidate.sequel)){
       try{
         const rel2=await window.__LIB_RESOLVE_SERIES_NEIGHBORS({code,title:candidate.title,author:candidate.author,saga:candidate.saga,description:candidate.description||''});
         window.__LIB_LAST_NEIGHBORS_RESULT__=rel2||null;
