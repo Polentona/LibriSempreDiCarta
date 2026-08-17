@@ -1,0 +1,2 @@
+Deploy relation-only authoritative catalog support including Shining -> Doctor Sleep.
+Includes bot commit c2f723d06813562b7f9527f2746f9f46ada6928d.
