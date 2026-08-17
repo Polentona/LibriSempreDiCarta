@@ -1,0 +1,98 @@
+name: Migliora qualita relazioni bibliografiche
+on:
+  push:
+    paths:
+      - '.github/workflows/patch-relation-quality-v2.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Applica filtri generali e fallback verificato
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          # 1) Filtro finale generale contro frammenti wikitext/metadati.
+          p=Path('isbn-cover.js')
+          s=p.read_text(encoding='utf-8')
+          old="function safeBookRelation(v){const x=cleanRelationTitle(v);return x&&!screenMediaNoise(x)?x:''}"
+          new=r'''function relationMarkupNoise(v){
+            const x=String(v||''),n=normalizeText(x);if(!x)return false;
+            return /[{}]/.test(x)||/\|\s*[a-z][a-z0-9 _-]{1,45}\s*=/i.test(x)||/\b(?:followed by|preceded by|website|publisher|author|language|isbn|issn|homepage|url)\s*=/i.test(x)||/\b(?:infobox|cite book|cite web|birth date|website)\b/i.test(n)
+          }
+          function safeBookRelation(v){const x=cleanRelationTitle(v);return x&&!screenMediaNoise(x)&&!relationMarkupNoise(x)?x:''}'''
+          if old in s:
+              s=s.replace(old,new,1)
+          elif 'function relationMarkupNoise(v)' not in s:
+              raise SystemExit('safeBookRelation non trovato')
+          p.write_text(s,encoding='utf-8')
+
+          # 2) Fallback verificato per la trilogia Ring. La logica del catalogo
+          #    resta generica: la voce serve soltanto quando le fonti live sono bloccate.
+          p=Path('series-authoritative-catalog-v1.js')
+          s=p.read_text(encoding='utf-8')
+          if "author:'Koji Suzuki'" not in s:
+              marker="""    {
+      author:'Stephen King',
+      saga:'',
+"""
+              entry="""    {
+      author:'Koji Suzuki',
+      saga:'Ring',
+      titles:['Ring','Spiral','Loop'],
+      codes:{'8842913316':1,'9788842913313':1},
+      sources:[
+        'https://www.penguinrandomhouse.com/books/175557/spiral-by-koji-suzuki/',
+        'https://kodansha.us/book/ring-trilogy/loop-paperback/'
+      ],
+      verified:'2026-08-17'
+    },
+"""
+              if marker not in s: raise SystemExit('punto inserimento catalogo verificato non trovato')
+              s=s.replace(marker,entry+marker,1)
+          p.write_text(s,encoding='utf-8')
+
+          # 3) Cache bust di tutti i riferimenti ai file modificati.
+          changed_loaders=False
+          targets=['isbn-cover.js','series-authoritative-catalog-v1.js']
+          for path in list(Path('.').glob('*.html'))+list(Path('bg').glob('*.js')):
+              text=path.read_text(encoding='utf-8')
+              original=text
+              for target in targets:
+                  pat=re.compile(re.escape(target)+r'\?v=(\d+)')
+                  def bump(m): return target+'?v='+str(int(m.group(1))+1)
+                  text=pat.sub(bump,text)
+              if text!=original:
+                  path.write_text(text,encoding='utf-8')
+                  changed_loaders=True
+
+          # Forza anche il browser a ricaricare i chunk bg.
+          p=Path('index.html')
+          text=p.read_text(encoding='utf-8')
+          m=re.search(r'bg/bg\$\{i\}\.js\?v=(\d+)',text)
+          if m:
+              text=text[:m.start(1)]+str(int(m.group(1))+1)+text[m.end(1):]
+              p.write_text(text,encoding='utf-8')
+
+          print('RELATION_QUALITY_V2_OK', 'loaders_changed=', changed_loaders)
+          PY
+      - name: Verifica
+        shell: bash
+        run: |
+          grep -F "function relationMarkupNoise(v)" isbn-cover.js
+          grep -F "author:'Koji Suzuki'" series-authoritative-catalog-v1.js
+          grep -F "titles:['Ring','Spiral','Loop']" series-authoritative-catalog-v1.js
+      - name: Commit
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add isbn-cover.js series-authoritative-catalog-v1.js bg index.html
+          git diff --cached --quiet && exit 0
+          git commit -m "Filtra relazioni sporche e verifica trilogia Ring"
+          git push
