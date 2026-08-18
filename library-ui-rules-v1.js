@@ -134,3 +134,140 @@
   migrateSeriesTitleOrder();
   if(typeof render==='function')render();
 })();
+
+(()=>{
+  if(window.__LIB_PLOT_PROMO_FILTER_V1)return;
+  window.__LIB_PLOT_PROMO_FILTER_V1=true;
+
+  const norm=v=>String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[’‘]/g,"'").replace(/[^a-z0-9+]+/g,' ').replace(/\s+/g,' ').trim();
+  function plain(v){
+    const d=document.createElement('div');
+    d.innerHTML=String(v||'').replace(/<br\s*\/?\s*>/gi,'\n');
+    return String(d.textContent||d.innerText||'')
+      .replace(/!\[[^\]]*\]\([^)]*\)/g,' ')
+      .replace(/\[([^\]]+)\]\([^)]*\)/g,'$1')
+      .replace(/[\u200B-\u200F\u202A-\u202E\u2060\u2066-\u2069\uFEFF]/g,'')
+      .replace(/\u00a0/g,' ')
+      .replace(/[ \t]+/g,' ')
+      .replace(/\n{3,}/g,'\n\n')
+      .trim();
+  }
+  function promoLike(v){
+    const n=norm(v);if(!n)return false;
+    return /(?:ora al cinema|adesso al cinema|da questo (?:romanzo|libro).{0,40}\bfilm\b|dal (?:romanzo|libro).{0,40}\bfilm\b|romanzo da cui.{0,35}\bfilm\b|libro da cui.{0,35}\bfilm\b|serie tv|serie televisiva|netflix|prime video|amazon prime|disney\+?|sky|now tv|nuova edizione|edizione speciale|edizione cinematografica|milioni? di copie|copie vendute|bestseller|caso editoriale|successo mondiale|dall'autore di|dall'autrice di|ha un nuovo capitolo)/i.test(n);
+  }
+  function sanitizePlot(v){
+    let p=plain(v);if(!p)return'';
+    p=p.replace(/^(?:descrizione(?: dell['’]editore| del libro| prodotto)?|sinossi|trama|abstract|presentazione)\s*[:\-–—]?\s*/i,'').trim();
+
+    const exactPromos=[
+      /\bla storia di\s+[^.!?]{1,120}?\s+ha un nuovo capitolo\b[.!?]?/ig,
+      /\bda questo (?:romanzo|libro)\s+(?:(?:è|e)\s+tratto\s+)?(?:il\s+)?film(?:\s+ora\s+al\s+cinema)?\b[.!?]?/ig,
+      /\bdal (?:romanzo|libro)\s+(?:(?:è|e)\s+tratto\s+)?(?:il\s+)?film(?:\s+ora\s+al\s+cinema)?\b[.!?]?/ig,
+      /\b(?:il\s+)?(?:romanzo|libro)\s+da\s+cui\s+(?:è|e)\s+tratto\s+il\s+film\b[^.!?]{0,80}[.!?]?/ig,
+      /\b(?:ora|adesso)\s+al\s+cinema\b[.!?]?/ig,
+      /\bda questo (?:romanzo|libro)\s+(?:la|una)\s+serie\s+(?:tv|televisiva)\b[^.!?]{0,100}[.!?]?/ig,
+      /\b(?:ora|adesso)\s+(?:su|in)\s+(?:netflix|prime video|amazon prime video|disney\+|sky|now tv)\b[^.!?]{0,80}[.!?]?/ig
+    ];
+    for(const re of exactPromos)p=p.replace(re,' ');
+    p=p.replace(/\s+/g,' ').trim().replace(/^[,;:–—\-\.\s]+|[,;:–—\-\s]+$/g,'').trim();
+
+    let changed=true,passes=0;
+    while(changed&&p&&passes++<6){
+      changed=false;
+      const m=p.match(/^([^.!?]{1,220}[.!?])(?:\s+|$)/);
+      if(m&&promoLike(m[1])){p=p.slice(m[0].length).trim();changed=true}
+    }
+    if(p){
+      const parts=p.match(/[^.!?]+[.!?]+|[^.!?]+$/g)||[p];
+      while(parts.length>1&&parts.at(-1).trim().length<=220&&promoLike(parts.at(-1))){parts.pop()}
+      p=parts.join(' ').replace(/\s+/g,' ').trim();
+    }
+    if(!p)return'';
+    if(p.length<=240&&promoLike(p))return'';
+    if(/\b(?:customer reviews?|recensioni degli utenti|recensioni dei clienti|verified purchase|acquisto verificato|reviewed in|recensito in|translate review|double tap to read)\b/i.test(p))return'';
+    if(p.length<60)return'';
+    if(p.length>2600)p=p.slice(0,2600).replace(/\s+\S*$/,'')+'…';
+    return p;
+  }
+
+  window.__LIB_CLEAN_BOOK_PLOT=sanitizePlot;
+  window.__LIB_SANITIZE_PLOT_PROMOS=sanitizePlot;
+
+  function wrapOfficialPlotResolver(){
+    const current=window.__LIB_RESOLVE_OFFICIAL_PLOT;
+    if(typeof current!=='function'||current.__plotPromoWrapped)return;
+    const wrapped=async function(input={}){return sanitizePlot(await current(input))};
+    wrapped.__plotPromoWrapped=true;
+    window.__LIB_RESOLVE_OFFICIAL_PLOT=wrapped;
+  }
+
+  let recoveryToken=0;
+  function installPlotFieldGuard(){
+    const ta=document.getElementById('editPlot');
+    if(!ta||ta.__plotPromoGuard)return !!ta;
+    const desc=Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value');
+    if(!desc?.get||!desc?.set)return false;
+    ta.__plotPromoGuard=true;
+    Object.defineProperty(ta,'value',{
+      configurable:true,
+      get(){return desc.get.call(this)},
+      set(v){
+        const raw=String(v??''),filtered=sanitizePlot(raw);
+        desc.set.call(this,filtered);
+        if(raw.trim()&&raw.trim()!==filtered&&promoLike(raw)){
+          window.__LIB_LAST_PLOT_PROMO_REMOVAL__={raw,filtered,at:Date.now()};
+          if(!filtered)scheduleOfficialRecovery(ta,desc)
+        }
+      }
+    });
+    ta.addEventListener('blur',()=>{
+      const raw=desc.get.call(ta),filtered=sanitizePlot(raw);
+      if(raw!==filtered)desc.set.call(ta,filtered)
+    });
+    return true;
+  }
+
+  function scheduleOfficialRecovery(ta,desc){
+    const token=++recoveryToken;
+    setTimeout(async()=>{
+      if(token!==recoveryToken||desc.get.call(ta).trim())return;
+      wrapOfficialPlotResolver();
+      const resolver=window.__LIB_RESOLVE_OFFICIAL_PLOT;
+      if(typeof resolver!=='function')return;
+      const title=document.getElementById('editTitle')?.value.trim()||'';
+      const author=document.getElementById('editAuthor')?.value.trim()||'';
+      const publisher=document.getElementById('editPublisher')?.value.trim()||'';
+      const code=document.getElementById('editCode')?.value.trim()||'';
+      if(!title||!publisher)return;
+      try{
+        const plot=sanitizePlot(await resolver({title,author,publisher,code}));
+        if(token!==recoveryToken||!plot||desc.get.call(ta).trim())return;
+        desc.set.call(ta,plot);
+        window.__LIB_LAST_PLOT_PROMO_RECOVERY__={title,publisher,plotLength:plot.length,at:Date.now()};
+      }catch(e){window.__LIB_LAST_PLOT_PROMO_RECOVERY_ERROR__=String(e?.message||e)}
+    },350);
+  }
+
+  function migrateSavedPlots(){
+    if(typeof books==='undefined'||!Array.isArray(books)||typeof saveBooks!=='function')return false;
+    let changed=false;
+    for(const b of books){
+      if(!String(b.plot||'').trim())continue;
+      const next=sanitizePlot(b.plot);
+      if(next!==b.plot){b.plot=next;changed=true}
+    }
+    if(changed){saveBooks();if(typeof render==='function')render()}
+    return true;
+  }
+
+  let tries=0;
+  const timer=setInterval(()=>{
+    tries++;
+    wrapOfficialPlotResolver();
+    installPlotFieldGuard();
+    migrateSavedPlots();
+    if(tries>=40)clearInterval(timer)
+  },125);
+  setTimeout(()=>{wrapOfficialPlotResolver();installPlotFieldGuard();migrateSavedPlots()},0);
+})();
