@@ -20,11 +20,21 @@
       author:'Alexandra Adornetto',
       saga:'Rebel',
       titles:['Rebel','Sacrifice','Heaven'],
+      codes:{
+        '9788850238934':0,
+        '9788850253449':0,
+        '9788850238941':1,
+        '9788850253456':1,
+        '9788850238958':2,
+        '8850238959':2,
+        '9788850253463':2
+      },
       sources:[
         'https://www.ibs.it/trilogia-di-rebel-rebel-sacrifice-libro-alexandra-adornetto/e/9788850256914',
+        'https://www.ibs.it/heaven-libro-alexandra-adornetto/e/9788850238958',
         'https://books.google.com/books/about/La_trilogia_di_Rebel.html?id=4sgKEAAAQBAJ'
       ],
-      verified:'2026-08-17'
+      verified:'2026-08-18'
     },
     {
       author:'Elizabeth Chandler',
@@ -85,6 +95,16 @@
     }
   ];
 
+  function titleMatchesForAuthor(author,title){
+    const hits=[];
+    for(const candidate of SERIES){
+      if(!same(candidate.author,author))continue;
+      const candidateIdx=candidate.titles.findIndex(x=>sameTitle(title,x,candidate.saga));
+      if(candidateIdx>=0)hits.push({entry:candidate,idx:candidateIdx});
+    }
+    return hits;
+  }
+
   function resolve(input={}){
     const author=clean(input.author),saga=clean(input.saga),title=clean(input.title),code=clean(input.code).replace(/[^0-9Xx]/g,'').toUpperCase();
     let entry=null,idx=-1;
@@ -92,13 +112,21 @@
       entry=SERIES.find(x=>x.codes&&Object.prototype.hasOwnProperty.call(x.codes,code))||null;
       if(entry)idx=Number(entry.codes[code]);
     }
-    if(!entry){
-      if(!author||!saga||!title)return null;
-      entry=SERIES.find(x=>same(x.author,author)&&same(x.saga,saga));
-      if(!entry)return null;
-      idx=entry.titles.findIndex(x=>sameTitle(title,x,entry.saga));
+    if(!entry&&author&&saga&&title){
+      entry=SERIES.find(x=>same(x.author,author)&&same(x.saga,saga))||null;
+      if(entry)idx=entry.titles.findIndex(x=>sameTitle(title,x,entry.saga));
     }
-    if(idx<0||idx>=entry.titles.length)return null;
+    /*
+      Il nome della saga puo' non essere ancora disponibile quando parte la ricerca ISBN.
+      In quel caso usiamo autore + titolo SOLO se identifica un'unica voce del catalogo
+      canonico italiano. Questo evita di passare ai fallback generici dell'intera
+      bibliografia dell'autore, che possono mescolare serie diverse o titoli originali.
+    */
+    if(!entry&&author&&title){
+      const hits=titleMatchesForAuthor(author,title);
+      if(hits.length===1){entry=hits[0].entry;idx=hits[0].idx}
+    }
+    if(!entry||idx<0||idx>=entry.titles.length)return null;
     const result={
       saga:entry.saga,
       prequel:idx>0?entry.titles[idx-1]:'',
