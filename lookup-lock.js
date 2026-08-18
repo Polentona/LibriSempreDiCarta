@@ -107,9 +107,9 @@ function boot(){
 boot();
 })();
 
-/* SERIES_RENAME_UI_V1: rinomina una saga direttamente dalla vista "Saghe e trilogie". */
+/* SERIES_RENAME_UI_V2: modifica inline del nome nella vista "Saghe e trilogie", senza prompt. */
 (()=>{
-if(window.__LIB_SERIES_RENAME_UI_V1)return;window.__LIB_SERIES_RENAME_UI_V1=true;
+if(window.__LIB_SERIES_RENAME_UI_V2)return;window.__LIB_SERIES_RENAME_UI_V2=true;
 const OVERRIDE_KEY='libriDiCarta.seriesNameOverrides.v1';
 let overrides={};
 try{const saved=JSON.parse(localStorage.getItem(OVERRIDE_KEY));if(saved&&typeof saved==='object'&&!Array.isArray(saved))overrides=saved}catch(e){overrides={}}
@@ -134,13 +134,11 @@ function renameTitlePrefix(title,oldName,newName){
   return t
 }
 function renameSeries(oldKey,newName){
-  newName=clean(newName);if(!newName||typeof books==='undefined'||!Array.isArray(books))return false;
-  const members=books.filter(b=>keyOf(b.saga)===oldKey);if(!members.length)return false;
+  newName=clean(newName);if(!newName||typeof books==='undefined'||!Array.isArray(books))return {ok:false,reason:'empty'};
+  const members=books.filter(b=>keyOf(b.saga)===oldKey);if(!members.length)return {ok:false,reason:'missing'};
   const oldName=clean(members[0].saga),newKey=keyOf(newName);
-  if(norm(oldName)===norm(newName)&&oldName===newName)return false;
-  if(newKey!==oldKey&&books.some(b=>!members.includes(b)&&keyOf(b.saga)===newKey)){
-    if(!confirm(`Esiste già una saga chiamata “${newName}”. Rinominando questa saga, i due gruppi verranno uniti. Continuare?`))return false;
-  }
+  if(norm(oldName)===norm(newName)&&oldName===newName)return {ok:true,unchanged:true};
+  if(newKey!==oldKey&&books.some(b=>!members.includes(b)&&keyOf(b.saga)===newKey))return {ok:false,reason:'duplicate'};
   for(const b of members){
     b.title=renameTitlePrefix(b.title,oldName,newName);
     b.saga=newName;
@@ -149,9 +147,8 @@ function renameSeries(oldKey,newName){
     overrides[String(b.id)]=newName;
   }
   if(typeof seriesNotes!=='undefined'&&seriesNotes&&newKey!==oldKey){
-    const oldNote=String(seriesNotes[oldKey]||'').trim(),newNote=String(seriesNotes[newKey]||'').trim();
-    if(oldNote&&!newNote)seriesNotes[newKey]=seriesNotes[oldKey];
-    else if(oldNote&&newNote&&oldNote!==newNote)seriesNotes[newKey]=newNote+'\n'+oldNote;
+    const oldNote=String(seriesNotes[oldKey]||'').trim();
+    if(oldNote&&!String(seriesNotes[newKey]||'').trim())seriesNotes[newKey]=seriesNotes[oldKey];
     delete seriesNotes[oldKey];
     if(typeof saveSeriesNotes==='function')saveSeriesNotes();
   }
@@ -162,13 +159,19 @@ function renameSeries(oldKey,newName){
   saveOverrides();
   if(typeof saveBooks==='function')saveBooks();
   if(typeof render==='function')render();
-  return true
+  return {ok:true}
+}
+function titleText(title){
+  if(!title)return'';
+  const node=[...title.childNodes].find(n=>n.nodeType===Node.TEXT_NODE&&clean(n.textContent));
+  return clean(node?.textContent||title.dataset.seriesName||'')
 }
 function decorate(){
   document.querySelectorAll('.series-row').forEach(row=>{
-    const title=row.querySelector('.series-name');if(!title||title.querySelector('.series-rename-btn'))return;
+    const title=row.querySelector('.series-name');if(!title||title.querySelector('.series-name-input')||title.querySelector('.series-rename-btn'))return;
     const keyButton=row.querySelector('[data-series-key]');if(!keyButton)return;
     const encoded=keyButton.dataset.seriesKey||'';
+    title.dataset.seriesName=titleText(title)||clean(books.find(b=>keyOf(b.saga)===decodeURIComponent(encoded))?.saga||'');
     const btn=document.createElement('button');
     btn.type='button';btn.className='series-rename-btn';btn.dataset.seriesRename=encoded;btn.title='Modifica nome della saga';btn.setAttribute('aria-label','Modifica nome della saga');btn.textContent='✎';
     title.appendChild(btn)
@@ -177,21 +180,55 @@ function decorate(){
 function installStyle(){
   if(document.getElementById('seriesRenameStyle'))return;
   const style=document.createElement('style');style.id='seriesRenameStyle';
-  style.textContent=`.series-name .series-rename-btn{margin-left:9px;vertical-align:3px;border:1px solid #bca58d;background:#f7ead9;color:#4f4339;border-radius:6px;width:27px;height:25px;padding:0;font:16px/1 Arial,sans-serif;cursor:pointer;text-transform:none;box-shadow:0 2px 5px rgba(82,56,35,.08)}.series-name .series-rename-btn:hover{background:#ead7bf}.series-name .series-rename-btn:focus-visible{outline:2px solid #607e56;outline-offset:2px}`;
+  style.textContent=`
+    .series-name .series-rename-btn{margin-left:9px;vertical-align:3px;border:1px solid #bca58d;background:#f7ead9;color:#4f4339;border-radius:6px;width:27px;height:25px;padding:0;font:16px/1 Arial,sans-serif;cursor:pointer;text-transform:none;box-shadow:0 2px 5px rgba(82,56,35,.08)}
+    .series-name .series-rename-btn:hover{background:#ead7bf}.series-name .series-rename-btn:focus-visible{outline:2px solid #607e56;outline-offset:2px}
+    .series-name.series-name-editing{display:flex;align-items:center;max-width:100%;border-bottom:0;margin-bottom:5px}
+    .series-name-input{width:min(100%,430px);min-width:170px;border:0;border-bottom:2px solid #6f6155;background:rgba(255,250,243,.8);color:inherit;border-radius:0;padding:1px 4px 2px;font:inherit;font-size:inherit;font-weight:inherit;font-style:inherit;text-transform:none;outline:none}
+    .series-name-input:focus{border-bottom-color:#607e56;background:#fffaf3}
+    .series-name-input.series-name-input-error{border-bottom-color:#a84f43;background:#fff1ee}
+    .series-rename-hint{display:block;margin-top:4px;font:9px/1.3 Arial,sans-serif;font-style:normal;font-weight:400;text-transform:none;color:#75685d}
+    .series-rename-hint.error{color:#9b4138}
+  `;
   document.head.appendChild(style)
+}
+function startInlineEdit(btn){
+  const row=btn.closest('.series-row'),title=row?.querySelector('.series-name');if(!row||!title||title.querySelector('.series-name-input'))return;
+  const oldKey=decodeURIComponent(btn.dataset.seriesRename||'');
+  const current=clean(title.dataset.seriesName)||clean(books.find(b=>keyOf(b.saga)===oldKey)?.saga||'');
+  title.classList.add('series-name-editing');
+  title.textContent='';
+  const input=document.createElement('input');input.type='text';input.className='series-name-input';input.value=current;input.setAttribute('aria-label','Nome della saga');input.autocomplete='off';
+  const hint=document.createElement('span');hint.className='series-rename-hint';hint.textContent='Invio per salvare · Esc per annullare';
+  title.append(input,hint);
+  let finished=false;
+  const cancel=()=>{if(finished)return;finished=true;if(typeof render==='function')render()};
+  const save=()=>{
+    if(finished)return;
+    const value=clean(input.value);
+    input.classList.remove('series-name-input-error');hint.classList.remove('error');
+    if(!value){input.classList.add('series-name-input-error');hint.classList.add('error');hint.textContent='Il nome non può essere vuoto';input.focus();return}
+    const result=renameSeries(oldKey,value);
+    if(result?.ok){finished=true;if(result.unchanged&&typeof render==='function')render();return}
+    if(result?.reason==='duplicate'){
+      input.classList.add('series-name-input-error');hint.classList.add('error');hint.textContent='Esiste già una saga con questo nome';input.focus();input.select();return
+    }
+    cancel()
+  };
+  input.addEventListener('keydown',e=>{
+    if(e.key==='Enter'){e.preventDefault();save()}
+    else if(e.key==='Escape'){e.preventDefault();cancel()}
+  });
+  input.addEventListener('blur',()=>{setTimeout(()=>{if(!finished&&document.activeElement!==input)save()},0)});
+  input.focus();input.select()
 }
 function bootRename(){
   const list=document.getElementById('list');if(!list){setTimeout(bootRename,120);return}
   installStyle();applyOverrides();
   document.addEventListener('click',e=>{
     const btn=e.target.closest?.('[data-series-rename]');if(!btn)return;
-    e.preventDefault();e.stopPropagation();
-    const oldKey=decodeURIComponent(btn.dataset.seriesRename||'');
-    const row=btn.closest('.series-row'),current=clean(row?.querySelector('.series-name')?.childNodes?.[0]?.textContent||'')||clean(books.find(b=>keyOf(b.saga)===oldKey)?.saga||'');
-    const next=prompt('Nuovo nome della saga:',current);if(next===null)return;
-    const value=clean(next);if(!value){alert('Il nome della saga non può essere vuoto.');return}
-    renameSeries(oldKey,value)
-  });
+    e.preventDefault();e.stopPropagation();startInlineEdit(btn)
+  },true);
   new MutationObserver(()=>decorate()).observe(list,{childList:true,subtree:true});
   decorate();
   if(typeof saveBooks==='function'&&!saveBooks.__seriesOverrideWrapped){
