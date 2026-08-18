@@ -1,0 +1,86 @@
+name: Deploy GitHub Pages
+
+on:
+  push:
+    branches: ["main"]
+    paths-ignore:
+      - ".github/**"
+      - "tools/**"
+      - "scripts/**"
+      - "deploy-*.txt"
+      - "*-result.txt"
+      - "actions-probe-trigger.txt"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: '.'
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+      - name: Verifica HTML pubblicato
+        id: live
+        continue-on-error: true
+        run: |
+          ok=0
+          bytes=0
+          for i in $(seq 1 18); do
+            if curl -fsSL --max-time 20 "https://polentona.github.io/LibriSempreDiCarta/?pages-live=${GITHUB_RUN_ID}-${i}" -o /tmp/pages-live.html; then
+              bytes=$(wc -c </tmp/pages-live.html)
+              if grep -q 'id="editInLibrary"' /tmp/pages-live.html \
+                && grep -q "currentView='home'" /tmp/pages-live.html \
+                && grep -q 'data-author-letter' /tmp/pages-live.html \
+                && grep -q 'class="series-row"' /tmp/pages-live.html \
+                && grep -q 'id="addBookBtn"' /tmp/pages-live.html; then
+                ok=1
+                break
+              fi
+            fi
+            sleep 5
+          done
+          echo "HTML_OK=$ok" | tee /tmp/pages-result.log
+          echo "HTML_BYTES=$bytes" | tee -a /tmp/pages-result.log
+          test "$ok" = 1
+      - name: Registra risultato Pages
+        if: always()
+        run: |
+          {
+            echo "deploy=${{ steps.deployment.outcome }}"
+            echo "html=${{ steps.live.outcome }}"
+            echo "run_id=${GITHUB_RUN_ID}"
+            echo "commit=${GITHUB_SHA}"
+            echo "---"
+            cat /tmp/pages-result.log 2>/dev/null || true
+          } > pages-deploy-result.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git pull --rebase origin main || true
+          git add pages-deploy-result.txt
+          git commit -m "Registra esito deploy GitHub Pages" || exit 0
+          git push
+      - name: Fallisci se la verifica live non passa
+        if: steps.deployment.outcome != 'success' || steps.live.outcome != 'success'
+        run: exit 1
