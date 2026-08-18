@@ -84,14 +84,21 @@
     },
     {
       author:'Stephen King',
-      saga:'',
+      saga:'Shining',
       titles:['Shining','Doctor Sleep'],
-      codes:{'9788845275746':0,'8845275744':0},
+      codes:{
+        '9788845275746':0,
+        '8845275744':0,
+        '9788820055684':1,
+        '8820055686':1,
+        '9788820092665':1
+      },
       sources:[
-        'https://www.bompiani.it/autori/stephen-king-773',
-        'https://stephenking.com/news/doctor-sleep-release-date-325.html'
+        'https://stephenking.com/news/doctor-sleep-release-date-325.html',
+        'https://www.simonandschuster.com/books/Doctor-Sleep/Stephen-King/9781476727653',
+        'https://www.ibs.it/doctor-sleep-ediz-italiana-libro-stephen-king/e/9788820055684'
       ],
-      verified:'2026-08-17'
+      verified:'2026-08-19'
     }
   ];
 
