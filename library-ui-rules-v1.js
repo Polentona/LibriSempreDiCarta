@@ -36,6 +36,7 @@
     if(atStart)return saga+'. '+clean(atStart[1]);
     const atEnd=title.match(new RegExp('^(.+?)\\s*(?:[.:-]|[-–—])\\s*'+e+'\\s*$','i'));
     if(atEnd)return saga+'. '+clean(atEnd[1]);
+    if(norm(saga)==='baciata da un angelo')return saga+'. '+title;
     return title;
   }
 
