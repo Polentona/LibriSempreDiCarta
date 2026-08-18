@@ -116,12 +116,6 @@
       entry=SERIES.find(x=>same(x.author,author)&&same(x.saga,saga))||null;
       if(entry)idx=entry.titles.findIndex(x=>sameTitle(title,x,entry.saga));
     }
-    /*
-      Il nome della saga puo' non essere ancora disponibile quando parte la ricerca ISBN.
-      In quel caso usiamo autore + titolo SOLO se identifica un'unica voce del catalogo
-      canonico italiano. Questo evita di passare ai fallback generici dell'intera
-      bibliografia dell'autore, che possono mescolare serie diverse o titoli originali.
-    */
     if(!entry&&author&&title){
       const hits=titleMatchesForAuthor(author,title);
       if(hits.length===1){entry=hits[0].entry;idx=hits[0].idx}
@@ -143,12 +137,6 @@
     return result;
   }
 
-  /*
-    GUARDIA CANONICA V2
-    Un'estremita' della saga ha intenzionalmente uno dei due vicini vuoto.
-    I resolver generici non devono interpretare quel vuoto come un dato mancante e
-    sovrascriverlo con elementi presi dalla bibliografia generale dell'autore.
-  */
   function canonicalComplete(rel){
     if(!rel?.authoritative||!clean(rel.saga))return false;
     if(rel.initial&&rel.terminal)return true;
@@ -218,4 +206,13 @@
     if(guardAttempts>=80)clearInterval(guardTimer);
   },125);
   setTimeout(installCanonicalGuards,0);
+
+  /* Carica le regole di ordinamento e rendering delle schede in un modulo separato. */
+  if(!window.__LIB_LIBRARY_UI_RULES_LOADER_V1){
+    window.__LIB_LIBRARY_UI_RULES_LOADER_V1=true;
+    const ui=document.createElement('script');
+    ui.src='library-ui-rules-v1.js?v=20260818-1';
+    ui.async=false;
+    document.head.appendChild(ui);
+  }
 })();
