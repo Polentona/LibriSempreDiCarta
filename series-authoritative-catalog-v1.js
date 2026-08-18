@@ -223,3 +223,135 @@
     document.head.appendChild(ui);
   }
 })();
+
+/* HOME_ORDER_V3: cognome -> gruppo saga/titolo -> ordine reale saga -> data -> titolo. */
+(()=>{
+  if(window.__LIB_HOME_ORDER_V3_BOOT)return;
+  window.__LIB_HOME_ORDER_V3_BOOT=true;
+
+  const clean=v=>String(v??'').replace(/\s+/g,' ').trim();
+  const norm=v=>clean(v).toLocaleLowerCase('it').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[’‘]/g,"'").replace(/[^a-z0-9']+/g,' ').replace(/\s+/g,' ').trim();
+  const cmp=(a,b)=>clean(a).localeCompare(clean(b),'it',{sensitivity:'base',numeric:true});
+
+  function primaryAuthor(author){
+    let raw=clean(author);if(!raw)return'';
+    raw=raw.split(/\s*(?:;|&|\be\b|\band\b)\s*/i).filter(Boolean)[0]||raw;
+    return clean(raw.replace(/\([^)]*\)/g,''));
+  }
+  function surname(author){
+    const a=primaryAuthor(author);if(!a)return'';
+    if(a.includes(','))return clean(a.split(',')[0]);
+    const p=a.split(/\s+/).filter(Boolean);return p.at(-1)||a;
+  }
+  function stripSaga(title,saga){
+    let t=norm(title),s=norm(saga);if(!t||!s)return t;
+    if(t===s)return t;
+    if(t.startsWith(s+' '))t=t.slice(s.length).trim();
+    if(t.endsWith(' '+s))t=t.slice(0,-s.length).trim();
+    return t;
+  }
+  function sameBookTitle(candidate,title,saga){
+    const a=norm(candidate),b=norm(title);if(!a||!b)return false;
+    if(a===b)return true;
+    const as=stripSaga(candidate,saga),bs=stripSaga(title,saga);
+    return !!as&&!!bs&&as===bs;
+  }
+  function bookCode(book){
+    return clean(book?.code||book?.isbn||book?.ean||book?.isbn13||'').replace(/[^0-9Xx]/g,'').toUpperCase();
+  }
+  function publicationValue(book){
+    const raw=clean(book?.publishedDate||book?.publication||book?.year||book?.published||'');
+    if(!raw)return Number.POSITIVE_INFINITY;
+    const iso=raw.match(/^((?:18|19|20)\d{2})(?:[-/.](\d{1,2}))?(?:[-/.](\d{1,2}))?/);
+    if(iso){
+      const y=Number(iso[1]),m=Math.max(1,Math.min(12,Number(iso[2])||1)),d=Math.max(1,Math.min(31,Number(iso[3])||1));
+      return Date.UTC(y,m-1,d);
+    }
+    const y=raw.match(/(?:18|19|20)\d{2}/);if(y)return Date.UTC(Number(y[0]),0,1);
+    const d=Date.parse(raw);return Number.isFinite(d)?d:Number.POSITIVE_INFINITY;
+  }
+  function catalogPosition(book){
+    const saga=clean(book?.saga),author=primaryAuthor(book?.author);if(!saga||!author)return null;
+    const catalog=Array.isArray(window.__LIB_AUTHORITATIVE_SERIES_CATALOG)?window.__LIB_AUTHORITATIVE_SERIES_CATALOG:[];
+    const entry=catalog.find(e=>norm(e.author)===norm(author)&&norm(e.saga)===norm(saga));
+    if(!entry)return null;
+    const code=bookCode(book);
+    if(code&&entry.codes&&Object.prototype.hasOwnProperty.call(entry.codes,code))return Number(entry.codes[code]);
+    const idx=(entry.titles||[]).findIndex(t=>sameBookTitle(book?.title,t,entry.saga));
+    return idx>=0?idx:null;
+  }
+  function sameSeriesGroup(a,b){
+    return norm(primaryAuthor(a?.author))===norm(primaryAuthor(b?.author))&&!!norm(a?.saga)&&norm(a?.saga)===norm(b?.saga);
+  }
+  function relationDepth(book,list){
+    if(!clean(book?.saga))return null;
+    const group=list.filter(x=>sameSeriesGroup(book,x));
+    if(group.length<2)return null;
+    let current=book,depth=0;
+    const seen=new Set();
+    for(let i=0;i<group.length+2;i++){
+      const marker=String(current?.id??group.indexOf(current));
+      if(seen.has(marker))return null;seen.add(marker);
+      const pre=clean(current?.prequel);
+      let previous=pre?group.find(x=>x!==current&&sameBookTitle(pre,x?.title,current?.saga)):null;
+      if(!previous){
+        previous=group.find(x=>x!==current&&clean(x?.sequel)&&sameBookTitle(x.sequel,current?.title,current?.saga))||null;
+      }
+      if(!previous)return depth;
+      depth++;current=previous;
+    }
+    return null;
+  }
+  function compareHome(a,b,list){
+    let c=cmp(surname(a?.author),surname(b?.author));if(c)return c;
+
+    const ga=clean(a?.saga)||clean(a?.title),gb=clean(b?.saga)||clean(b?.title);
+    c=cmp(ga,gb);if(c)return c;
+
+    if(sameSeriesGroup(a,b)){
+      const ca=catalogPosition(a),cb=catalogPosition(b);
+      if(Number.isInteger(ca)&&Number.isInteger(cb)&&ca!==cb)return ca-cb;
+      const da=relationDepth(a,list),db=relationDepth(b,list);
+      if(Number.isInteger(da)&&Number.isInteger(db)&&da!==db)return da-db;
+    }
+
+    const pa=publicationValue(a),pb=publicationValue(b);
+    if(pa!==pb){
+      if(!Number.isFinite(pa))return 1;
+      if(!Number.isFinite(pb))return -1;
+      return pa-pb;
+    }
+    c=cmp(a?.title,b?.title);if(c)return c;
+    c=cmp(primaryAuthor(a?.author),primaryAuthor(b?.author));if(c)return c;
+    return (Number(a?.id)||0)-(Number(b?.id)||0);
+  }
+  function sortHome(list){
+    const copy=[...(Array.isArray(list)?list:[])];
+    return copy.sort((a,b)=>compareHome(a,b,copy));
+  }
+  function install(){
+    const current=window.getFilteredBooks;
+    if(typeof current!=='function')return false;
+    if(current.__homeOrderV3)return true;
+    const wrapped=function(){
+      const list=current.apply(this,arguments);
+      try{
+        if(typeof currentView!=='undefined'&&currentView==='home')return sortHome(list);
+      }catch(e){console.warn('Ordinamento Home V3:',e)}
+      return list;
+    };
+    wrapped.__homeOrderV3=true;
+    wrapped.__homeOrderV3Base=current;
+    window.getFilteredBooks=wrapped;
+    try{if(typeof currentView!=='undefined'&&currentView==='home'&&typeof render==='function')render()}catch(e){}
+    return true;
+  }
+
+  let tries=0;
+  const timer=setInterval(()=>{
+    tries++;
+    install();
+    if(tries>=100)clearInterval(timer);
+  },100);
+  setTimeout(install,0);
+})();
