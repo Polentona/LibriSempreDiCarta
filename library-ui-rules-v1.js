@@ -68,15 +68,25 @@
 
   const style=document.createElement('style');
   style.textContent=`
+    .book{align-items:stretch!important}
+    .book .info{display:flex!important;flex-direction:column!important;height:100%!important;min-height:100%!important}
     .book-side-details{padding:10px 10px 0;color:var(--ink);font-size:9px;line-height:1.28}
     .book-side-details .relation-item+.relation-item{margin-top:10px}
-    .cover-rating{margin-top:12px;text-align:left}
-    .cover-rating-label{display:block;font-size:9px;margin-bottom:2px;text-transform:uppercase}
-    .cover-rating .stars{justify-content:flex-start}
-    .cover-rating .star{font-size:20px}
-    .meta{grid-template-columns:minmax(210px,.7fr) minmax(0,1.5fr)}
-    .meta:not(:has(.notes)){grid-template-columns:minmax(210px,420px)}
-    @media(max-width:620px){.meta{grid-template-columns:1fr}.meta:not(:has(.notes)){grid-template-columns:1fr}}
+    .cover-rating{margin-top:9px;text-align:left}
+    .cover-rating-label{display:block;font-size:7px!important;line-height:1.1;margin:0 0 2px 0!important;text-transform:uppercase}
+    .cover-rating .stars{justify-content:flex-start!important;gap:0!important;margin:0!important;padding:0!important}
+    .cover-rating .star{font-size:14px!important;line-height:1!important;padding:0!important;margin:0!important;min-width:0!important;width:auto!important}
+    .cover-rating .star:first-child{margin-left:-1px!important}
+    .meta{display:flex!important;align-items:flex-start!important;gap:10px!important;margin-top:8px!important;width:100%!important}
+    .meta>.panel:first-child{flex:0 1 45%!important;width:45%!important;max-width:340px!important;min-width:200px!important}
+    .meta>.notes{flex:1 1 auto!important;min-width:0!important}
+    .book-manage{margin-top:auto!important;padding-top:14px!important;display:flex!important;justify-content:flex-end!important;gap:8px!important}
+    @media(max-width:620px){
+      .meta{display:block!important}
+      .meta>.panel:first-child{width:100%!important;max-width:none!important;min-width:0!important}
+      .meta>.notes{margin-top:10px!important}
+      .book-manage{padding-top:10px!important}
+    }
   `;
   document.head.appendChild(style);
 
