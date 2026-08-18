@@ -211,7 +211,7 @@
   if(!window.__LIB_LIBRARY_UI_RULES_LOADER_V1){
     window.__LIB_LIBRARY_UI_RULES_LOADER_V1=true;
     const ui=document.createElement('script');
-    ui.src='library-ui-rules-v1.js?v=20260818-1';
+    ui.src='library-ui-rules-v1.js?v=20260819-2';
     ui.async=false;
     document.head.appendChild(ui);
   }
