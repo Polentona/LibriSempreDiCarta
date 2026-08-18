@@ -250,3 +250,25 @@ function bootRename(){
 }
 bootRename();
 })();
+
+/* SERIES_EMPTY_NOTES_HIDE_V1: nella vista saghe nasconde completamente il banner NOTE quando non esiste una nota. */
+(()=>{
+if(window.__LIB_SERIES_EMPTY_NOTES_HIDE_V1)return;window.__LIB_SERIES_EMPTY_NOTES_HIDE_V1=true;
+function syncSeriesNotes(){
+  document.querySelectorAll('.series-row').forEach(row=>{
+    const note=row.querySelector('.series-note');if(!note)return;
+    const label=row.querySelector('.series-note-label');
+    const hasNote=String(note.value||'').trim().length>0;
+    note.hidden=!hasNote;
+    if(label)label.hidden=!hasNote;
+  })
+}
+function bootSeriesNotes(){
+  const list=document.getElementById('list');if(!list){setTimeout(bootSeriesNotes,120);return}
+  syncSeriesNotes();
+  new MutationObserver(()=>syncSeriesNotes()).observe(list,{childList:true,subtree:true});
+  document.addEventListener('input',e=>{if(e.target?.matches?.('.series-note'))syncSeriesNotes()});
+  document.addEventListener('change',e=>{if(e.target?.matches?.('.series-note'))syncSeriesNotes()});
+}
+bootSeriesNotes();
+})();
