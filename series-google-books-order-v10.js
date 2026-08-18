@@ -94,3 +94,13 @@ function installHomeOrder(){
 let tries=0;const orderTimer=setInterval(()=>{tries++;if(installHomeOrder()||tries>=80)clearInterval(orderTimer)},100);
 setTimeout(installHomeOrder,0);
 })();
+
+/* MULTI_GENRES_LOADER_V1 */
+(()=>{
+  if(window.__LIB_MULTI_GENRES_LOADER_V1)return;
+  window.__LIB_MULTI_GENRES_LOADER_V1=true;
+  const s=document.createElement('script');
+  s.src='genres-multi-v1.js?v=20260819-1';
+  s.async=false;
+  document.head.appendChild(s);
+})();
