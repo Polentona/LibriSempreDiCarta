@@ -143,6 +143,79 @@
     return result;
   }
 
+  /*
+    GUARDIA CANONICA V2
+    Un'estremita' della saga ha intenzionalmente uno dei due vicini vuoto.
+    I resolver generici non devono interpretare quel vuoto come un dato mancante e
+    sovrascriverlo con elementi presi dalla bibliografia generale dell'autore.
+  */
+  function canonicalComplete(rel){
+    if(!rel?.authoritative||!clean(rel.saga))return false;
+    if(rel.initial&&rel.terminal)return true;
+    if(rel.initial)return !!clean(rel.sequel);
+    if(rel.terminal)return !!clean(rel.prequel);
+    return !!clean(rel.prequel)&&!!clean(rel.sequel);
+  }
+  function canonicalRelation(rel){
+    return {
+      saga:clean(rel.saga),prequel:clean(rel.prequel),sequel:clean(rel.sequel),
+      sagaChecked:true,checked:true,authoritative:true,
+      initial:!!rel.initial,terminal:!!rel.terminal,
+      source:rel.source||'',sources:Array.isArray(rel.sources)?[...rel.sources]:[]
+    };
+  }
+  function obviousRelationGarbage(v){
+    const x=clean(v),n=norm(v);if(!x)return false;
+    if(x.length>190)return true;
+    return /\b(?:author of|autore di|writer of|scrittore di|born (?:18|19|20)\d{2}|nato (?:nel )?(?:18|19|20)\d{2})\b/i.test(n);
+  }
+  function sanitizeRelations(rel){
+    if(!rel||typeof rel!=='object')return rel;
+    const out={...rel};
+    if(obviousRelationGarbage(out.prequel))out.prequel='';
+    if(obviousRelationGarbage(out.sequel))out.sequel='';
+    return out;
+  }
+  function wrapResolver(name){
+    const current=window[name];
+    if(typeof current!=='function'||current.__canonicalSeriesGuardV2)return false;
+    const wrapped=async function(input={}){
+      const canonical=resolve(input||{});
+      if(canonicalComplete(canonical)){
+        const result=canonicalRelation(canonical);
+        window.__LIB_CANONICAL_RELATION_GUARD_LAST__={resolver:name,input,result,blockedFallback:true};
+        return result;
+      }
+      const result=await current(input||{});
+      const safe=sanitizeRelations(result);
+      if(safe!==result||safe?.prequel!==result?.prequel||safe?.sequel!==result?.sequel){
+        window.__LIB_CANONICAL_RELATION_GUARD_LAST__={resolver:name,input,result:safe,blockedGarbage:true};
+      }
+      return safe;
+    };
+    for(const key of Object.keys(current)){try{wrapped[key]=current[key]}catch(e){}}
+    wrapped.__canonicalSeriesGuardV2=true;
+    window[name]=wrapped;
+    return true;
+  }
+  function installCanonicalGuards(){
+    for(const name of [
+      '__LIB_RESOLVE_UNIVERSAL_SERIES',
+      '__LIB_FIND_RELATIONS',
+      '__LIB_RESOLVE_SERIES_NEIGHBORS',
+      '__LIB_RESOLVE_BOUNDED_RELATIONS'
+    ])wrapResolver(name);
+  }
+
   window.__LIB_AUTHORITATIVE_SERIES_CATALOG=SERIES;
   window.__LIB_RESOLVE_AUTHORITATIVE_SERIES_NEIGHBORS=resolve;
+  window.__LIB_INSTALL_CANONICAL_SERIES_GUARDS=installCanonicalGuards;
+
+  let guardAttempts=0;
+  const guardTimer=setInterval(()=>{
+    guardAttempts++;
+    installCanonicalGuards();
+    if(guardAttempts>=80)clearInterval(guardTimer);
+  },125);
+  setTimeout(installCanonicalGuards,0);
 })();
