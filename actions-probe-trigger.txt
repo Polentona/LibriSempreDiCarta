@@ -1,2 +1,0 @@
-probe=2026-08-18-v2
-purpose=verify-push-actions-trigger-after-registration
