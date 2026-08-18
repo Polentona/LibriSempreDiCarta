@@ -18,3 +18,24 @@ async function lookup(input){const title=clean(input.title),author=clean(input.a
 function install(){const current=window.__LIB_FIND_RELATIONS;if(typeof current!=='function')return false;if(current.__googleSeriesV10)return true;const base=current;const wrapped=async input=>{const [b,g]=await Promise.all([Promise.resolve(base(input||{})).catch(()=>({prequel:'',sequel:'',saga:'',sagaChecked:false,source:''})),lookup(input||{}).catch(()=>null)]);if(!g)return b;return{prequel:book(g.prequel)||book(b?.prequel)||'',sequel:book(g.sequel)||book(b?.sequel)||'',saga:g.strongSaga&&g.saga?saga(g.saga,input?.author):saga(b?.saga,input?.author)||'',sagaChecked:Boolean(b?.sagaChecked||g.strongSaga),source:g.source||b?.source||''}};wrapped.__googleSeriesV10=true;window.__LIB_FIND_RELATIONS=wrapped;return true}
 let n=0;const timer=setInterval(()=>{n++;install();if(n>=100)clearInterval(timer)},100);install();
 })();
+
+/* BOOK_TITLE_UNDERLINE_FIT_V1: la riga sotto il titolo termina con il testo, non con il banner. */
+(()=>{
+if(window.__LIB_BOOK_TITLE_UNDERLINE_FIT_V1)return;window.__LIB_BOOK_TITLE_UNDERLINE_FIT_V1=true;
+const style=document.createElement('style');
+style.id='bookTitleUnderlineFitStyle';
+style.textContent=`
+  .book .info>.title{
+    align-self:flex-start!important;
+    width:max-content!important;
+    max-width:100%!important;
+  }
+  @media(max-width:620px){
+    .book .info>.title{
+      padding-right:0!important;
+      max-width:calc(100% - 34px)!important;
+    }
+  }
+`;
+document.head.appendChild(style);
+})();
