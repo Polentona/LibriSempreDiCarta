@@ -1,0 +1,11 @@
+outcome=failure
+tested_isbn=9788845278389
+source_commit=2b7c23c460672fa2598f775e00a0d212532d1a5a
+---
+PAGE_CONSOLE_ERROR Failed to load resource: the server responded with a status of 429 ()
+PAGE_CONSOLE_ERROR Failed to load resource: the server responded with a status of 429 ()
+PAGE_CONSOLE_ERROR Failed to load resource: the server responded with a status of 404 ()
+PAGE_CONSOLE_ERROR Failed to load resource: the server responded with a status of 429 ()
+FINAL_FIELDS {"title":"","author":"","genres":"","publisher":"","publishedDate":"","saga":"","prequel":"","sequel":"","status":"Non ho trovato dati affidabili per questo ISBN. Puoi comunque compilare i campi manualmente.","universal":null,"goodreadsSeries":null,"goodreadsSeriesError":"","goodreadsGenres":null,"goodreadsLoaded":false,"v8Loaded":true}
+ISBN_LIVE_FAIL Error: Campi non corretti: titolo, autore, saga, prequel, sequel, genere:Contemporaneo, genere:Romance, genere:Chick Lit, genere:Giallo
+    at /tmp/isbn-live/test.js:33:30
