@@ -95,10 +95,14 @@ let tries=0;const orderTimer=setInterval(()=>{tries++;if(installHomeOrder()||tri
 setTimeout(installHomeOrder,0);
 })();
 
-/* RESOLVER_AND_GENRES_CACHE_BUST_V2 */
+/* RESOLVER_AND_GENRES_CACHE_BUST_V3 */
 (()=>{
-  if(window.__LIB_RESOLVER_AND_GENRES_CACHE_BUST_V2)return;
-  window.__LIB_RESOLVER_AND_GENRES_CACHE_BUST_V2=true;
+  if(window.__LIB_RESOLVER_AND_GENRES_CACHE_BUST_V3)return;
+  window.__LIB_RESOLVER_AND_GENRES_CACHE_BUST_V3=true;
+  const r=document.createElement('script');
+  r.src='isbn-search-recovery-v2.js?v=20260819-1';
+  r.async=false;
+  document.head.appendChild(r);
   const u=document.createElement('script');
   u.src='series-universal-resolver-v1.js?v=20260819-2';
   u.async=false;
