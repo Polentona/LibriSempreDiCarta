@@ -1,14 +1,16 @@
 outcome=failure
 tested_isbn=9788845278389
-source_commit=fafe9c24c2baccb873015e97c2eca36d6649fcbb
+source_commit=d08399929d91a24bd0592903e4ddc48e25333f24
 ---
-HTTP_ERROR 429 https://www.googleapis.com/books/v1/volumes?q=isbn%3A9788845278389&maxResults=20&projection=full&printType=all
-HTTP_ERROR 429 https://r.jina.ai/https://www.unilibro.it/libro/pancol-katherine/il-valzer-lento-delle-tartarughe/9788845278389
+HTTP_ERROR 429 https://www.googleapis.com/books/v1/volumes?q=isbn%3A9788845278389&maxResults=20&projection=full&printType=all&langRestrict=it
+HTTP_ERROR 403 https://r.jina.ai/https://www.google.com/search?hl=it&num=12&q=%229788845278389%22%20(site%3Aeurolibro.it%20OR%20site%3Aunilibro.it%20OR%20site%3Alibreriauniversitaria.it%20OR%20site%3Ahoepli.it%20OR%20site%3Aibs.it%20OR%20site%3Alibraccio.it%20OR%20site%3Amondadoristore.it%20OR%20site%3Agiunti.it)
+HTTP_ERROR 429 https://r.jina.ai/https://www.bing.com/search?setlang=it-IT&q=site%3Aunilibro.it%20%229788845278389%22%20classificazione
 HTTP_ERROR 429 https://r.jina.ai/https://www.goodreads.com/book/show/148901573
 HTTP_ERROR 429 https://r.jina.ai/https://www.unilibro.it/libro/pancol-katherine/il-valzer-lento-delle-tartarughe/9788845278389
-HTTP_ERROR 429 https://r.jina.ai/https://www.bing.com/search?setlang=it-IT&q=site%3Aunilibro.it%20%229788845278389%22%20classificazione
-HTTP_ERROR 404 https://images.weserv.nl/?url=https%3A%2F%2Fcovers.librarything.com%2Fdevkey%2Ffd11eebee79ccfcfe2f17d34a92e1011%2Fsmall%2Fisbn%2F9788845278389
+HTTP_ERROR 429 https://r.jina.ai/https://www.goodreads.com/search?q=9788845278389%20Il%20valzer%20lento%20delle%20tartarughe%20Katherine%20Pancol&search_type=books
+HTTP_ERROR 429 https://r.jina.ai/https://www.unilibro.it/libro/pancol-katherine/il-valzer-lento-delle-tartarughe/9788845278389
 HTTP_ERROR 404 https://images.weserv.nl/?url=https%3A%2F%2Fcovers.openlibrary.org%2Fb%2Fisbn%2F9788845278389-L.jpg%3Fdefault%3Dfalse
+HTTP_ERROR 404 https://images.weserv.nl/?url=https%3A%2F%2Fcovers.librarything.com%2Fdevkey%2Ffd11eebee79ccfcfe2f17d34a92e1011%2Fsmall%2Fisbn%2F9788845278389
 HTTP_ERROR 403 https://r.jina.ai/https://www.google.com/search?hl=it&num=10&q=site%3Aunilibro.it%20%229788845278389%22%20classificazione
 HTTP_ERROR 403 https://r.jina.ai/https://www.google.com/search?hl=it&num=10&q=%229788845278389%22%20%22Il%20valzer%20lento%20delle%20tartarughe%22%20classificazione%20genere
 HTTP_ERROR 403 https://r.jina.ai/https://www.google.com/search?hl=it&num=10&q=%229788845278389%22%20%22Katherine%20Pancol%22%20genere
