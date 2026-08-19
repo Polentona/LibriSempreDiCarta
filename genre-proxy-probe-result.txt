@@ -1,0 +1,7 @@
+jina_https STATUS 200 LEN 5069 CLASS True
+alzer lento delle tartarughe **Autore** **Editore** **Data Pubblicazione** 2015 **Collana** **Pagine** 700 **Genere** **Classificazione** **Punti Accumulabili** Consegna GRATIS con Corriere in ITALIA per ordini da 49,00 € € 14.00 * * * ## Altri libri con autore: Pancol Katherine [![Image 3: Muchachas. Vol. 2 libro](https://cdn.unilibro.it/cover/libro/9788845277009g.jpg)](https://www.unilibro.it/libro/pancol-katherine/muchachas-vol-2/9788845277009) -5% [![Image 4: Muchachas. Vol. 3 libro](https://cdn.unilibro.it/cover/libro/9788845277016g.jpg)](https://www.unilibro.it/libro/pancol-katherine/muchachas-vol-3/9788845
+jina_http_target STATUS 200 LEN 523 CLASS False
+Title: Just a moment... URL Source: http://www.unilibro.it/libro/pancol-katherine/il-valzer-lento-delle-tartarughe/9788845278389 Warning: This page maybe requiring CAPTCHA, please make sure you are authorized to access this page. Markdown Content: ![Image 1: Icon for www.unilibro.it](http://www.unil
+allorigins_raw ERROR TimeoutError('The read operation timed out')
+allorigins_get ERROR <HTTPError 408: 'Request Timeout'>
+codetabs ERROR TimeoutError('The read operation timed out')
