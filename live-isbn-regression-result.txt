@@ -1,10 +1,22 @@
 outcome=failure
 tested_isbn=9788845278389
-source_commit=4fe16dfe55c4349d25b4957a6cb42fba80f516fb
+source_commit=5ab3307d3e24edccf44f1ac918a7e9fc7bf592b3
 ---
 HTTP_ERROR 429 https://www.googleapis.com/books/v1/volumes?q=isbn%3A9788845278389&maxResults=20&projection=full&printType=all
-HTTP_ERROR 404 https://images.weserv.nl/?url=https%3A%2F%2Fcovers.librarything.com%2Fdevkey%2Ffd11eebee79ccfcfe2f17d34a92e1011%2Fsmall%2Fisbn%2F9788845278389
+HTTP_ERROR 403 https://r.jina.ai/https://www.google.com/search?hl=it&num=10&q=site%3Aunilibro.it%20%229788845278389%22%20classificazione
+HTTP_ERROR 429 https://r.jina.ai/https://www.goodreads.com/search?q=9788845278389%20Il%20valzer%20lento%20delle%20tartarughe%20Katherine%20Pancol&search_type=books
+HTTP_ERROR 429 https://r.jina.ai/https://www.unilibro.it/libro/pancol-katherine/il-valzer-lento-delle-tartarughe/9788845278389
 HTTP_ERROR 404 https://images.weserv.nl/?url=https%3A%2F%2Fcovers.openlibrary.org%2Fb%2Fisbn%2F9788845278389-L.jpg%3Fdefault%3Dfalse
+HTTP_ERROR 404 https://images.weserv.nl/?url=https%3A%2F%2Fcovers.librarything.com%2Fdevkey%2Ffd11eebee79ccfcfe2f17d34a92e1011%2Fsmall%2Fisbn%2F9788845278389
+HTTP_ERROR 403 https://r.jina.ai/https://www.google.com/search?hl=it&num=10&q=%229788845278389%22%20%22Il%20valzer%20lento%20delle%20tartarughe%22%20classificazione%20genere
+HTTP_ERROR 403 https://corsproxy.io/?url=https%3A%2F%2Fwww.unilibro.it%2Flibro%2Fpancol-katherine%2Fil-valzer-lento-delle-tartarughe%2F9788845278389
+HTTP_ERROR 403 https://r.jina.ai/https://www.google.com/search?hl=it&num=10&q=%229788845278389%22%20%22Katherine%20Pancol%22%20genere
+HTTP_ERROR 403 https://r.jina.ai/https://www.google.com/search?hl=it&num=10&q=site%3Aunilibro.it%20%229788845278389%22%20classificazione
+HTTP_ERROR 403 https://r.jina.ai/https://www.google.com/search?hl=it&num=10&q=%229788845278389%22%20%22Il%20valzer%20lento%20delle%20tartarughe%22%20classificazione%20genere
+HTTP_ERROR 403 https://r.jina.ai/https://www.google.com/search?hl=it&num=10&q=%229788845278389%22%20%22Katherine%20Pancol%22%20genere
+HTTP_ERROR 403 https://r.jina.ai/https://www.google.com/search?hl=it&num=10&q=site%3Aunilibro.it%20%229788845278389%22%20classificazione
+HTTP_ERROR 403 https://r.jina.ai/https://www.google.com/search?hl=it&num=10&q=%229788845278389%22%20%22Il%20valzer%20lento%20delle%20tartarughe%22%20classificazione%20genere
+HTTP_ERROR 403 https://r.jina.ai/https://www.google.com/search?hl=it&num=10&q=%229788845278389%22%20%22Katherine%20Pancol%22%20genere
 FINAL_FIELDS {"title":"Il valzer lento delle tartarughe","author":"Katherine Pancol","genres":"","publisher":"Bompiani","publishedDate":"2015","saga":"Josephine","prequel":"Gli occhi gialli dei coccodrilli","sequel":"Gli scoiattoli di Central Park sono tristi il lunedì","status":"","rescueLoaded":true,"rescue":null,"resilient":null,"universal":{"saga":"Josephine","prequel":"Gli occhi gialli dei coccodrilli","sequel":"Gli scoiattoli di Central Park sono tristi il lunedì","position":2,"total":3,"initial":false,"terminal":false,"authoritative":true,"checked":true,"sagaChecked":true,"source":"https://it.wikipedia.org/wiki/Katherine_Pancol"},"genreDelegate":{"sig":"9788845278389|il valzer lento delle tartarughe|katherine pancol","genres":[],"retail":[],"fallback":[],"field":""},"genreRetailer":null}
 ISBN_LIVE_FAIL Error: Campi non corretti: genere:Narrativa contemporanea, genere:Narrativa rosa/sentimentale
     at /tmp/isbn-live/test.js:67:30
