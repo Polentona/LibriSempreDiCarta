@@ -23,7 +23,7 @@ jobs:
           p=Path('index.html')
           s=p.read_text(encoding='utf-8')
           versions={
-            'series-neighbors-standalone-v5.js':'20260819-23',
+            'series-neighbors-standalone-v5.js':'20260819-24',
             'series-universal-resolver-v1.js':'20260819-7',
             'isbn-resilient-fallback-v1.js':'20260819-11'
           }
@@ -36,7 +36,7 @@ jobs:
             exit 0
           fi
           git config user.name "github-actions[bot]"
-          git config user.email "4189822+github-actions[bot]@users.noreply.github.com"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add index.html
           git commit -m "Aggiorna cache runtime ISBN"
           git push
