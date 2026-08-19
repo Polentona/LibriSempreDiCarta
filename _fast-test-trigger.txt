@@ -1,1 +1,1 @@
-run-20260820-sperling-v5-isbn-9788868363710
+run-20260820-sperling-v5-resolver-isolated
