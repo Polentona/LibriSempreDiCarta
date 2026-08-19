@@ -20,29 +20,27 @@ jobs:
         run: |
           python - <<'PY' > /tmp/probe.txt
           import urllib.request, urllib.parse, json, re
-          target='https://www.unilibro.it/libro/pancol-katherine/il-valzer-lento-delle-tartarughe/9788845278389'
+          isbn='9788845278389'
+          target='https://www.unilibro.it/libro/pancol-katherine/il-valzer-lento-delle-tartarughe/'+isbn
+          q='"'+isbn+'" classificazione genere'
           targets=[
-            ('jina_https','https://r.jina.ai/'+target),
-            ('jina_http_target','https://r.jina.ai/http://www.unilibro.it/libro/pancol-katherine/il-valzer-lento-delle-tartarughe/9788845278389'),
-            ('allorigins_raw','https://api.allorigins.win/raw?url='+urllib.parse.quote(target,safe='')),
-            ('allorigins_get','https://api.allorigins.win/get?url='+urllib.parse.quote(target,safe='')),
-            ('codetabs','https://api.codetabs.com/v1/proxy?quest='+urllib.parse.quote(target,safe='')),
+            ('jina_unilibro','https://r.jina.ai/'+target),
+            ('jina_bing','https://r.jina.ai/https://www.bing.com/search?setlang=it-IT&q='+urllib.parse.quote(q,safe='')),
+            ('jina_google','https://r.jina.ai/https://www.google.com/search?hl=it&num=10&q='+urllib.parse.quote(q,safe='')),
+            ('jina_ddg','https://r.jina.ai/https://html.duckduckgo.com/html/?q='+urllib.parse.quote(q,safe='')),
           ]
           for name,url in targets:
             try:
-              req=urllib.request.Request(url,headers={'User-Agent':'Mozilla/5.0','Accept':'text/html,text/plain,application/json,*/*'})
+              req=urllib.request.Request(url,headers={'User-Agent':'Mozilla/5.0','Accept':'text/html,text/plain,*/*'})
               with urllib.request.urlopen(req,timeout=15) as r:
                 raw=r.read(1000000).decode('utf-8','replace')
-                if name=='allorigins_get':
-                  try: raw=json.loads(raw).get('contents','')
-                  except: pass
                 text=re.sub(r'\s+',' ',raw)
-                i=text.lower().find('classificazione')
-                excerpt=text[max(0,i-120):i+500] if i>=0 else text[:300]
-                print(name,'STATUS',r.status,'LEN',len(raw),'CLASS',i>=0)
-                print(excerpt[:650])
+                print('\n###',name,'STATUS',r.status,'LEN',len(raw))
+                for needle in ['narrativa rosa','classificazione','genere','contemporanea']:
+                  i=text.lower().find(needle)
+                  print(needle,'FOUND',i>=0,'EXCERPT',text[max(0,i-140):i+600] if i>=0 else '')
             except Exception as e:
-              print(name,'ERROR',repr(e))
+              print('\n###',name,'ERROR',repr(e))
           PY
           cat /tmp/probe.txt
       - name: Registra risultato
