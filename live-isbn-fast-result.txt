@@ -1,10 +1,17 @@
 outcome=failure
-source_commit=d39de24498ed889f4a0511b092006ccf40687faf
+source_commit=d247f81a61bba38cd858b2ac5f8af83abf436112
+mode=sperling-official-v5
+isbn=9788868363710
 ---
-HTTP 429 https://www.googleapis.com/books/v1/volumes?q=isbn%3A9788845278389&maxResults=20&projection=full&printType=all
-HTTP 403 https://r.jina.ai/https://www.google.com/search?hl=it&num=10&q=%229788845278389%22%20libro
-HTTP 404 https://images.weserv.nl/?url=https%3A%2F%2Fcovers.librarything.com%2Fdevkey%2Ffd11eebee79ccfcfe2f17d34a92e1011%2Fsmall%2Fisbn%2F9788845278389
-HTTP 404 https://images.weserv.nl/?url=https%3A%2F%2Fcovers.openlibrary.org%2Fb%2Fisbn%2F9788845278389-L.jpg%3Fdefault%3Dfalse
-FINAL {"title":"Il valzer lento delle tartarughe","author":"Katherine Pancol","publisher":"Bompiani","publishedDate":"2015","genres":"Crime","saga":"Josephine","prequel":"Gli occhi gialli dei coccodrilli","sequel":"Gli scoiattoli di Central Park sono tristi il lunedì","status":"","v14":true,"wikiV2":true,"wiki":{"input":{"code":"9788845278389","title":"Il valzer lento delle tartarughe","author":"Katherine Pancol","saga":"","publisher":"Bompiani"},"page":"Katherine Pancol","rel":{"saga":"Josephine","prequel":"Gli occhi gialli dei coccodrilli","sequel":"","position":2,"total":2,"initial":false,"terminal":true,"authoritative":true,"checked":true,"source":"https://it.wikipedia.org/wiki/Katherine_Pancol","items":["Gli occhi gialli dei coccodrilli","Il valzer lento delle tartarughe"]}},"codeTabs":{"error":"Failed to fetch"},"directGenre":{"error":"Failed to fetch"},"genreDelegate":{"sig":"9788845278389|il valzer lento delle tartarughe|katherine pancol","genres":["Crime"],"field":"Crime"},"sbn":{"isbn":"9788845278389","diag":[{"url":"https://r.jina.ai/http://opac.sbn.it/opacmobilegw/search.json?isbn=9788845278389","ok":true,"length":1305,"numFound":1}],"rec":{"title":"Il valzer lento delle tartarughe","author":"Katherine Pancol","publisher":"Bompiani","year":"2015","cover":"http://covers.librarything.com/devkey/fd11eebee79ccfcfe2f17d34a92e1011/small/isbn/9788845278389","categories":[],"description":"","source":"OPAC SBN"}},"universal":{"saga":"Josephine","prequel":"Gli occhi gialli dei coccodrilli","sequel":"","position":2,"total":2,"initial":false,"terminal":true,"authoritative":true,"checked":true,"sagaChecked":true,"source":"https://it.wikipedia.org/wiki/Katherine_Pancol"}}
-FAST_ISBN_FAIL Error: genre:Narrativa contemporanea, genre:Narrativa rosa/sentimentale
-    at /tmp/isbn-fast/test.js:15:427
+HTTP 429 https://www.googleapis.com/books/v1/volumes?q=isbn%3A9788868363710&maxResults=20&projection=full&printType=all&langRestrict=it
+HTTP 403 https://corsproxy.io/?url=https%3A%2F%2Fwww.bompiani.it%2Fimg%2Fbompiani%2Flogo_square.png
+HTTP 408 https://api.allorigins.win/raw?url=https%3A%2F%2Fwww.bompiani.it%2Fcatalogo
+HTTP 413 https://corsproxy.io/?url=https%3A%2F%2Fwww.bompiani.it%2Fcatalogo
+HTTP 429 https://www.googleapis.com/books/v1/volumes?q=inauthor%3A%22Stephen%20King%22%20intitle%3A%22trilogia%22&langRestrict=it&maxResults=40
+HTTP 429 https://www.googleapis.com/books/v1/volumes?q=inauthor%3A%22Stephen%20King%22%20intitle%3A%22saga%22&langRestrict=it&maxResults=40
+HTTP 429 https://www.googleapis.com/books/v1/volumes?q=inauthor%3A%22Stephen%20King%22%20intitle%3A%22serie%22&langRestrict=it&maxResults=40
+HTTP 429 https://www.googleapis.com/books/v1/volumes?q=%22I%20lupi%20del%20Calla.%20La%20torre%20nera%20(Vol.%205)%22%20inauthor%3A%22Stephen%20King%22&langRestrict=it&maxResults=40
+HTTP 429 https://www.googleapis.com/books/v1/volumes?q=inauthor%3A%22Stephen%20King%22&langRestrict=it&maxResults=40
+FINAL {"code":"9788868363710","title":"","author":"","publisher":"","publishedDate":"","saga":"","plot":"…","status":"","loaderV33":true,"plotV5":true,"plotPolicy":"publisher-first-sperling-direct-then-clean-fallbacks-resilient","officialLength":0,"officialPreview":"…"}
+SPERLING_PLOT_FAIL Error: title, author, publisher, official-plot, form-plot
+    at /tmp/isbn-fast/test.js:52:23
