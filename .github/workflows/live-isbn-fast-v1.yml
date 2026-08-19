@@ -19,30 +19,69 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Test live trama editore
+      - name: Test live ISBN Sperling
         id: live
         continue-on-error: true
         run: |
-          node --check publisher-plot-priority-v3.js
+          node --check publisher-plot-resilience-v5.js
           mkdir -p /tmp/isbn-fast && cd /tmp/isbn-fast
           npm init -y >/dev/null 2>&1
           npm install playwright-core@1.55.0 >/dev/null 2>&1
           cat > test.js <<'JS'
           const {chromium}=require('playwright-core');
-          const expected={title:'Il valzer lento delle tartarughe',author:'Katherine Pancol',publisher:'Bompiani',year:'2015'};
+          const ISBN='9788868363710';
           const norm=v=>String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
           const same=(a,b)=>norm(a)===norm(b);
-          const read=page=>page.evaluate(()=>({title:editTitle?.value||'',author:editAuthor?.value||'',publisher:editPublisher?.value||'',publishedDate:editPublishedDate?.value||'',plot:editPlot?.value||'',status:lookupStatus?.innerText||'',loaderV30:!!window.__LIB_SERIES_NEIGHBORS_STANDALONE_V30,plotV3:!!window.__LIB_PUBLISHER_PLOT_PRIORITY_V3,plotPolicy:window.__LIB_PLOT_SOURCE_POLICY||''}));
+          const contains=(a,b)=>norm(a).includes(norm(b));
+          const read=page=>page.evaluate(()=>{
+            const v=id=>document.getElementById(id)?.value||'';
+            return {
+              code:v('editCode'),title:v('editTitle'),author:v('editAuthor'),publisher:v('editPublisher'),publishedDate:v('editPublishedDate'),saga:v('editSaga'),plot:v('editPlot'),
+              status:document.getElementById('lookupStatus')?.innerText||'',
+              loaderV33:!!window.__LIB_SERIES_NEIGHBORS_STANDALONE_V33,
+              plotV5:!!window.__LIB_PUBLISHER_PLOT_RESILIENCE_V5,
+              plotPolicy:window.__LIB_PLOT_SOURCE_POLICY||''
+            }
+          });
           (async()=>{
             const browser=await chromium.launch({headless:true,executablePath:'/usr/bin/google-chrome',args:['--no-sandbox']});
-            const page=await browser.newPage({viewport:{width:1400,height:1100}});page.on('pageerror',e=>console.log('PAGE_ERROR',e.message));page.on('response',r=>{if(r.status()>=400)console.log('HTTP',r.status(),r.url())});
-            await page.goto('https://polentona.github.io/LibriSempreDiCarta/?fast-plot='+Date.now(),{waitUntil:'domcontentloaded',timeout:90000});
-            await page.locator('#addBookBtn').click();await page.locator('#editDialog[open]').waitFor({timeout:15000});await page.locator('#editCode').fill('9788845278389');await page.locator('#lookupMetadataBtn').click();
-            let last={};const until=Date.now()+90000;while(Date.now()<until){await page.waitForTimeout(1000);last=await read(page);if(same(last.title,expected.title)&&same(last.author,expected.author)&&same(last.publisher,expected.publisher)&&String(last.publishedDate).includes(expected.year)&&last.loaderV30&&last.plotV3&&last.plot.length>=200)break}
-            const official=await page.evaluate(async()=>typeof window.__LIB_RESOLVE_OFFICIAL_PLOT==='function'?await window.__LIB_RESOLVE_OFFICIAL_PLOT({code:'9788845278389',title:editTitle?.value||'',author:editAuthor?.value||'',publisher:editPublisher?.value||''}):'');
-            console.log('FINAL',JSON.stringify({...last,plot:last.plot.slice(0,160)+'…',officialLength:official.length}));
-            const bad=[];for(const k of ['title','author','publisher'])if(!same(last[k],expected[k]))bad.push(k);if(!String(last.publishedDate).includes(expected.year))bad.push('year');if(!last.loaderV30)bad.push('loader-v30');if(!last.plotV3)bad.push('plot-v3');if(last.plotPolicy!=='publisher-first-then-clean-fallbacks')bad.push('plot-policy');if(official.length<200)bad.push('official-plot');if(!same(last.plot,official))bad.push('official-plot-not-prioritized');if(/a mio parere|secondo me|verified purchase|serie tv|adattamento cinematograf|netflix|prime video/i.test(last.plot))bad.push('plot-noise');await browser.close();if(bad.length)throw new Error(bad.join(', '));console.log('FAST_PLOT_OK')
-          })().catch(e=>{console.error('FAST_PLOT_FAIL',e.stack||e.message);process.exit(1)});
+            const page=await browser.newPage({viewport:{width:1400,height:1100}});
+            page.on('pageerror',e=>console.log('PAGE_ERROR',e.message));
+            page.on('response',r=>{if(r.status()>=400)console.log('HTTP',r.status(),r.url())});
+            await page.goto('https://polentona.github.io/LibriSempreDiCarta/?fast-sperling='+Date.now(),{waitUntil:'domcontentloaded',timeout:90000});
+            await page.locator('#addBookBtn').click();
+            await page.locator('#editDialog[open]').waitFor({timeout:15000});
+            await page.locator('#editCode').fill(ISBN);
+            await page.locator('#lookupMetadataBtn').click();
+            let last={};
+            const until=Date.now()+120000;
+            while(Date.now()<until){
+              await page.waitForTimeout(1000);
+              last=await read(page);
+              if(contains(last.title,'lupi del calla')&&contains(last.author,'stephen king')&&contains(last.publisher,'sperling')&&last.loaderV33&&last.plotV5&&last.plot.length>=120)break;
+            }
+            const official=await page.evaluate(async()=>{
+              const v=id=>document.getElementById(id)?.value||'';
+              if(typeof window.__LIB_RESOLVE_OFFICIAL_PLOT!=='function')return'';
+              return await window.__LIB_RESOLVE_OFFICIAL_PLOT({code:v('editCode'),title:v('editTitle'),author:v('editAuthor'),publisher:v('editPublisher'),saga:v('editSaga')});
+            });
+            console.log('FINAL',JSON.stringify({...last,plot:(last.plot||'').slice(0,220)+'…',officialLength:(official||'').length,officialPreview:(official||'').slice(0,220)+'…'}));
+            const bad=[];
+            if(last.code.replace(/\D/g,'')!==ISBN)bad.push('isbn');
+            if(!contains(last.title,'lupi del calla'))bad.push('title');
+            if(!contains(last.author,'stephen king'))bad.push('author');
+            if(!contains(last.publisher,'sperling'))bad.push('publisher');
+            if(!last.loaderV33)bad.push('loader-v33');
+            if(!last.plotV5)bad.push('plot-v5');
+            if(last.plotPolicy!=='publisher-first-sperling-direct-then-clean-fallbacks-resilient')bad.push('plot-policy');
+            if((official||'').length<120)bad.push('official-plot');
+            if((last.plot||'').length<120)bad.push('form-plot');
+            if(official&&!same(last.plot,official))bad.push('official-plot-not-prioritized');
+            if(/a mio parere|secondo me|verified purchase|serie tv|adattamento cinematograf|netflix|prime video/i.test(last.plot||''))bad.push('plot-noise');
+            await browser.close();
+            if(bad.length)throw new Error(bad.join(', '));
+            console.log('SPERLING_PLOT_OK');
+          })().catch(e=>{console.error('SPERLING_PLOT_FAIL',e.stack||e.message);process.exit(1)});
           JS
           node test.js 2>&1 | tee /tmp/isbn-fast.log
           test ${PIPESTATUS[0]} -eq 0
@@ -52,7 +91,8 @@ jobs:
           {
             echo "outcome=${{ steps.live.outcome }}"
             echo "source_commit=${GITHUB_SHA}"
-            echo "mode=publisher-plot-v3"
+            echo "mode=sperling-official-v5"
+            echo "isbn=9788868363710"
             echo '---'
             cat /tmp/isbn-fast.log 2>/dev/null || true
           } > live-isbn-fast-result.txt
