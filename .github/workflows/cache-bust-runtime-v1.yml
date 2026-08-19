@@ -19,15 +19,16 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
+          import re
           p=Path('index.html')
           s=p.read_text(encoding='utf-8')
-          replacements={
-            'series-neighbors-standalone-v5.js?v=5':'series-neighbors-standalone-v5.js?v=20260819-14',
-            'series-universal-resolver-v1.js?v=5':'series-universal-resolver-v1.js?v=20260819-7',
-            'isbn-resilient-fallback-v1.js?v=10':'isbn-resilient-fallback-v1.js?v=20260819-11'
+          versions={
+            'series-neighbors-standalone-v5.js':'20260819-15',
+            'series-universal-resolver-v1.js':'20260819-7',
+            'isbn-resilient-fallback-v1.js':'20260819-11'
           }
-          for old,new in replacements.items():
-              s=s.replace(old,new)
+          for filename,version in versions.items():
+              s=re.sub(re.escape(filename)+r'\?v=[^"\']+', filename+'?v='+version, s)
           p.write_text(s,encoding='utf-8')
           PY
           if git diff --quiet -- index.html; then
