@@ -1,0 +1,41 @@
+name: Aggiorna versioni runtime
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  cache-bust:
+    if: ${{ !startsWith(github.event.head_commit.message, 'Aggiorna cache runtime') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+      - name: Forza caricamento script aggiornati
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          replacements={
+            'series-neighbors-standalone-v5.js?v=5':'series-neighbors-standalone-v5.js?v=20260819-14',
+            'series-universal-resolver-v1.js?v=5':'series-universal-resolver-v1.js?v=20260819-7',
+            'isbn-resilient-fallback-v1.js?v=10':'isbn-resilient-fallback-v1.js?v=20260819-11'
+          }
+          for old,new in replacements.items():
+              s=s.replace(old,new)
+          p.write_text(s,encoding='utf-8')
+          PY
+          if git diff --quiet -- index.html; then
+            echo 'Versioni già aggiornate.'
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git commit -m "Aggiorna cache runtime ISBN"
+          git push
