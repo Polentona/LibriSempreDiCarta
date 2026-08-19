@@ -19,7 +19,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Test live trama ufficiale Sperling V6
+      - name: Test live compilazione automatica trama Sperling V6
         id: live
         continue-on-error: true
         run: |
@@ -41,17 +41,16 @@ jobs:
             const page=await browser.newPage({viewport:{width:1400,height:1100}});
             page.on('pageerror',e=>console.log('PAGE_ERROR',e.message));
             page.on('response',r=>{if(r.status()>=400)console.log('HTTP',r.status(),r.url())});
-            await page.goto('https://polentona.github.io/LibriSempreDiCarta/?test-sperling-v6='+Date.now(),{waitUntil:'domcontentloaded',timeout:90000});
+            await page.goto('https://polentona.github.io/LibriSempreDiCarta/?test-sperling-v6-auto='+Date.now(),{waitUntil:'domcontentloaded',timeout:90000});
             await page.locator('#addBookBtn').click();
             await page.locator('#editDialog[open]').waitFor({timeout:15000});
-            await page.locator('#editCode').fill(ISBN);
-            await page.locator('#editTitle').fill(TITLE);
-            await page.locator('#editAuthor').fill(AUTHOR);
-            await page.locator('#editPublisher').fill(PUBLISHER);
-            await page.locator('#editSaga').fill(SAGA);
+            await page.evaluate(({ISBN,TITLE,AUTHOR,PUBLISHER,SAGA})=>{
+              const set=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v};
+              set('editCode',ISBN);set('editTitle',TITLE);set('editAuthor',AUTHOR);set('editPublisher',PUBLISHER);set('editSaga',SAGA);set('editPlot','');
+            },{ISBN,TITLE,AUTHOR,PUBLISHER,SAGA});
 
             let formPlot='';
-            const until=Date.now()+35000;
+            const until=Date.now()+30000;
             while(Date.now()<until){
               await page.waitForTimeout(1000);
               formPlot=await page.locator('#editPlot').inputValue();
@@ -61,8 +60,9 @@ jobs:
               let official='';
               try{official=await window.__LIB_RESOLVE_OFFICIAL_PLOT({code:ISBN,title:TITLE,author:AUTHOR,publisher:PUBLISHER,saga:SAGA})||''}catch(e){official='__ERROR__'+String(e)}
               const hooks=window.__LIB_PUBLISHER_PLOT_RESILIENCE_V6_TEST__;
+              const current={};for(const id of ['editCode','editTitle','editAuthor','editPublisher','editSaga','editPlot'])current[id]=document.getElementById(id)?.value||'';
               return {
-                official,
+                official,current,
                 loaderV34:!!window.__LIB_SERIES_NEIGHBORS_STANDALONE_V34,
                 plotV6:!!window.__LIB_PUBLISHER_PLOT_RESILIENCE_V6,
                 policy:window.__LIB_PLOT_SOURCE_POLICY||'',
@@ -70,12 +70,11 @@ jobs:
                 titleMatch:hooks?.sperlingTitleMatch?.('Title: La Torre Nera - I lupi del Calla - Sperling & Kupfer Editore',TITLE,SAGA)||false
               }
             },{ISBN,TITLE,AUTHOR,PUBLISHER,SAGA});
-            formPlot=await page.locator('#editPlot').inputValue();
+            formPlot=state.current.editPlot;
             const status=await page.locator('#lookupStatus').innerText();
             console.log('FINAL',JSON.stringify({
-              loaderV34:state.loaderV34,plotV6:state.plotV6,policy:state.policy,slugs:state.slugs,titleMatch:state.titleMatch,
-              officialLength:state.official.length,officialPreview:state.official.slice(0,260),
-              formPlotLength:formPlot.length,formPlotPreview:formPlot.slice(0,260),status
+              loaderV34:state.loaderV34,plotV6:state.plotV6,policy:state.policy,slugs:state.slugs,titleMatch:state.titleMatch,current:state.current,
+              officialLength:state.official.length,officialPreview:state.official.slice(0,260),formPlotLength:formPlot.length,formPlotPreview:formPlot.slice(0,260),status
             }));
             const bad=[];
             if(!state.loaderV34)bad.push('loader-v34');
@@ -102,7 +101,7 @@ jobs:
           {
             echo "outcome=${{ steps.live.outcome }}"
             echo "source_commit=${GITHUB_SHA}"
-            echo "mode=sperling-live-v6"
+            echo "mode=sperling-live-auto-v6"
             echo "isbn=9788868363710"
             echo '---'
             cat /tmp/isbn-fast.log 2>/dev/null || true
