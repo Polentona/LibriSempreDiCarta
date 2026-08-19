@@ -1,5 +1,5 @@
 (()=>{
-if(window.__LIB_GENRE_DELEGATE_V6)return;window.__LIB_GENRE_DELEGATE_V6=true;
+if(window.__LIB_GENRE_DELEGATE_V7)return;window.__LIB_GENRE_DELEGATE_V7=true;
 const clean=v=>String(v??'').replace(/\s+/g,' ').trim();
 const norm=v=>clean(v).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[’‘]/g,"'").replace(/[^a-z0-9]+/g,' ').trim();
 const uniq=a=>[...new Map((a||[]).filter(Boolean).map(x=>[norm(x),clean(x)])).values()];
@@ -22,13 +22,11 @@ function genreMap(text){
   return out
 }
 async function fetchText(url,timeout=8500){const c=new AbortController(),t=setTimeout(()=>c.abort(),timeout);try{const r=await fetch(url,{signal:c.signal,headers:{Accept:'text/plain,text/html,*/*'}});if(!r.ok)return'';return await r.text()}catch(e){return''}finally{clearTimeout(t)}}
+async function allOrigins(target){const c=new AbortController(),t=setTimeout(()=>c.abort(),8500);try{const r=await fetch('https://api.allorigins.win/get?url='+encodeURIComponent(target),{signal:c.signal,headers:{Accept:'application/json'}});if(!r.ok)return'';const d=await r.json();return String(d?.contents||'')}catch(e){return''}finally{clearTimeout(t)}}
 async function reader(target){
-  const attempts=[
-    'https://r.jina.ai/'+target,
-    'https://api.allorigins.win/raw?url='+encodeURIComponent(target),
-    'https://corsproxy.io/?url='+encodeURIComponent(target)
-  ];
-  for(const u of attempts){const text=await fetchText(u);if(text&&text.length>250)return text}
+  const jina=await fetchText('https://r.jina.ai/'+target);if(jina&&jina.length>250)return jina;
+  const wrapped=await allOrigins(target);if(wrapped&&wrapped.length>250)return wrapped;
+  for(const u of ['https://api.allorigins.win/raw?url='+encodeURIComponent(target),'https://corsproxy.io/?url='+encodeURIComponent(target)]){const text=await fetchText(u);if(text&&text.length>250)return text}
   return''
 }
 function slug(v){return norm(v).replace(/\s+/g,'-')}
@@ -42,42 +40,38 @@ function classificationGenres(text){
 async function retailerGenres({title,author,code}){
   const isbn=String(code||'').replace(/\D/g,'');if(!isbn)return[];
   const parts=clean(author).split(/\s+/).filter(Boolean),authorSlug=slug([...parts.slice(-1),...parts.slice(0,-1)].join(' ')),titleSlug=slug(title);
-  const targets=[
-    `https://www.unilibro.it/libro/${authorSlug}/${titleSlug}/${isbn}`,
-    `https://www.eurolibro.it/libro/isbn/${isbn}.html`
-  ];
-  for(const target of targets){const text=await reader(target);const gs=classificationGenres(text);if(gs.length){window.__LIB_GENRE_RETAILER_LAST__={target,genres:gs};return gs}}
+  const targets=[`https://www.unilibro.it/libro/${authorSlug}/${titleSlug}/${isbn}`,`https://www.eurolibro.it/libro/isbn/${isbn}.html`];
+  for(const target of targets){const text=await reader(target),gs=classificationGenres(text);if(gs.length){window.__LIB_GENRE_RETAILER_LAST__={target,genres:gs};return gs}}
   return[]
 }
-function applyGenres(genres){
+function applyGenres(genres,{replace=false}={}){
   const field=document.getElementById('editCategory');if(!field||!genres.length)return false;
-  const current=clean(field.value),currentSpecific=generic(current)?[]:current.split(/[,;|]/).map(clean).filter(Boolean);
-  const merged=uniq([...currentSpecific,...genres]);if(!merged.length)return false;
+  const current=clean(field.value),currentSpecific=replace||generic(current)?[]:current.split(/[,;|]/).map(clean).filter(Boolean),merged=uniq([...currentSpecific,...genres]);if(!merged.length)return false;
   field.value=merged.join(', ');field.dispatchEvent(new Event('input',{bubbles:true}));field.dispatchEvent(new Event('change',{bubbles:true}));return true
 }
 async function run(force=false){
   if(pending)return;
   const dlg=document.getElementById('editDialog'),title=clean(document.getElementById('editTitle')?.value),author=clean(document.getElementById('editAuthor')?.value),code=clean(document.getElementById('editCode')?.value),field=document.getElementById('editCategory');
-  if(!dlg?.open||!title||!author||!field||!generic(field.value))return;
-  const sig=[code,norm(title),norm(author)].join('|'),now=Date.now();if(!force&&sig===lastSig&&now-lastAttempt<30000)return;lastSig=sig;lastAttempt=now;pending=true;
+  if(!dlg?.open||!title||!author||!field)return;
+  const sig=[code,norm(title),norm(author)].join('|'),now=Date.now();if(!force&&sig===lastSig&&now-lastAttempt<30000)return;if(!force&&!generic(field.value))return;lastSig=sig;lastAttempt=now;pending=true;
   try{
-    let genres=[];
+    let fallback=[];
     if(typeof window.__LIB_RESOLVE_UNIVERSAL_SERIES==='function'){
-      try{await window.__LIB_RESOLVE_UNIVERSAL_SERIES({code,title,author,saga:document.getElementById('editSaga')?.value||'',publisher:document.getElementById('editPublisher')?.value||''});genres=uniq(window.__LIB_LAST_UNIVERSAL_GENRES__||[]).flatMap(genreMap)}catch(e){}
+      try{await window.__LIB_RESOLVE_UNIVERSAL_SERIES({code,title,author,saga:document.getElementById('editSaga')?.value||'',publisher:document.getElementById('editPublisher')?.value||''});fallback=uniq(window.__LIB_LAST_UNIVERSAL_GENRES__||[]).flatMap(genreMap)}catch(e){}
     }
-    if(!genres.length)genres=await retailerGenres({title,author,code});
-    if(genres.length)applyGenres(genres);
-    window.__LIB_GENRE_DELEGATE_LAST__={sig,genres,field:field.value};
+    const retail=await retailerGenres({title,author,code});
+    const genres=retail.length?retail:fallback;
+    if(genres.length)applyGenres(genres,{replace:retail.length>0});
+    window.__LIB_GENRE_DELEGATE_LAST__={sig,genres,retail,fallback,field:field.value};
   }catch(e){window.__LIB_GENRE_DELEGATE_ERROR__=String(e&&e.message||e)}finally{pending=false}
 }
 function boot(){
   const field=document.getElementById('editCategory'),code=document.getElementById('editCode'),btn=document.getElementById('lookupMetadataBtn');
-  if(field&&!field.__genreV6){field.__genreV6=true;field.addEventListener('change',()=>{if(generic(field.value))run(true)})}
-  if(code&&!code.__genreV6){code.__genreV6=true;code.addEventListener('change',()=>{lastSig='';setTimeout(()=>run(true),300)})}
-  if(btn&&!btn.__genreV6){btn.__genreV6=true;btn.addEventListener('click',()=>{lastSig='';setTimeout(()=>run(true),1200)})}
+  if(field&&!field.__genreV7){field.__genreV7=true;field.addEventListener('change',()=>{if(generic(field.value))run(true)})}
+  if(code&&!code.__genreV7){code.__genreV7=true;code.addEventListener('change',()=>{lastSig='';setTimeout(()=>run(true),300)})}
+  if(btn&&!btn.__genreV7){btn.__genreV7=true;btn.addEventListener('click',()=>{lastSig='';setTimeout(()=>run(true),1200)})}
   run(false)
 }
 let tries=0;const timer=setInterval(()=>{tries++;boot();if(tries>=480)clearInterval(timer)},500);setTimeout(boot,0);
-window.__LIB_LOOKUP_SPECIFIC_GENRES=opts=>retailerGenres(opts||{});
-window.__LIB_GOODREADS_DIRECT_V4=false;
+window.__LIB_LOOKUP_SPECIFIC_GENRES=opts=>retailerGenres(opts||{});window.__LIB_GOODREADS_DIRECT_V4=false;
 })();
