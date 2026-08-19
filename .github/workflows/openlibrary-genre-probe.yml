@@ -1,0 +1,56 @@
+name: Diagnostica generi Open Library
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '_openlibrary-probe-trigger.txt'
+
+permissions:
+  contents: write
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Interroga Open Library
+        run: |
+          python - <<'PY' > /tmp/ol.txt
+          import json, urllib.request, urllib.parse
+          isbn='9788845278389'
+          urls=[
+            'https://openlibrary.org/search.json?isbn='+isbn+'&fields='+urllib.parse.quote('key,title,author_name,subject,first_publish_year,isbn')+'&limit=10',
+            'https://openlibrary.org/search.json?title='+urllib.parse.quote('Il valzer lento delle tartarughe')+'&author='+urllib.parse.quote('Katherine Pancol')+'&fields='+urllib.parse.quote('key,title,author_name,subject,first_publish_year,isbn')+'&limit=10',
+            'https://openlibrary.org/search.json?title='+urllib.parse.quote('La valse lente des tortues')+'&author='+urllib.parse.quote('Katherine Pancol')+'&fields='+urllib.parse.quote('key,title,author_name,subject,first_publish_year,isbn')+'&limit=10',
+            'https://openlibrary.org/search.json?title='+urllib.parse.quote('The slow waltz of turtles')+'&author='+urllib.parse.quote('Katherine Pancol')+'&fields='+urllib.parse.quote('key,title,author_name,subject,first_publish_year,isbn')+'&limit=10'
+          ]
+          seen=[]
+          for u in urls:
+            try:
+              req=urllib.request.Request(u,headers={'User-Agent':'Mozilla/5.0'})
+              data=json.load(urllib.request.urlopen(req,timeout=20))
+              print('\nSEARCH',u,'NUM',data.get('numFound'))
+              for d in data.get('docs',[])[:6]:
+                print(json.dumps({k:d.get(k) for k in ['key','title','author_name','first_publish_year','subject','isbn']},ensure_ascii=False)[:12000])
+                k=d.get('key')
+                if k and k not in seen: seen.append(k)
+            except Exception as e: print('ERR',repr(e))
+          for k in seen[:12]:
+            try:
+              u='https://openlibrary.org'+k+'.json'
+              req=urllib.request.Request(u,headers={'User-Agent':'Mozilla/5.0'})
+              d=json.load(urllib.request.urlopen(req,timeout=20))
+              print('\nWORK',k,json.dumps({'title':d.get('title'),'subjects':d.get('subjects'),'description':d.get('description')},ensure_ascii=False)[:16000])
+            except Exception as e: print('WORKERR',k,repr(e))
+          PY
+          cat /tmp/ol.txt
+      - name: Registra risultato
+        run: |
+          cp /tmp/ol.txt openlibrary-genre-probe-result.txt
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git pull --rebase origin main || true
+          git add openlibrary-genre-probe-result.txt
+          git commit -m 'Registra diagnostica Open Library generi' || exit 0
+          git push
