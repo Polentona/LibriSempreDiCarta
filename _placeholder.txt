@@ -1,1 +1,1 @@
-isbn-live-final-20260819-1247
+isbn-live-after-cache-bust-20260819-1300
