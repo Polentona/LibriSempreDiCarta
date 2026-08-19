@@ -1,0 +1,1 @@
+Trigger deploy GitHub Pages con runner ubuntu-slim.
