@@ -1,13 +1,11 @@
 outcome=failure
 tested_isbn=9788845278389
-source_commit=33ad68ec6e05f37d0257f6d2630bc868de97e692
+source_commit=9eb6d29c0a0ad114b61e5e3a936670511911357f
+mode=publisher-plot-v3
 ---
 HTTP_ERROR 429 https://www.googleapis.com/books/v1/volumes?q=isbn%3A9788845278389&maxResults=20&projection=full&printType=all
-HTTP_ERROR 429 https://r.jina.ai/https://www.bing.com/search?setlang=it-IT&q=site%3Abompiani.it%20%229788845278389%22%20%22Il%20valzer%20lento%20delle%20tartarughe%22
-HTTP_ERROR 429 https://r.jina.ai/https://html.duckduckgo.com/html/?q=%229788845278389%22%20(site%3Aunilibro.it%20OR%20site%3Alibreriauniversitaria.it%20OR%20site%3Aibs.it%20OR%20site%3Agiunti.it%20OR%20site%3Abompiani.it)
 HTTP_ERROR 404 https://images.weserv.nl/?url=https%3A%2F%2Fcovers.librarything.com%2Fdevkey%2Ffd11eebee79ccfcfe2f17d34a92e1011%2Fsmall%2Fisbn%2F9788845278389
 HTTP_ERROR 404 https://images.weserv.nl/?url=https%3A%2F%2Fcovers.openlibrary.org%2Fb%2Fisbn%2F9788845278389-L.jpg%3Fdefault%3Dfalse
-HTTP_ERROR 403 https://corsproxy.io/?url=https%3A%2F%2Fhtml.duckduckgo.com%2Fhtml%2F%3Fq%3D%25229788845278389%2522%2520(site%253Aunilibro.it%2520OR%2520site%253Alibreriauniversitaria.it%2520OR%2520site%253Aibs.it%2520OR%2520site%253Agiunti.it%2520OR%2520site%253Abompiani.it)
-FINAL_FIELDS {"title":"Il valzer lento delle tartarughe","author":"Katherine Pancol","genres":"Narrativa rosa/sentimentale, Crime","publisher":"Bompiani","publishedDate":"2015","saga":"Josephine","prequel":"Gli occhi gialli dei coccodrilli","sequel":"Gli scoiattoli di Central Park sono tristi il lunedì","status":"","rescueLoaded":true,"rescue":null,"resilient":null,"universal":{"saga":"Josephine","prequel":"Gli occhi gialli dei coccodrilli","sequel":"Gli scoiattoli di Central Park sono tristi il lunedì","position":2,"total":3,"initial":false,"terminal":false,"authoritative":true,"checked":true,"sagaChecked":true,"source":"https://it.wikipedia.org/wiki/Katherine_Pancol"},"genreDelegate":{"sig":"9788845278389|il valzer lento delle tartarughe|katherine pancol","genres":["Narrativa rosa/sentimentale"],"labels":["fiction romance emotional lighthearted medium-paced"],"source":"storygraph","url":"https://app.thestorygraph.com/browse?search_term=9788845278389","found":true,"field":"Narrativa rosa/sentimentale"},"genreRetailer":null}
-ISBN_LIVE_FAIL Error: Campi non corretti: genere:Narrativa contemporanea
-    at /tmp/isbn-live/test.js:67:30
+FINAL_PLOT {"title":"Il valzer lento delle tartarughe","author":"Katherine Pancol","publisher":"Bompiani","publishedDate":"2015","genres":"Narrativa rosa/sentimentale","plotLength":652,"officialLength":652,"status":"","plotV3":true,"loaderV30":false,"plotPolicy":"publisher-first-then-clean-fallbacks-resilient"}
+PLOT_LIVE_FAIL Error: Campi trama non corretti: loader-v30, policy-trama
+    at /tmp/isbn-live/test.js:17:798
