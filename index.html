@@ -95,7 +95,7 @@ const viewInfo={
   categories:['Categorie',''],
   series:['Saghe e trilogie','']
 };
-function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]))}
 function stars(n,id){return [1,2,3,4,5].map(v=>`<button class="star ${v<=n?'on':''}" data-id="${id}" data-v="${v}" type="button">★</button>`).join('')}
 function isInLibrary(book){return book?.inLibrary===true||book?.physicalOwned===true}
 function authorSurname(author){
@@ -280,7 +280,7 @@ render();
 <script src="series-wikipedia-authoritative-v3.js?v=1"></script>
 <script src="series-google-books-order-v10.js?v=1"></script>
 <script src="series-authoritative-catalog-v1.js?v=5"></script>
-<script src="series-neighbors-standalone-v5.js?v=20260819-17"></script>
+<script src="series-neighbors-standalone-v5.js?v=20260819-21"></script>
 <script src="series-universal-resolver-v1.js?v=20260819-7"></script>
 <script src="isbn-cover.js?v=20260817-17"></script>
 <script src="lookup-lock.js?v=2"></script>
