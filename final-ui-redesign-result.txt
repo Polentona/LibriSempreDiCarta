@@ -3,4 +3,4 @@ browser=failure
 ---
 HTML_OK=1
 HTML_BYTES=34029
-BROWSER_FAIL home 3 {"active":"Home","home":3}
+BROWSER_FAIL filtro K Lauren Kate|Stephen King {"active":"Home","home":10,"navContained":true,"library":6,"checkbox":1,"letters":26,"authors":["Alexandra Adornetto","Simon Beckett","Lauren Kate","Stephen King"]}
