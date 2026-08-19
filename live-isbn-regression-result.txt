@@ -1,26 +1,9 @@
 outcome=failure
 tested_isbn=9788845278389
-source_commit=96a12c0ff921ccfa57c96d0f154358a13dca4bb1
+source_commit=2b6226324434a4cb248c5e9137b2c9a1a7b1e3cf
 ---
 HTTP_ERROR 429 https://www.googleapis.com/books/v1/volumes?q=isbn%3A9788845278389&maxResults=20&projection=full&printType=all
-METADATA_SEEDED_FOR_RESOLVER_TEST
-ISBN_LIVE_FAIL locator.fill: Timeout 30000ms exceeded.
-Call log:
-  - waiting for locator('#editTitle')
-    - locator resolved to <input disabled required="" id="editTitle" aria-disabled="true" data-lookup-prev-disabled="0"/>
-    - fill("Il valzer lento delle tartarughe")
-  - attempting fill action
-    2 × waiting for element to be visible, enabled and editable
-      - element is not enabled
-    - retrying fill action
-    - waiting 20ms
-    2 × waiting for element to be visible, enabled and editable
-      - element is not enabled
-    - retrying fill action
-      - waiting 100ms
-    60 × waiting for element to be visible, enabled and editable
-       - element is not enabled
-     - retrying fill action
-       - waiting 500ms
-
-    at /tmp/isbn-live/test.js:22:40
+HTTP_ERROR 404 https://images.weserv.nl/?url=https%3A%2F%2Fcovers.openlibrary.org%2Fb%2Fisbn%2F9788845278389-L.jpg%3Fdefault%3Dfalse
+FINAL_FIELDS {"title":"","author":"","genres":"","publisher":"","publishedDate":"","saga":"","prequel":"","sequel":"","status":"Non ho trovato dati affidabili per questo ISBN. Puoi comunque compilare i campi manualmente.","rescueLoaded":true,"rescue":null,"resilient":null,"universal":null,"genreDelegate":null,"genreRetailer":null}
+ISBN_LIVE_FAIL Error: Campi non corretti: titolo, autore, editore, pubblicazione, saga, prequel, sequel, genere:Narrativa contemporanea, genere:Narrativa rosa/sentimentale
+    at /tmp/isbn-live/test.js:67:30
