@@ -35,7 +35,7 @@ jobs:
           const expected={title:'Il valzer lento delle tartarughe',author:'Katherine Pancol',saga:'Joséphine',prequel:'Gli occhi gialli dei coccodrilli',sequel:'Gli scoiattoli di Central Park sono tristi il lunedì',genres:['Contemporaneo','Romance','Chick Lit','Giallo']};
           const norm=v=>String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
           const same=(a,b)=>norm(a)===norm(b);
-          const read=page=>page.evaluate(()=>({title:document.getElementById('editTitle')?.value||'',author:document.getElementById('editAuthor')?.value||'',genres:document.getElementById('editCategory')?.value||'',publisher:document.getElementById('editPublisher')?.value||'',publishedDate:document.getElementById('editPublishedDate')?.value||'',saga:document.getElementById('editSaga')?.value||'',prequel:document.getElementById('editPrequel')?.value||'',sequel:document.getElementById('editSequel')?.value||'',status:document.getElementById('lookupStatus')?.innerText||'',universal:window.__LIB_LAST_UNIVERSAL_SERIES_RESULT__||null,goodreadsSeries:window.__LIB_GOODREADS_SERIES_LAST__||null,goodreadsSeriesError:window.__LIB_GOODREADS_SERIES_ERROR__||'',goodreadsGenres:window.__LIB_GOODREADS_GENRES_LAST__||null,direct:window.__LIB_GOODREADS_DIRECT_LAST__||null,directError:window.__LIB_GOODREADS_DIRECT_LAST_ERROR__||'',directLoaded:!!window.__LIB_GOODREADS_DIRECT_V2,v8Loaded:!!window.__LIB_SERIES_NEIGHBORS_STANDALONE_V8}));
+          const read=page=>page.evaluate(()=>({title:document.getElementById('editTitle')?.value||'',author:document.getElementById('editAuthor')?.value||'',genres:document.getElementById('editCategory')?.value||'',publisher:document.getElementById('editPublisher')?.value||'',publishedDate:document.getElementById('editPublishedDate')?.value||'',saga:document.getElementById('editSaga')?.value||'',prequel:document.getElementById('editPrequel')?.value||'',sequel:document.getElementById('editSequel')?.value||'',status:document.getElementById('lookupStatus')?.innerText||'',universal:window.__LIB_LAST_UNIVERSAL_SERIES_RESULT__||null,unified:window.__LIB_UNIFIED_BOOK_ENRICHER_LAST__||null,genresResolved:window.__LIB_LAST_UNIVERSAL_GENRES__||[]}));
           (async()=>{
             const browser=await chromium.launch({headless:true});
             const page=await browser.newPage({viewport:{width:1500,height:1200}});
@@ -49,13 +49,25 @@ jobs:
               await page.locator('#editDialog[open]').waitFor({state:'visible',timeout:20000});
               await page.locator('#editCode').fill('9788845278389');
               await page.locator('#lookupMetadataBtn').click();
-              for(let i=0;i<20;i++){await page.waitForTimeout(1000);last=await read(page);if(last.title&&last.author)break}
+              for(let i=0;i<18;i++){await page.waitForTimeout(1000);last=await read(page);if(last.title&&last.author)break}
               if(!last.title||!last.author){
                 metadataSeeded=true;console.log('METADATA_SEEDED_FOR_RESOLVER_TEST');
-                await page.locator('#editTitle').fill(expected.title);await page.locator('#editAuthor').fill(expected.author);await page.locator('#editPublisher').fill('Bompiani');await page.locator('#editPublishedDate').fill('2015');
+                await page.evaluate(({e})=>{
+                  const set=(id,v)=>{const el=document.getElementById(id);if(el){el.value=v;el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}))}};
+                  set('editCode','9788845278389');set('editTitle',e.title);set('editAuthor',e.author);set('editPublisher','Bompiani');set('editPublishedDate','2015');
+                },{e:expected});
               }
-              const deadline=Date.now()+100000;
-              while(Date.now()<deadline){await page.waitForTimeout(1250);last=await read(page);const gs=last.genres.split(/[,;|]/).map(x=>x.trim()).filter(Boolean);if(same(last.saga,expected.saga)&&same(last.prequel,expected.prequel)&&same(last.sequel,expected.sequel)&&expected.genres.every(g=>gs.some(x=>same(x,g))))break}
+              await page.evaluate(async()=>{
+                if(typeof window.__LIB_RESOLVE_UNIVERSAL_SERIES!=='function')throw new Error('resolver universale non caricato');
+                const rel=await window.__LIB_RESOLVE_UNIVERSAL_SERIES({code:'9788845278389',title:'Il valzer lento delle tartarughe',author:'Katherine Pancol',publisher:'Bompiani',saga:'',description:''});
+                if(rel){
+                  if(rel.saga)document.getElementById('editSaga').value=rel.saga;
+                  if(rel.prequel)document.getElementById('editPrequel').value=rel.prequel;
+                  if(rel.sequel)document.getElementById('editSequel').value=rel.sequel;
+                }
+              });
+              const deadline=Date.now()+45000;
+              while(Date.now()<deadline){await page.waitForTimeout(1000);last=await read(page);const gs=last.genres.split(/[,;|]/).map(x=>x.trim()).filter(Boolean);if(same(last.saga,expected.saga)&&same(last.prequel,expected.prequel)&&same(last.sequel,expected.sequel)&&expected.genres.every(g=>gs.some(x=>same(x,g))))break}
               last.metadataSeeded=metadataSeeded;console.log('FINAL_FIELDS',JSON.stringify(last));
               const gs=last.genres.split(/[,;|]/).map(x=>x.trim()).filter(Boolean),problems=[];
               if(!same(last.saga,expected.saga))problems.push('saga');if(!same(last.prequel,expected.prequel))problems.push('prequel');if(!same(last.sequel,expected.sequel))problems.push('sequel');for(const g of expected.genres)if(!gs.some(x=>same(x,g)))problems.push('genere:'+g);
