@@ -1,24 +1,17 @@
+### WIKIDATA SEARCH
+STATUS 200 LEN 560
+{"id": "Q110538534", "label": "La valse lente des tortues", "description": "novel by Katherine Pancol", "aliases": null}
 
-### jina_unilibro STATUS 200 LEN 4111
-narrativa rosa FOUND False EXCERPT 
-classificazione FOUND True EXCERPT 8387 **Titolo** Il valzer lento delle tartarughe **Autore** **Editore** **Data Pubblicazione** 2015 **Collana** **Pagine** 700 **Genere** **Classificazione** **Punti Accumulabili** Consegna GRATIS con Corriere in ITALIA per ordini da 49,00 € € 14.00 * * * ## Altri libri con autore: Pancol Katherine [![Image 2: Muchachas. Vol. 2 libro](https://cdn.unilibro.it/cover/libro/9788845277009g.jpg)](https://www.unilibro.it/libro/pancol-katherine/muchachas-vol-2/9788845277009) -5% [![Image 3: Muchachas. Vol. 3 libro](https://cdn.unilibro.it/cover/libro/9788845277016g.jpg)](https://www.unilibro.it/libro/pancol-katherine/muchachas-vol-3/9788845277016) -55% [![Image 4: Lentamente fra le tue braccia libro](https://cdn.unilibro.it/cover/libro/97
-genere FOUND True EXCERPT 10** 8845278387 **Titolo** Il valzer lento delle tartarughe **Autore** **Editore** **Data Pubblicazione** 2015 **Collana** **Pagine** 700 **Genere** **Classificazione** **Punti Accumulabili** Consegna GRATIS con Corriere in ITALIA per ordini da 49,00 € € 14.00 * * * ## Altri libri con autore: Pancol Katherine [![Image 2: Muchachas. Vol. 2 libro](https://cdn.unilibro.it/cover/libro/9788845277009g.jpg)](https://www.unilibro.it/libro/pancol-katherine/muchachas-vol-2/9788845277009) -5% [![Image 3: Muchachas. Vol. 3 libro](https://cdn.unilibro.it/cover/libro/9788845277016g.jpg)](https://www.unilibro.it/libro/pancol-katherine/muchachas-vol-3/9788845277016) -55% [![Image 4: Lentamente fra le tue braccia libro](https://cdn.unilibro.it/cov
-contemporanea FOUND False EXCERPT 
+### WIKIDATA ENTITIES STATUS 200 LEN 2568
+ENTITY Q110538534
+LABELS {"fr": {"language": "fr", "value": "La valse lente des tortues"}}
+ALIASES {}
 
-### jina_bing STATUS 200 LEN 4901
-narrativa rosa FOUND False EXCERPT 
-classificazione FOUND True EXCERPT Title: "9788845278389" classificazione genere - Bing URL Source: https://www.bing.com/search?setlang=it-IT&q=%229788845278389%22%20classificazione%20genere Markdown Content: Circa 4.090 risultati 1. ## [7 Bio Examples and Templates: How to **Write About Yourself**](https://www.bing.com/ck/a?!&&p=4b17664b533a26e1b8a21eb6a788081f5622d247ef3287cda3a03b9983ad7378JmltdHM9MTc4NzA5NzYwMA&ptn=3&ver=2&hsh=4&fclid=0b4beef1-a7ca-6492-1fb4-f94ba6e26538&u=a1aHR0cHM6Ly9zdGF0dXMubmV0L2FydGljbGVzLzctYmlvLWV4YW1wbGVzLWFuZC10ZW1wbGF0ZXMtaG93LXRvLXdyaXRlLWFib3V0LXlvdXJzZWxmLw&ntb=1) This article will give you helpful tips and examples
-genere FOUND True EXCERPT Title: "9788845278389" classificazione genere - Bing URL Source: https://www.bing.com/search?setlang=it-IT&q=%229788845278389%22%20classificazione%20genere Markdown Content: Circa 4.090 risultati 1. ## [7 Bio Examples and Templates: How to **Write About Yourself**](https://www.bing.com/ck/a?!&&p=4b17664b533a26e1b8a21eb6a788081f5622d247ef3287cda3a03b9983ad7378JmltdHM9MTc4NzA5NzYwMA&ptn=3&ver=2&hsh=4&fclid=0b4beef1-a7ca-6492-1fb4-f94ba6e26538&u=a1aHR0cHM6Ly9zdGF0dXMubmV0L2FydGljbGVzLzctYmlvLWV4YW1wbGVzLWFuZC10ZW1wbGF0ZXMtaG93LXRvLXdyaXRlLWFib3V0LXlvdXJzZWxmLw&ntb=1) This article will give you helpful tips and examples for writing abo
-contemporanea FOUND False EXCERPT 
+### OPENLIBRARY ORIGINAL SEARCH
+STATUS 200 LEN 453
+{"author_name": ["Katherine Pancol"], "first_publish_year": 2008, "isbn": ["9782226182319", "9782356412683", "9782253129400", "2253129402", "2226182314", "2356412689"], "key": "/works/OL850897W", "title": "La valse lente des tortues", "subject": ["Relations entre hommes et femmes", "Romans, nouvelles", "Amitiés"]}
 
-### jina_google STATUS 200 LEN 879
-narrativa rosa FOUND False EXCERPT 
-classificazione FOUND True EXCERPT Title: https://www.google.com/search?hl=it&num=10&q=%229788845278389%22%20classificazione%20genere&sei=zpiFaofMH_Cv0PEPyvLm-Ac URL Source: https://www.google.com/search?hl=it&num=10&q=%229788845278389%22%20classificazione%20genere Warning: This page maybe requiring CAPTCHA, please make sure you are authorized to access this page. Markdown Content: **Informazioni su questa pagina** I nostri sistemi hanno rilevato un traffico insolito proveniente dalla rete del tuo computer. Questa pagina verifica se sei davvero tu che stai inviando le richieste e non un robot. [A che cosa è dovuto?](https://www.google.com/search?hl=it&num=10&q=%229788845278389%22%20classificazione%20
-genere FOUND True EXCERPT Title: https://www.google.com/search?hl=it&num=10&q=%229788845278389%22%20classificazione%20genere&sei=zpiFaofMH_Cv0PEPyvLm-Ac URL Source: https://www.google.com/search?hl=it&num=10&q=%229788845278389%22%20classificazione%20genere Warning: This page maybe requiring CAPTCHA, please make sure you are authorized to access this page. Markdown Content: **Informazioni su questa pagina** I nostri sistemi hanno rilevato un traffico insolito proveniente dalla rete del tuo computer. Questa pagina verifica se sei davvero tu che stai inviando le richieste e non un robot. [A che cosa è dovuto?](https://www.google.com/search?hl=it&num=10&q=%229788845278389%22%20classificazione%20genere#) Indirizzo
-contemporanea FOUND False EXCERPT 
-
-### jina_ddg STATUS 200 LEN 4205
-narrativa rosa FOUND False EXCERPT 
-classificazione FOUND True EXCERPT Title: "9788845278389" classificazione genere at DuckDuckGo URL Source: https://html.duckduckgo.com/html/?q=%229788845278389%22%20classificazione%20genere Markdown Content: [](https://html.duckduckgo.com/html/?q=%229788845278389%22%20classificazione%20genere) [](https://html.duckduckgo.com/html/ "DuckDuckGo") ## [Il valzer lento delle tartarughe - Pancol, Katherine: 9788845278389 ...](https://duckduckgo.com/l/?uddg=https%3A%2F%2Fwww.abebooks.com%2F9788845278389%2Fvalzer%2Dlento%2Dtartarughe%2DPancol%2DKatherine%2D8845278387%2Fplp&rut=80f09ea0949cb7d673300e09e76967351eecd686aea10c94695ca64bcfbc95c9) [![Image 1](https
-genere FOUND True EXCERPT Title: "9788845278389" classificazione genere at DuckDuckGo URL Source: https://html.duckduckgo.com/html/?q=%229788845278389%22%20classificazione%20genere Markdown Content: [](https://html.duckduckgo.com/html/?q=%229788845278389%22%20classificazione%20genere) [](https://html.duckduckgo.com/html/ "DuckDuckGo") ## [Il valzer lento delle tartarughe - Pancol, Katherine: 9788845278389 ...](https://duckduckgo.com/l/?uddg=https%3A%2F%2Fwww.abebooks.com%2F9788845278389%2Fvalzer%2Dlento%2Dtartarughe%2DPancol%2DKatherine%2D8845278387%2Fplp&rut=80f09ea0949cb7d673300e09e76967351eecd686aea10c94695ca64bcfbc95c9) [![Image 1](https://external-cont
-contemporanea FOUND False EXCERPT 
+EDITIONS /works/OL850897W STATUS 200 COUNT 3
+{"title": "La valse lente des tortues", "subtitle": "roman", "languages": [{"key": "/languages/fre"}], "publish_date": "2009", "isbn_13": ["9782253129400"]}
+{"title": "La valse lente des tortues", "subtitle": "roman", "languages": [{"key": "/languages/fre"}], "publish_date": "2008", "isbn_13": ["9782226182319"]}
+{"title": "La valse lente des tortues", "subtitle": null, "languages": null, "publish_date": "2011", "isbn_13": ["9782356412683"]}
