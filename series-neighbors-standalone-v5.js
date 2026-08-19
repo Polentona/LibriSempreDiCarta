@@ -1,6 +1,6 @@
 (()=>{
 const root=typeof window!=='undefined'?window:globalThis;
-if(root.__LIB_SERIES_NEIGHBORS_STANDALONE_V26)return;root.__LIB_SERIES_NEIGHBORS_STANDALONE_V26=true;
+if(root.__LIB_SERIES_NEIGHBORS_STANDALONE_V27)return;root.__LIB_SERIES_NEIGHBORS_STANDALONE_V27=true;
 const clean=v=>String(v??'').replace(/\s+/g,' ').trim();
 const norm=v=>clean(v).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[’‘]/g,"'").replace(/[^a-z0-9']+/g,' ').trim();
 function safeSaga(v,title=''){let x=clean(v).replace(/^["“”«»']+|["“”«»']+$/g,'');const n=norm(x);if(!x||x.length>100||n===norm(title)||/(?:18|19|20)\d{2}|https?:|www\.|\.{2,}|…/.test(x)||/\b(?:iniziat[ao]|seguit[oa]|precedut[oa]|pubblicat[ao]|romanzo|libro|volume|capitolo|autore|editore|isbn|ean|film|cinema)\b/i.test(n))return'';return x.replace(/^(?:la\s+|the\s+)?(?:serie|series|saga|trilogia|trilogy)\s+(?:di\s+|of\s+)?/i,'').trim()}
@@ -12,7 +12,7 @@ loadOnce('libIsbnSbnRescueV3','isbn-sbn-rescue-v1.js?v=20260819-3');
 loadOnce('libIsbnDirectCatalogV2','isbn-direct-catalog-v1.js?v=20260819-2');
 loadOnce('libWikiSequenceFixV3','series-wikipedia-sequence-fix-v1.js?v=20260819-3');
 loadOnce('libGenresMultiV6','genres-multi-v1.js?v=20260819-6');
-loadOnce('libGenreStoryGraphGoodreadsV1','storygraph-goodreads-genres-v1.js?v=20260819-1');
+loadOnce('libGenreStoryGraphGoodreadsV2','storygraph-goodreads-genres-v2.js?v=20260819-2');
 root.__LIB_GENRE_SOURCE_POLICY='storygraph-then-goodreads';
-root.__LIB_SERIES_NEIGHBORS_V26_TEST__={safeSaga,safeBook};
+root.__LIB_SERIES_NEIGHBORS_V27_TEST__={safeSaga,safeBook};
 })();
