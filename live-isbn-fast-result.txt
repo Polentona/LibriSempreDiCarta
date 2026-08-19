@@ -1,17 +1,10 @@
 outcome=failure
-source_commit=d247f81a61bba38cd858b2ac5f8af83abf436112
-mode=sperling-official-v5
+source_commit=20cdc01f1748b33e429587fdf78faf0376120435
+mode=sperling-resolver-isolated-v5
 isbn=9788868363710
 ---
-HTTP 429 https://www.googleapis.com/books/v1/volumes?q=isbn%3A9788868363710&maxResults=20&projection=full&printType=all&langRestrict=it
-HTTP 403 https://corsproxy.io/?url=https%3A%2F%2Fwww.bompiani.it%2Fimg%2Fbompiani%2Flogo_square.png
-HTTP 408 https://api.allorigins.win/raw?url=https%3A%2F%2Fwww.bompiani.it%2Fcatalogo
-HTTP 413 https://corsproxy.io/?url=https%3A%2F%2Fwww.bompiani.it%2Fcatalogo
-HTTP 429 https://www.googleapis.com/books/v1/volumes?q=inauthor%3A%22Stephen%20King%22%20intitle%3A%22trilogia%22&langRestrict=it&maxResults=40
-HTTP 429 https://www.googleapis.com/books/v1/volumes?q=inauthor%3A%22Stephen%20King%22%20intitle%3A%22saga%22&langRestrict=it&maxResults=40
-HTTP 429 https://www.googleapis.com/books/v1/volumes?q=inauthor%3A%22Stephen%20King%22%20intitle%3A%22serie%22&langRestrict=it&maxResults=40
-HTTP 429 https://www.googleapis.com/books/v1/volumes?q=%22I%20lupi%20del%20Calla.%20La%20torre%20nera%20(Vol.%205)%22%20inauthor%3A%22Stephen%20King%22&langRestrict=it&maxResults=40
-HTTP 429 https://www.googleapis.com/books/v1/volumes?q=inauthor%3A%22Stephen%20King%22&langRestrict=it&maxResults=40
-FINAL {"code":"9788868363710","title":"","author":"","publisher":"","publishedDate":"","saga":"","plot":"…","status":"","loaderV33":true,"plotV5":true,"plotPolicy":"publisher-first-sperling-direct-then-clean-fallbacks-resilient","officialLength":0,"officialPreview":"…"}
-SPERLING_PLOT_FAIL Error: title, author, publisher, official-plot, form-plot
+HTTP 429 https://www.googleapis.com/books/v1/volumes?q=isbn%3A9788868363710&maxResults=20&projection=full&printType=all
+DEBUG {"slugs":["la-torre-nera-i-lupi-del-calla-stephen-king","i-lupi-del-calla-la-torre-nera-stephen-king","i-lupi-del-calla-stephen-king"],"target":"https://www.sperling.it/libri/la-torre-nera-i-lupi-del-calla-stephen-king","probe":[{"url":"https://www.sperling.it/libri/la-torre-nera-i-lupi-del-calla-stephen-king","error":"TypeError: Failed to fetch"},{"url":"https://r.jina.ai/https://www.sperling.it/libri/la-torre-nera-i-lupi-del-calla-stephen-king","status":200,"length":3945,"hasTitle":true,"hasAuthor":true,"sample":"Title: La Torre Nera - I lupi del Calla - Sperling & Kupfer Editore\n\nURL Source: https://www.sperling.it/libri/la-torre-nera-i-lupi-del-calla-stephen-king\n\nMarkdown Content:\nNarrativa\n\nPagine 704\n\nAnno di uscita 2017\n\nPrezzo€ 15,00\n\nEdizione\n\nTascabile\n\n[![Image 1: Mondadori Store](https://www.sperling.it/content/themes/sperling-2022/images/stores/mondadori.png?x65311)](https://www.mondadoristore.it/search/?tpr=40&g=978886836371 \"Vai su Mondadori Store per acquistare questo libro\")\n\n[![Image 2: "},{"url":"https://r.jina.ai/http://www.sperling.it/libri/la-torre-nera-i-lupi-del-calla-stephen-king","status":200,"length":3944,"hasTitle":true,"hasAuthor":true,"sample":"Title: La Torre Nera - I lupi del Calla - Sperling & Kupfer Editore\n\nURL Source: http://www.sperling.it/libri/la-torre-nera-i-lupi-del-calla-stephen-king\n\nMarkdown Content:\nNarrativa\n\nPagine 704\n\nAnno di uscita 2017\n\nPrezzo€ 15,00\n\nEdizione\n\nTascabile\n\n[![Image 1: Mondadori Store](https://www.sperling.it/content/themes/sperling-2022/images/stores/mondadori.png?x65311)](https://www.mondadoristore.it/search/?tpr=40&g=978886836371 \"Vai su Mondadori Store per acquistare questo libro\")\n\n[![Image 2: A"}],"official":"","policy":"publisher-first-sperling-direct-then-clean-fallbacks-resilient","loaderV33":true,"plotV5":true,"officialPreview":""}
+FORM {"plotLength":0,"plotPreview":"","status":""}
+SPERLING_PLOT_FAIL Error: official-plot, form-plot
     at /tmp/isbn-fast/test.js:52:23
