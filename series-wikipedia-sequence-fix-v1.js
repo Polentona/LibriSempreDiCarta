@@ -1,5 +1,5 @@
 (()=>{
-if(window.__LIB_WIKI_SEQUENCE_FIX_V1)return;window.__LIB_WIKI_SEQUENCE_FIX_V1=true;
+if(window.__LIB_WIKI_SEQUENCE_FIX_V2)return;window.__LIB_WIKI_SEQUENCE_FIX_V2=true;
 const clean=v=>String(v??'').replace(/\s+/g,' ').trim();
 const norm=v=>clean(v).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[’‘]/g,"'").replace(/[^a-z0-9]+/g,' ').trim();
 function same(a,b){const x=norm(a),y=norm(b);return !!x&&!!y&&(x===y||x.startsWith(y+' ')||y.startsWith(x+' '))}
@@ -7,10 +7,13 @@ function stripWiki(v){return String(v||'').replace(/<ref\b[^>]*>[\s\S]*?<\/ref>/
 function book(v){return clean(stripWiki(v)).replace(/^[-*#]+\s*/,'').replace(/\s*\((?:18|19|20)\d{2}[^)]*\)\s*$/,'').replace(/[.,;:]$/,'').trim()}
 async function wikiText(author){const base='https://it.wikipedia.org/w/api.php';const get=async u=>{try{const r=await fetch(u,{headers:{Accept:'application/json'}});return r.ok?await r.json():null}catch(e){return null}};let page=clean(author),q=new URLSearchParams({action:'parse',page,prop:'wikitext',format:'json',origin:'*'}),d=await get(base+'?'+q),wt=d?.parse?.wikitext?.['*']||'';if(!wt){q=new URLSearchParams({action:'query',list:'search',srsearch:author,srnamespace:'0',srlimit:'4',format:'json',origin:'*'});d=await get(base+'?'+q);page=d?.query?.search?.[0]?.title||'';if(page){q=new URLSearchParams({action:'parse',page,prop:'wikitext',format:'json',origin:'*'});d=await get(base+'?'+q);wt=d?.parse?.wikitext?.['*']||''}}return{page,wt}}
 function sequence(wt,title){const raw=stripWiki(wt).replace(/\r/g,''),flat=raw.replace(/\s+/g,' '),items=[];let m;
-  const firstTwo=flat.match(/(?:trilogia|serie|saga|ciclo)\s+(?:iniziata|cominciata)\s+con\s+(.{2,190}?)\s*\((?:18|19|20)\d{2}\)\s*,\s+(?:seguit[oa]\s+da|proseguita\s+con)\s+(.{2,190}?)\s*\((?:18|19|20)\d{2}\)/i);
-  if(firstTwo)items.push(book(firstTwo[1]),book(firstTwo[2]));
+  const firstTwoPatterns=[
+    /(?:trilogia|serie|saga|ciclo)\s+(?:iniziata|cominciata)\s+con\s+(.{2,190}?)\s*\((?:18|19|20)\d{2}\)\s*,\s+(?:seguit[oa]\s+da|proseguita\s+con)\s+(.{2,190}?)\s*\((?:18|19|20)\d{2}\)/i,
+    /(?:trilogia|serie|saga|ciclo)[^.;]{0,80}?\bcon\s+(.{2,190}?)\s*\((?:18|19|20)\d{2}\)[^.;]{0,80}?(?:seguit[oa]\s+da|proseguita\s+con)\s+(.{2,190}?)\s*\((?:18|19|20)\d{2}\)/i
+  ];
+  for(const re of firstTwoPatterns){m=flat.match(re);if(m){items.push(book(m[1]),book(m[2]));break}}
   const lastPatterns=[
-    /(?:l['’]\s*)?ultimo\s+(?:libro|romanzo|volume)\s+della\s+(?:saga|trilogia|serie)\s+(?:è|e|fu)\s+(.{2,190}?)(?:\s*\((?:18|19|20)\d{2}\))?(?=\s*(?:\.|\n|$))/i,
+    /(?:l['’]\s*)?ultimo\s+(?:libro|romanzo|volume)\s+della\s+(?:saga|trilogia|serie)\s+(?:è|e|fu)\s+(.{2,190}?)(?:\s*\((?:18|19|20)\d{2}\))?(?=\s*(?:\.|$))/i,
     /(?:ultimo|terzo)\s+(?:libro|romanzo|volume)[^.]{0,120}?(?:saga|trilogia|serie)[^.]{0,80}?(?:è|e|fu)\s+(.{2,190}?)(?:\s*\((?:18|19|20)\d{2}\))?(?=\s*(?:\.|$))/i
   ];
   for(const re of lastPatterns){m=flat.match(re);if(m){items.push(book(m[1]));break}}
@@ -18,8 +21,7 @@ function sequence(wt,title){const raw=stripWiki(wt).replace(/\r/g,''),flat=raw.r
   let saga='';const sm=flat.match(/(?:la\s+)?saga\s+di\s+([A-ZÀ-ÖØ-Ý][A-Za-zÀ-ÿ'’ -]{1,70}?)(?=\s+e\s+(?:la|il|i|le|gli|l['’])\b|[,.;])/i);if(sm)saga=clean(sm[1]);
   return{saga,prequel:idx>0?unique[idx-1]:'',sequel:idx<unique.length-1?unique[idx+1]:'',position:idx+1,total:unique.length,initial:idx===0,terminal:idx===unique.length-1,authoritative:true,checked:true,source:'Wikipedia autore',items:unique}
 }
-const cache=new Map();async function wikiRelation(input={}){const key=norm(input.author)+'|'+norm(input.title);if(cache.has(key))return cache.get(key);const p=(async()=>{if(!clean(input.author)||!clean(input.title))return null;const {page,wt}=await wikiText(input.author);const rel=wt?sequence(wt,input.title):null;if(rel){rel.source='https://it.wikipedia.org/wiki/'+encodeURIComponent(String(page||input.author).replace(/ /g,'_'));window.__LIB_WIKI_SEQUENCE_FIX_LAST__={input,page,rel}}return rel})();cache.set(key,p);return p}
-function install(){const cur=window.__LIB_RESOLVE_UNIVERSAL_SERIES;if(typeof cur!=='function'||cur.__wikiSequenceFixV1)return false;const base=cur;const wrapped=async input=>{const b=await Promise.resolve(base(input||{})).catch(()=>null),w=await wikiRelation(input||{}).catch(()=>null);if(!w)return b;const out={...(b||{}),saga:b?.saga||w.saga||'',prequel:b?.prequel||w.prequel||'',sequel:b?.sequel||w.sequel||'',position:b?.position||w.position,total:Math.max(Number(b?.total)||0,Number(w.total)||0),initial:w.initial,terminal:w.terminal,checked:true,source:b?.source||w.source};out.authoritative=!!out.saga&&((out.initial&&!!out.sequel)||(out.terminal&&!!out.prequel)||(!out.initial&&!out.terminal&&!!out.prequel&&!!out.sequel));window.__LIB_LAST_UNIVERSAL_SERIES_RESULT__=out;return out};wrapped.__wikiSequenceFixV1=true;window.__LIB_RESOLVE_UNIVERSAL_SERIES=wrapped;return true}
-let tries=0;const t=setInterval(()=>{tries++;if(install()||tries>=100)clearInterval(t)},100);install();
-window.__LIB_WIKI_SEQUENCE_FIX_TEST__={sequence,wikiRelation};
+const cache=new Map();async function wikiRelation(input={}){const key=norm(input.author)+'|'+norm(input.title);if(cache.has(key))return cache.get(key);const p=(async()=>{if(!clean(input.author)||!clean(input.title))return null;const {page,wt}=await wikiText(input.author);const rel=wt?sequence(wt,input.title):null;window.__LIB_WIKI_SEQUENCE_FIX_LAST__={input,page,rel};if(rel)rel.source='https://it.wikipedia.org/wiki/'+encodeURIComponent(String(page||input.author).replace(/ /g,'_'));return rel})();cache.set(key,p);return p}
+function install(){const cur=window.__LIB_RESOLVE_UNIVERSAL_SERIES;if(typeof cur!=='function'||cur.__wikiSequenceFixV2)return false;const base=cur;const wrapped=async input=>{const b=await Promise.resolve(base(input||{})).catch(()=>null),w=await wikiRelation(input||{}).catch(()=>null);if(!w)return b;const out={...(b||{}),saga:b?.saga||w.saga||'',prequel:b?.prequel||w.prequel||'',sequel:b?.sequel||w.sequel||'',position:w.position||b?.position||0,total:Math.max(Number(b?.total)||0,Number(w.total)||0),initial:w.initial,terminal:w.terminal,checked:true,source:b?.source||w.source};out.authoritative=!!out.saga&&((out.initial&&!!out.sequel)||(out.terminal&&!!out.prequel)||(!out.initial&&!out.terminal&&!!out.prequel&&!!out.sequel));window.__LIB_LAST_UNIVERSAL_SERIES_RESULT__=out;return out};wrapped.__wikiSequenceFixV2=true;window.__LIB_RESOLVE_UNIVERSAL_SERIES=wrapped;return true}
+let tries=0;const t=setInterval(()=>{tries++;install();if(tries>=720)clearInterval(t)},250);install();window.__LIB_WIKI_SEQUENCE_FIX_TEST__={sequence,wikiRelation};
 })();
