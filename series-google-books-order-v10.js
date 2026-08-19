@@ -95,12 +95,16 @@ let tries=0;const orderTimer=setInterval(()=>{tries++;if(installHomeOrder()||tri
 setTimeout(installHomeOrder,0);
 })();
 
-/* MULTI_GENRES_LOADER_V1 */
+/* RESOLVER_AND_GENRES_CACHE_BUST_V2 */
 (()=>{
-  if(window.__LIB_MULTI_GENRES_LOADER_V1)return;
-  window.__LIB_MULTI_GENRES_LOADER_V1=true;
-  const s=document.createElement('script');
-  s.src='genres-multi-v1.js?v=20260819-1';
-  s.async=false;
-  document.head.appendChild(s);
+  if(window.__LIB_RESOLVER_AND_GENRES_CACHE_BUST_V2)return;
+  window.__LIB_RESOLVER_AND_GENRES_CACHE_BUST_V2=true;
+  const u=document.createElement('script');
+  u.src='series-universal-resolver-v1.js?v=20260819-2';
+  u.async=false;
+  document.head.appendChild(u);
+  const g=document.createElement('script');
+  g.src='genres-multi-v1.js?v=20260819-4';
+  g.async=false;
+  document.head.appendChild(g);
 })();
