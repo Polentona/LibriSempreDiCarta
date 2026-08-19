@@ -32,16 +32,41 @@ jobs:
         run: |
           cat > test.js <<'JS'
           const {chromium}=require('playwright');
-          const expected={title:'Il valzer lento delle tartarughe',author:'Katherine Pancol',saga:'Joséphine',prequel:'Gli occhi gialli dei coccodrilli',sequel:'Gli scoiattoli di Central Park sono tristi il lunedì',genres:['Narrativa contemporanea','Narrativa rosa/sentimentale']};
+          const expected={
+            title:'Il valzer lento delle tartarughe',
+            author:'Katherine Pancol',
+            publisher:'Bompiani',
+            year:'2015',
+            saga:'Joséphine',
+            prequel:'Gli occhi gialli dei coccodrilli',
+            sequel:'Gli scoiattoli di Central Park sono tristi il lunedì',
+            genres:['Narrativa contemporanea','Narrativa rosa/sentimentale']
+          };
           const norm=v=>String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
           const same=(a,b)=>norm(a)===norm(b);
-          const read=page=>page.evaluate(()=>({title:document.getElementById('editTitle')?.value||'',author:document.getElementById('editAuthor')?.value||'',genres:document.getElementById('editCategory')?.value||'',publisher:document.getElementById('editPublisher')?.value||'',publishedDate:document.getElementById('editPublishedDate')?.value||'',saga:document.getElementById('editSaga')?.value||'',prequel:document.getElementById('editPrequel')?.value||'',sequel:document.getElementById('editSequel')?.value||'',status:document.getElementById('lookupStatus')?.innerText||'',universal:window.__LIB_LAST_UNIVERSAL_SERIES_RESULT__||null,unified:window.__LIB_UNIFIED_BOOK_ENRICHER_LAST__||null,genresResolved:window.__LIB_LAST_UNIVERSAL_GENRES__||[],retailerGenres:window.__LIB_GENRE_RETAILER_LAST__||null,delegate:window.__LIB_GENRE_DELEGATE_LAST__||null}));
+          const read=page=>page.evaluate(()=>({
+            title:document.getElementById('editTitle')?.value||'',
+            author:document.getElementById('editAuthor')?.value||'',
+            genres:document.getElementById('editCategory')?.value||'',
+            publisher:document.getElementById('editPublisher')?.value||'',
+            publishedDate:document.getElementById('editPublishedDate')?.value||'',
+            saga:document.getElementById('editSaga')?.value||'',
+            prequel:document.getElementById('editPrequel')?.value||'',
+            sequel:document.getElementById('editSequel')?.value||'',
+            status:document.getElementById('lookupStatus')?.innerText||'',
+            rescueLoaded:!!window.__LIB_ISBN_METADATA_RESCUE_V1,
+            rescue:window.__LIB_METADATA_RESCUE_LAST__||null,
+            resilient:window.__LIB_RESILIENT_ISBN_LAST__||null,
+            universal:window.__LIB_LAST_UNIVERSAL_SERIES_RESULT__||null,
+            genreDelegate:window.__LIB_GENRE_DELEGATE_LAST__||null,
+            genreRetailer:window.__LIB_GENRE_RETAILER_LAST__||null
+          }));
           (async()=>{
             const browser=await chromium.launch({headless:true});
             const page=await browser.newPage({viewport:{width:1500,height:1200}});
-            const errors=[];page.on('pageerror',e=>errors.push(e.message));
+            const errors=[];
+            page.on('pageerror',e=>errors.push(e.message));
             page.on('response',r=>{if(r.status()>=400)console.log('HTTP_ERROR',r.status(),r.url())});
-            let last={},metadataSeeded=false;
             try{
               await page.goto('https://polentona.github.io/LibriSempreDiCarta/?isbn-live='+Date.now(),{waitUntil:'domcontentloaded',timeout:120000});
               await page.locator('#addBookBtn').waitFor({state:'visible',timeout:30000});
@@ -49,32 +74,31 @@ jobs:
               await page.locator('#editDialog[open]').waitFor({state:'visible',timeout:20000});
               await page.locator('#editCode').fill('9788845278389');
               await page.locator('#lookupMetadataBtn').click();
-              for(let i=0;i<18;i++){await page.waitForTimeout(1000);last=await read(page);if(last.title&&last.author)break}
-              if(!last.title||!last.author){
-                metadataSeeded=true;console.log('METADATA_SEEDED_FOR_RESOLVER_TEST');
-                await page.evaluate(({e})=>{
-                  const set=(id,v)=>{const el=document.getElementById(id);if(el){el.removeAttribute('disabled');el.disabled=false;el.value=v;el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}))}};
-                  set('editCode','9788845278389');set('editTitle',e.title);set('editAuthor',e.author);set('editPublisher','Bompiani');set('editPublishedDate','2015');set('editCategory','Narrativa');
-                },{e:expected});
+
+              let last={};
+              const deadline=Date.now()+90000;
+              while(Date.now()<deadline){
+                await page.waitForTimeout(1000);
+                last=await read(page);
+                const gs=last.genres.split(/[,;|]/).map(x=>x.trim()).filter(Boolean);
+                const complete=same(last.title,expected.title)&&same(last.author,expected.author)&&same(last.publisher,expected.publisher)&&String(last.publishedDate).includes(expected.year)&&same(last.saga,expected.saga)&&same(last.prequel,expected.prequel)&&same(last.sequel,expected.sequel)&&expected.genres.every(g=>gs.some(x=>same(x,g)));
+                if(complete)break;
               }
-              await page.evaluate(async()=>{
-                if(typeof window.__LIB_RESOLVE_UNIVERSAL_SERIES==='function'){
-                  const rel=await window.__LIB_RESOLVE_UNIVERSAL_SERIES({code:'9788845278389',title:'Il valzer lento delle tartarughe',author:'Katherine Pancol',publisher:'Bompiani',saga:'',description:''});
-                  if(rel){if(rel.saga)document.getElementById('editSaga').value=rel.saga;if(rel.prequel)document.getElementById('editPrequel').value=rel.prequel;if(rel.sequel)document.getElementById('editSequel').value=rel.sequel}
-                }
-                if(typeof window.__LIB_LOOKUP_SPECIFIC_GENRES==='function'){
-                  const gs=await window.__LIB_LOOKUP_SPECIFIC_GENRES({code:'9788845278389',title:'Il valzer lento delle tartarughe',author:'Katherine Pancol'});
-                  if(gs?.length){const f=document.getElementById('editCategory');f.value=gs.join(', ');f.dispatchEvent(new Event('change',{bubbles:true}))}
-                }
-              });
-              const deadline=Date.now()+50000;
-              while(Date.now()<deadline){await page.waitForTimeout(1000);last=await read(page);const gs=last.genres.split(/[,;|]/).map(x=>x.trim()).filter(Boolean);if(same(last.saga,expected.saga)&&same(last.prequel,expected.prequel)&&same(last.sequel,expected.sequel)&&expected.genres.every(g=>gs.some(x=>same(x,g))))break}
-              last.metadataSeeded=metadataSeeded;console.log('FINAL_FIELDS',JSON.stringify(last));
+
+              console.log('FINAL_FIELDS',JSON.stringify(last));
               const gs=last.genres.split(/[,;|]/).map(x=>x.trim()).filter(Boolean),problems=[];
-              if(!same(last.saga,expected.saga))problems.push('saga');if(!same(last.prequel,expected.prequel))problems.push('prequel');if(!same(last.sequel,expected.sequel))problems.push('sequel');for(const g of expected.genres)if(!gs.some(x=>same(x,g)))problems.push('genere:'+g);
+              if(!same(last.title,expected.title))problems.push('titolo');
+              if(!same(last.author,expected.author))problems.push('autore');
+              if(!same(last.publisher,expected.publisher))problems.push('editore');
+              if(!String(last.publishedDate).includes(expected.year))problems.push('pubblicazione');
+              if(!same(last.saga,expected.saga))problems.push('saga');
+              if(!same(last.prequel,expected.prequel))problems.push('prequel');
+              if(!same(last.sequel,expected.sequel))problems.push('sequel');
+              for(const g of expected.genres)if(!gs.some(x=>same(x,g)))problems.push('genere:'+g);
+              if(!last.rescueLoaded)problems.push('fallback ISBN non caricato');
               if(errors.length)console.log('PAGE_ERRORS',JSON.stringify(errors));
               if(problems.length)throw new Error('Campi non corretti: '+problems.join(', '));
-              console.log('ISBN_LIVE_OK',JSON.stringify({metadataSeeded,genres:last.genres,saga:last.saga,prequel:last.prequel,sequel:last.sequel}));
+              console.log('ISBN_LIVE_OK',JSON.stringify(last));
             }finally{await browser.close()}
           })().catch(e=>{console.error('ISBN_LIVE_FAIL',e.stack||e.message);process.exit(1)});
           JS
