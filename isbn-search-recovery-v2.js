@@ -35,3 +35,12 @@ window.fetch=async function(input,init){let u;try{u=new URL(typeof input==='stri
 
 window.__LIB_ISBN_SEARCH_RECOVERY_TEST__={quickLookup,verifiedPage,snippetRecord,links};
 })();
+
+(()=>{
+  if(window.__LIB_GOODREADS_GENRES_LOADER_V1)return;
+  window.__LIB_GOODREADS_GENRES_LOADER_V1=true;
+  const s=document.createElement('script');
+  s.src='goodreads-genres-v1.js?v=20260819-1';
+  s.async=false;
+  document.head.appendChild(s);
+})();
