@@ -1,1 +1,1 @@
-probe-20260819-wikidata-openlibrary
+probe-20260819-storygraph-proxies-v2
