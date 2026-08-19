@@ -10,6 +10,7 @@ on:
       - "deploy-*.txt"
       - "*-result.txt"
       - "actions-probe-trigger.txt"
+      - "_fast-test-trigger.txt"
   workflow_dispatch:
 
 permissions:
@@ -41,11 +42,12 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-      - name: Verifica HTML pubblicato
+      - name: Verifica HTML e runtime pubblicati
         id: live
         continue-on-error: true
         run: |
           ok=0
+          runtime=0
           bytes=0
           for i in $(seq 1 18); do
             if curl -fsSL --max-time 20 "https://polentona.github.io/LibriSempreDiCarta/?pages-live=${GITHUB_RUN_ID}-${i}" -o /tmp/pages-live.html; then
@@ -54,14 +56,24 @@ jobs:
                 && grep -q "currentView='home'" /tmp/pages-live.html \
                 && grep -q 'data-author-letter' /tmp/pages-live.html \
                 && grep -q 'class="series-row"' /tmp/pages-live.html \
-                && grep -q 'id="addBookBtn"' /tmp/pages-live.html; then
-                ok=1
-                break
+                && grep -q 'id="addBookBtn"' /tmp/pages-live.html \
+                && grep -q 'series-neighbors-standalone-v5.js?v=20260820-30' /tmp/pages-live.html; then
+                if curl -fsSL --max-time 20 "https://polentona.github.io/LibriSempreDiCarta/series-neighbors-standalone-v5.js?runtime=${GITHUB_RUN_ID}-${i}" -o /tmp/loader-live.js \
+                  && grep -q '__LIB_SERIES_NEIGHBORS_STANDALONE_V33' /tmp/loader-live.js \
+                  && grep -q 'publisher-plot-resilience-v5.js?v=20260820-5' /tmp/loader-live.js \
+                  && curl -fsSL --max-time 20 "https://polentona.github.io/LibriSempreDiCarta/publisher-plot-resilience-v5.js?runtime=${GITHUB_RUN_ID}-${i}" -o /tmp/plot-live.js \
+                  && grep -q '__LIB_PUBLISHER_PLOT_RESILIENCE_V5' /tmp/plot-live.js \
+                  && grep -q 'freshSperling' /tmp/plot-live.js; then
+                  runtime=1
+                  ok=1
+                  break
+                fi
               fi
             fi
             sleep 5
           done
           echo "HTML_OK=$ok" | tee /tmp/pages-result.log
+          echo "RUNTIME_OK=$runtime" | tee -a /tmp/pages-result.log
           echo "HTML_BYTES=$bytes" | tee -a /tmp/pages-result.log
           test "$ok" = 1
       - name: Registra risultato Pages
