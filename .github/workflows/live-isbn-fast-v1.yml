@@ -1,0 +1,66 @@
+name: Test ISBN live rapido
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '_fast-test-trigger.txt'
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Test live
+        id: live
+        continue-on-error: true
+        run: |
+          mkdir -p /tmp/isbn-fast && cd /tmp/isbn-fast
+          npm init -y >/dev/null 2>&1
+          npm install playwright-core@1.55.0 >/dev/null 2>&1
+          cat > test.js <<'JS'
+          const {chromium}=require('playwright-core');
+          const expected={title:'Il valzer lento delle tartarughe',author:'Katherine Pancol',publisher:'Bompiani',year:'2015',saga:'Josephine',prequel:'Gli occhi gialli dei coccodrilli',sequel:'Gli scoiattoli di Central Park sono tristi il lunedì',genres:['Narrativa contemporanea','Narrativa rosa/sentimentale']};
+          const norm=v=>String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
+          const same=(a,b)=>norm(a)===norm(b);
+          const read=page=>page.evaluate(()=>({
+            title:editTitle?.value||'',author:editAuthor?.value||'',publisher:editPublisher?.value||'',publishedDate:editPublishedDate?.value||'',genres:editCategory?.value||'',saga:editSaga?.value||'',prequel:editPrequel?.value||'',sequel:editSequel?.value||'',status:lookupStatus?.innerText||'',
+            v14:!!window.__LIB_SERIES_NEIGHBORS_STANDALONE_V14,wikiV2:!!window.__LIB_WIKI_SEQUENCE_FIX_V2,wiki:window.__LIB_WIKI_SEQUENCE_FIX_LAST__||null,codeTabs:window.__LIB_GENRE_CODETABS_LAST__||null,directGenre:window.__LIB_GENRE_DIRECT_RETAILER_LAST__||null,genreDelegate:window.__LIB_GENRE_DELEGATE_LAST__||null,sbn:window.__LIB_SBN_RESCUE_LAST__||null,universal:window.__LIB_LAST_UNIVERSAL_SERIES_RESULT__||null
+          }));
+          (async()=>{
+            const browser=await chromium.launch({headless:true,executablePath:'/usr/bin/google-chrome',args:['--no-sandbox']});
+            const page=await browser.newPage({viewport:{width:1400,height:1100}});page.on('pageerror',e=>console.log('PAGE_ERROR',e.message));page.on('response',r=>{if(r.status()>=400)console.log('HTTP',r.status(),r.url())});
+            await page.goto('https://polentona.github.io/LibriSempreDiCarta/?fast='+Date.now(),{waitUntil:'domcontentloaded',timeout:90000});
+            await page.locator('#addBookBtn').click();await page.locator('#editDialog[open]').waitFor({timeout:15000});await page.locator('#editCode').fill('9788845278389');await page.locator('#lookupMetadataBtn').click();
+            let last={};const until=Date.now()+75000;while(Date.now()<until){await page.waitForTimeout(1000);last=await read(page);const gs=last.genres.split(/[,;|]/).map(x=>x.trim()).filter(Boolean);if(same(last.title,expected.title)&&same(last.author,expected.author)&&same(last.publisher,expected.publisher)&&String(last.publishedDate).includes(expected.year)&&same(last.saga,expected.saga)&&same(last.prequel,expected.prequel)&&same(last.sequel,expected.sequel)&&expected.genres.every(g=>gs.some(x=>same(x,g))))break}
+            console.log('FINAL',JSON.stringify(last));const gs=last.genres.split(/[,;|]/).map(x=>x.trim()).filter(Boolean),bad=[];for(const k of ['title','author','publisher','saga','prequel','sequel'])if(!same(last[k],expected[k]))bad.push(k);if(!String(last.publishedDate).includes(expected.year))bad.push('year');for(const g of expected.genres)if(!gs.some(x=>same(x,g)))bad.push('genre:'+g);await browser.close();if(bad.length)throw new Error(bad.join(', '));console.log('FAST_ISBN_OK')
+          })().catch(e=>{console.error('FAST_ISBN_FAIL',e.stack||e.message);process.exit(1)});
+          JS
+          node test.js 2>&1 | tee /tmp/isbn-fast.log
+          test ${PIPESTATUS[0]} -eq 0
+      - name: Registra risultato
+        if: always()
+        run: |
+          {
+            echo "outcome=${{ steps.live.outcome }}"
+            echo "source_commit=${GITHUB_SHA}"
+            echo '---'
+            cat /tmp/isbn-fast.log 2>/dev/null || true
+          } > live-isbn-fast-result.txt
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git pull --rebase origin main || true
+          git add live-isbn-fast-result.txt
+          git commit -m 'Registra test ISBN rapido' || exit 0
+          git push
+      - name: Fallisci se test KO
+        if: steps.live.outcome != 'success'
+        run: exit 1
