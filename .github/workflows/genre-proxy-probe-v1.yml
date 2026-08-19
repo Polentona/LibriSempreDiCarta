@@ -1,0 +1,56 @@
+name: Diagnostica fonti generi
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '_genre-proxy-probe-trigger.txt'
+
+permissions:
+  contents: write
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+      - name: Verifica endpoint
+        run: |
+          python - <<'PY' > /tmp/probe.txt
+          import urllib.request, urllib.parse, json, re
+          target='https://www.unilibro.it/libro/pancol-katherine/il-valzer-lento-delle-tartarughe/9788845278389'
+          targets=[
+            ('jina_https','https://r.jina.ai/'+target),
+            ('jina_http_target','https://r.jina.ai/http://www.unilibro.it/libro/pancol-katherine/il-valzer-lento-delle-tartarughe/9788845278389'),
+            ('allorigins_raw','https://api.allorigins.win/raw?url='+urllib.parse.quote(target,safe='')),
+            ('allorigins_get','https://api.allorigins.win/get?url='+urllib.parse.quote(target,safe='')),
+            ('codetabs','https://api.codetabs.com/v1/proxy?quest='+urllib.parse.quote(target,safe='')),
+          ]
+          for name,url in targets:
+            try:
+              req=urllib.request.Request(url,headers={'User-Agent':'Mozilla/5.0','Accept':'text/html,text/plain,application/json,*/*'})
+              with urllib.request.urlopen(req,timeout=15) as r:
+                raw=r.read(1000000).decode('utf-8','replace')
+                if name=='allorigins_get':
+                  try: raw=json.loads(raw).get('contents','')
+                  except: pass
+                text=re.sub(r'\s+',' ',raw)
+                i=text.lower().find('classificazione')
+                excerpt=text[max(0,i-120):i+500] if i>=0 else text[:300]
+                print(name,'STATUS',r.status,'LEN',len(raw),'CLASS',i>=0)
+                print(excerpt[:650])
+            except Exception as e:
+              print(name,'ERROR',repr(e))
+          PY
+          cat /tmp/probe.txt
+      - name: Registra risultato
+        run: |
+          cp /tmp/probe.txt genre-proxy-probe-result.txt
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git pull --rebase origin main || true
+          git add genre-proxy-probe-result.txt
+          git commit -m 'Registra diagnostica fonti generi' || exit 0
+          git push
