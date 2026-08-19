@@ -19,26 +19,30 @@ jobs:
       - name: Verifica endpoint
         run: |
           python - <<'PY' > /tmp/probe.txt
-          import urllib.request, urllib.parse, json, re
+          import urllib.request, urllib.parse, re
           isbn='9788845278389'
-          target='https://www.unilibro.it/libro/pancol-katherine/il-valzer-lento-delle-tartarughe/'+isbn
+          unilibro='https://www.unilibro.it/libro/pancol-katherine/il-valzer-lento-delle-tartarughe/'+isbn
           q='"'+isbn+'" classificazione genere'
+          gq='"La valse lente des tortues" "Katherine Pancol"'
           targets=[
-            ('jina_unilibro','https://r.jina.ai/'+target),
+            ('jina_unilibro','https://r.jina.ai/'+unilibro),
             ('jina_bing','https://r.jina.ai/https://www.bing.com/search?setlang=it-IT&q='+urllib.parse.quote(q,safe='')),
             ('jina_google','https://r.jina.ai/https://www.google.com/search?hl=it&num=10&q='+urllib.parse.quote(q,safe='')),
             ('jina_ddg','https://r.jina.ai/https://html.duckduckgo.com/html/?q='+urllib.parse.quote(q,safe='')),
+            ('jina_gbooks_search','https://r.jina.ai/https://books.google.com/books?q='+urllib.parse.quote(gq,safe='')),
+            ('jina_gbooks_book','https://r.jina.ai/https://books.google.com/books/about/La_valse_lente_des_tortues.html?id=GMIbAQAAIAAJ'),
+            ('jina_goodreads','https://r.jina.ai/https://www.goodreads.com/book/show/11783180-il-valzer-lento-delle-tartarughe'),
           ]
           for name,url in targets:
             try:
               req=urllib.request.Request(url,headers={'User-Agent':'Mozilla/5.0','Accept':'text/html,text/plain,*/*'})
-              with urllib.request.urlopen(req,timeout=15) as r:
-                raw=r.read(1000000).decode('utf-8','replace')
+              with urllib.request.urlopen(req,timeout=20) as r:
+                raw=r.read(1500000).decode('utf-8','replace')
                 text=re.sub(r'\s+',' ',raw)
                 print('\n###',name,'STATUS',r.status,'LEN',len(raw))
-                for needle in ['narrativa rosa','classificazione','genere','contemporanea']:
-                  i=text.lower().find(needle)
-                  print(needle,'FOUND',i>=0,'EXCERPT',text[max(0,i-140):i+600] if i>=0 else '')
+                for needle in ['narrativa rosa','classificazione','contemporanea','romance','subjects','fiction / city life','fiction / women','chick lit','mystery','GMIbAQAAIAAJ']:
+                  i=text.lower().find(needle.lower())
+                  print(needle,'FOUND',i>=0,'EXCERPT',text[max(0,i-180):i+850] if i>=0 else '')
             except Exception as e:
               print('\n###',name,'ERROR',repr(e))
           PY
