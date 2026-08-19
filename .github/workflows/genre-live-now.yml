@@ -1,0 +1,97 @@
+name: Verifica live generi ISBN
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'genre-search-fallback-v1.js'
+      - 'goodreads-genres-v1.js'
+      - 'isbn-direct-catalog-v1.js'
+      - 'series-neighbors-standalone-v5.js'
+      - '.github/workflows/genre-live-now.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  genre-live:
+    if: ${{ !startsWith(github.event.head_commit.message, 'Registra esito test generi live') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Attendi pubblicazione Pages
+        run: sleep 45
+      - name: Installa Playwright
+        run: |
+          mkdir -p /tmp/genre-live && cd /tmp/genre-live
+          npm init -y >/dev/null 2>&1
+          npm install playwright@1.55.0 >/dev/null 2>&1
+          npx playwright install --with-deps chromium >/dev/null
+      - name: Prova genere sul sito pubblico
+        id: test
+        continue-on-error: true
+        working-directory: /tmp/genre-live
+        run: |
+          cat > test.js <<'JS'
+          const {chromium}=require('playwright');
+          const norm=v=>String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+            const page=await browser.newPage({viewport:{width:1400,height:1100}});
+            page.on('response',r=>{if(r.status()>=400)console.log('HTTP_ERROR',r.status(),r.url())});
+            page.on('pageerror',e=>console.log('PAGE_ERROR',e.message));
+            try{
+              await page.goto('https://polentona.github.io/LibriSempreDiCarta/?genre-live='+Date.now(),{waitUntil:'domcontentloaded',timeout:120000});
+              await page.locator('#addBookBtn').click();
+              await page.locator('#editDialog[open]').waitFor({state:'visible',timeout:20000});
+              await page.locator('#editCode').fill('9788845278389');
+              await page.locator('#lookupMetadataBtn').click();
+              let state={};
+              for(let i=0;i<100;i++){
+                await page.waitForTimeout(1000);
+                state=await page.evaluate(()=>({
+                  title:document.getElementById('editTitle')?.value||'',
+                  author:document.getElementById('editAuthor')?.value||'',
+                  genres:document.getElementById('editCategory')?.value||'',
+                  saga:document.getElementById('editSaga')?.value||'',
+                  prequel:document.getElementById('editPrequel')?.value||'',
+                  sequel:document.getElementById('editSequel')?.value||'',
+                  searchLoaded:!!window.__LIB_GENRE_SEARCH_FALLBACK_V1,
+                  searchLast:window.__LIB_GENRE_SEARCH_LAST__||null,
+                  searchError:window.__LIB_GENRE_SEARCH_ERROR__||'',
+                  direct:window.__LIB_DIRECT_CATALOG_LAST__||null,
+                  directGenres:window.__LIB_DIRECT_CATALOG_GENRES_LAST__||null,
+                  delegate:window.__LIB_GENRE_DELEGATE_LAST__||null
+                }));
+                const gs=state.genres.split(/[,;|]/).map(norm);
+                if(gs.includes(norm('Narrativa contemporanea'))&&gs.includes(norm('Narrativa rosa/sentimentale')))break;
+              }
+              console.log('FINAL_GENRE_STATE',JSON.stringify(state));
+              const gs=state.genres.split(/[,;|]/).map(norm);
+              if(!gs.includes(norm('Narrativa contemporanea'))||!gs.includes(norm('Narrativa rosa/sentimentale')))throw new Error('Generi non compilati: '+state.genres);
+              console.log('GENRE_LIVE_OK',state.genres);
+            }finally{await browser.close()}
+          })().catch(e=>{console.error('GENRE_LIVE_FAIL',e.stack||e.message);process.exit(1)});
+          JS
+          node test.js 2>&1 | tee /tmp/genre-live.log
+          test ${PIPESTATUS[0]} -eq 0
+      - name: Registra esito test generi live
+        if: always()
+        run: |
+          {
+            echo "outcome=${{ steps.test.outcome }}"
+            echo "source_commit=${{ github.sha }}"
+            echo "---"
+            cat /tmp/genre-live.log 2>/dev/null || true
+          } > live-genre-test-result.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add live-genre-test-result.txt
+          git commit -m "Registra esito test generi live" || exit 0
+          git push
+      - name: Fallisci se il test non passa
+        if: steps.test.outcome != 'success'
+        run: exit 1
