@@ -1,1 +1,1 @@
-isbn-live-after-cache-bust-20260819-1300
+genre-v15-cache-trigger-20260819
