@@ -23,7 +23,7 @@ jobs:
           p=Path('index.html')
           s=p.read_text(encoding='utf-8')
           versions={
-            'series-neighbors-standalone-v5.js':'20260819-15',
+            'series-neighbors-standalone-v5.js':'20260819-16',
             'series-universal-resolver-v1.js':'20260819-7',
             'isbn-resilient-fallback-v1.js':'20260819-11'
           }
