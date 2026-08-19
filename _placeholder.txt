@@ -1,1 +1,1 @@
-deploy-goodreads-genres-v10-20260819
+deploy-storygraph-goodreads-genres-v1-20260819
