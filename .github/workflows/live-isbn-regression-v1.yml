@@ -1,0 +1,97 @@
+name: Verifica live compilazione ISBN
+
+on:
+  workflow_run:
+    workflows: ["Deploy GitHub Pages"]
+    types: [completed]
+
+permissions:
+  contents: read
+
+jobs:
+  isbn-live:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Installa Playwright
+        run: |
+          mkdir -p /tmp/isbn-live && cd /tmp/isbn-live
+          npm init -y >/dev/null 2>&1
+          npm install playwright@1.55.0 >/dev/null 2>&1
+          npx playwright install --with-deps chromium >/dev/null
+      - name: Prova ISBN 9788845278389 sul sito pubblico
+        working-directory: /tmp/isbn-live
+        run: |
+          cat > test.js <<'JS'
+          const {chromium}=require('playwright');
+          const expected={
+            title:'Il valzer lento delle tartarughe',
+            author:'Katherine Pancol',
+            saga:'Joséphine',
+            prequel:'Gli occhi gialli dei coccodrilli',
+            sequel:'Gli scoiattoli di Central Park sono tristi il lunedì',
+            genres:['Contemporaneo','Romance','Chick Lit','Giallo']
+          };
+          const norm=v=>String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
+          const same=(a,b)=>norm(a)===norm(b);
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+            const page=await browser.newPage({viewport:{width:1500,height:1200}});
+            const errors=[]; page.on('pageerror',e=>errors.push(e.message));
+            page.on('console',m=>{ if(m.type()==='error') console.log('PAGE_CONSOLE_ERROR',m.text()) });
+            let last={};
+            try{
+              let opened=false;
+              for(let attempt=0;attempt<12&&!opened;attempt++){
+                try{
+                  await page.goto('https://polentona.github.io/LibriSempreDiCarta/?isbn-live='+Date.now(),{waitUntil:'domcontentloaded',timeout:120000});
+                  await page.locator('#addBookBtn').waitFor({state:'visible',timeout:20000}); opened=true;
+                }catch(e){ console.log('WAIT_PAGES',attempt+1,e.message); await page.waitForTimeout(10000) }
+              }
+              if(!opened) throw new Error('GitHub Pages non raggiungibile');
+              await page.locator('#addBookBtn').click();
+              await page.locator('#editDialog[open]').waitFor({state:'visible',timeout:20000});
+              await page.locator('#editCode').fill('9788845278389');
+              await page.locator('#lookupMetadataBtn').click();
+              const deadline=Date.now()+120000;
+              while(Date.now()<deadline){
+                await page.waitForTimeout(1500);
+                last=await page.evaluate(()=>({
+                  title:document.getElementById('editTitle')?.value||'',
+                  author:document.getElementById('editAuthor')?.value||'',
+                  genres:document.getElementById('editCategory')?.value||'',
+                  publisher:document.getElementById('editPublisher')?.value||'',
+                  publishedDate:document.getElementById('editPublishedDate')?.value||'',
+                  saga:document.getElementById('editSaga')?.value||'',
+                  prequel:document.getElementById('editPrequel')?.value||'',
+                  sequel:document.getElementById('editSequel')?.value||'',
+                  status:document.getElementById('lookupStatus')?.innerText||'',
+                  universal:window.__LIB_LAST_UNIVERSAL_SERIES_RESULT__||null,
+                  goodreadsSeries:window.__LIB_GOODREADS_SERIES_LAST__||null,
+                  goodreadsSeriesError:window.__LIB_GOODREADS_SERIES_ERROR__||'',
+                  goodreadsGenres:window.__LIB_GOODREADS_GENRES_LAST__||null,
+                  goodreadsLoaded:!!window.__LIB_GOODREADS_GENRES_V1,
+                  v8Loaded:!!window.__LIB_SERIES_NEIGHBORS_STANDALONE_V8
+                }));
+                const gs=last.genres.split(/[,;|]/).map(x=>x.trim()).filter(Boolean);
+                if(same(last.title,expected.title)&&same(last.author,expected.author)&&same(last.saga,expected.saga)&&same(last.prequel,expected.prequel)&&same(last.sequel,expected.sequel)&&expected.genres.every(g=>gs.some(x=>same(x,g)))) break;
+              }
+              console.log('FINAL_FIELDS',JSON.stringify(last));
+              const gs=last.genres.split(/[,;|]/).map(x=>x.trim()).filter(Boolean);
+              const problems=[];
+              if(!same(last.title,expected.title))problems.push('titolo');
+              if(!same(last.author,expected.author))problems.push('autore');
+              if(!same(last.saga,expected.saga))problems.push('saga');
+              if(!same(last.prequel,expected.prequel))problems.push('prequel');
+              if(!same(last.sequel,expected.sequel))problems.push('sequel');
+              for(const g of expected.genres)if(!gs.some(x=>same(x,g)))problems.push('genere:'+g);
+              if(errors.length)console.log('PAGE_ERRORS',JSON.stringify(errors));
+              if(problems.length)throw new Error('Campi non corretti: '+problems.join(', '));
+              console.log('ISBN_LIVE_OK',JSON.stringify({title:last.title,author:last.author,genres:last.genres,saga:last.saga,prequel:last.prequel,sequel:last.sequel}));
+            }finally{await browser.close()}
+          })().catch(e=>{console.error('ISBN_LIVE_FAIL',e.stack||e.message);process.exit(1)});
+          JS
+          node test.js
