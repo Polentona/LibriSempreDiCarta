@@ -1,0 +1,43 @@
+name: Probe proxy CORS
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "proxy-probe-trigger.txt"
+
+permissions:
+  contents: write
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+      - name: Prova proxy
+        run: |
+          target='https://www.goodreads.com/book/show/11783180-il-valzer-lento-delle-tartarughe'
+          enc=$(python3 -c 'import urllib.parse; print(urllib.parse.quote("https://www.goodreads.com/book/show/11783180-il-valzer-lento-delle-tartarughe",safe=""))')
+          : > /tmp/probe.log
+          for url in \
+            "https://r.jina.ai/$target" \
+            "https://api.allorigins.win/raw?url=$enc" \
+            "https://corsproxy.io/?url=$enc"; do
+            echo "URL=$url" >> /tmp/probe.log
+            code=$(curl -L -sS --max-time 15 -o /tmp/body.txt -w '%{http_code}' "$url" || true)
+            bytes=$(wc -c </tmp/body.txt 2>/dev/null || echo 0)
+            echo "HTTP=$code BYTES=$bytes" >> /tmp/probe.log
+            grep -Eio 'Jos[eé]phine[^<\n]{0,80}#[[:space:]]*2|Chick[[:space:]]+Lit|Contemporary|Mystery' /tmp/body.txt | head -20 >> /tmp/probe.log || true
+            echo '---' >> /tmp/probe.log
+          done
+          cat /tmp/probe.log
+      - name: Registra risultato
+        run: |
+          cp /tmp/probe.log proxy-probe-result.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add proxy-probe-result.txt
+          git commit -m "Registra probe proxy CORS" || exit 0
+          git push
