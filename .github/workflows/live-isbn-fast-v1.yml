@@ -19,11 +19,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Test live resolver trama Sperling
+      - name: Test live trama ufficiale Sperling V6
         id: live
         continue-on-error: true
         run: |
-          node --check publisher-plot-resilience-v5.js
+          node --check publisher-plot-resilience-v6.js
           mkdir -p /tmp/isbn-fast && cd /tmp/isbn-fast
           npm init -y >/dev/null 2>&1
           npm install playwright-core@1.55.0 >/dev/null 2>&1
@@ -41,7 +41,7 @@ jobs:
             const page=await browser.newPage({viewport:{width:1400,height:1100}});
             page.on('pageerror',e=>console.log('PAGE_ERROR',e.message));
             page.on('response',r=>{if(r.status()>=400)console.log('HTTP',r.status(),r.url())});
-            await page.goto('https://polentona.github.io/LibriSempreDiCarta/?fast-sperling-resolver='+Date.now(),{waitUntil:'domcontentloaded',timeout:90000});
+            await page.goto('https://polentona.github.io/LibriSempreDiCarta/?test-sperling-v6='+Date.now(),{waitUntil:'domcontentloaded',timeout:90000});
             await page.locator('#addBookBtn').click();
             await page.locator('#editDialog[open]').waitFor({timeout:15000});
             await page.locator('#editCode').fill(ISBN);
@@ -49,40 +49,50 @@ jobs:
             await page.locator('#editAuthor').fill(AUTHOR);
             await page.locator('#editPublisher').fill(PUBLISHER);
             await page.locator('#editSaga').fill(SAGA);
-            const debug=await page.evaluate(async({ISBN,TITLE,AUTHOR,PUBLISHER,SAGA})=>{
-              const hooks=window.__LIB_PUBLISHER_PLOT_RESILIENCE_V5_TEST__;
-              const slugs=hooks?.sperlingSlugs?.(TITLE,SAGA,AUTHOR)||[];
-              const target='https://www.sperling.it/libri/'+(slugs[0]||'');
-              const probe=[];
-              for(const u of [target,'https://r.jina.ai/'+target,'https://r.jina.ai/'+target.replace(/^https:\/\//,'http://')]){
-                try{
-                  const r=await fetch(u,{cache:'no-store'});const t=await r.text();
-                  const lines=u.includes('r.jina.ai/')?t.split(/\r?\n/).map((x,i)=>({i,len:x.trim().length,s:x.trim().slice(0,180)})).filter(x=>x.len>=30).slice(0,80):[];
-                  probe.push({url:u,status:r.status,length:t.length,hasTitle:t.toLowerCase().includes('lupi del calla'),hasAuthor:t.toLowerCase().includes('stephen king'),lines});
-                }catch(e){probe.push({url:u,error:String(e)})}
-              }
+
+            let formPlot='';
+            const until=Date.now()+35000;
+            while(Date.now()<until){
+              await page.waitForTimeout(1000);
+              formPlot=await page.locator('#editPlot').inputValue();
+              if(formPlot.length>=500)break;
+            }
+            const state=await page.evaluate(async({ISBN,TITLE,AUTHOR,PUBLISHER,SAGA})=>{
               let official='';
               try{official=await window.__LIB_RESOLVE_OFFICIAL_PLOT({code:ISBN,title:TITLE,author:AUTHOR,publisher:PUBLISHER,saga:SAGA})||''}catch(e){official='__ERROR__'+String(e)}
-              return {slugs,target,probe,official,policy:window.__LIB_PLOT_SOURCE_POLICY||'',loaderV33:!!window.__LIB_SERIES_NEIGHBORS_STANDALONE_V33,plotV5:!!window.__LIB_PUBLISHER_PLOT_RESILIENCE_V5};
+              const hooks=window.__LIB_PUBLISHER_PLOT_RESILIENCE_V6_TEST__;
+              return {
+                official,
+                loaderV34:!!window.__LIB_SERIES_NEIGHBORS_STANDALONE_V34,
+                plotV6:!!window.__LIB_PUBLISHER_PLOT_RESILIENCE_V6,
+                policy:window.__LIB_PLOT_SOURCE_POLICY||'',
+                slugs:hooks?.sperlingSlugs?.(TITLE,SAGA,AUTHOR)||[],
+                titleMatch:hooks?.sperlingTitleMatch?.('Title: La Torre Nera - I lupi del Calla - Sperling & Kupfer Editore',TITLE,SAGA)||false
+              }
             },{ISBN,TITLE,AUTHOR,PUBLISHER,SAGA});
-            console.log('DEBUG',JSON.stringify({...debug,officialPreview:String(debug.official||'').slice(0,500)}));
-            await page.waitForTimeout(8000);
-            const formPlot=await page.locator('#editPlot').inputValue();
+            formPlot=await page.locator('#editPlot').inputValue();
             const status=await page.locator('#lookupStatus').innerText();
-            console.log('FORM',JSON.stringify({plotLength:formPlot.length,plotPreview:formPlot.slice(0,500),status}));
+            console.log('FINAL',JSON.stringify({
+              loaderV34:state.loaderV34,plotV6:state.plotV6,policy:state.policy,slugs:state.slugs,titleMatch:state.titleMatch,
+              officialLength:state.official.length,officialPreview:state.official.slice(0,260),
+              formPlotLength:formPlot.length,formPlotPreview:formPlot.slice(0,260),status
+            }));
             const bad=[];
-            if(!debug.loaderV33)bad.push('loader-v33');
-            if(!debug.plotV5)bad.push('plot-v5');
-            if(debug.policy!=='publisher-first-sperling-direct-then-clean-fallbacks-resilient')bad.push('plot-policy');
-            if(!debug.slugs.includes('la-torre-nera-i-lupi-del-calla-stephen-king'))bad.push('sperling-slug');
-            if(String(debug.official||'').startsWith('__ERROR__'))bad.push('official-error');
-            if((debug.official||'').length<120)bad.push('official-plot');
-            if(formPlot.length<120)bad.push('form-plot');
-            if(debug.official&&!same(formPlot,debug.official))bad.push('official-plot-not-prioritized');
+            if(!state.loaderV34)bad.push('loader-v34');
+            if(!state.plotV6)bad.push('plot-v6');
+            if(state.policy!=='publisher-first-sperling-direct-v6-then-clean-fallbacks-resilient')bad.push('plot-policy');
+            if(!state.slugs.includes('la-torre-nera-i-lupi-del-calla-stephen-king'))bad.push('sperling-slug');
+            if(!state.titleMatch)bad.push('title-match');
+            if(String(state.official||'').startsWith('__ERROR__'))bad.push('official-error');
+            if((state.official||'').length<500)bad.push('official-plot');
+            if(formPlot.length<500)bad.push('form-plot');
+            if(state.official&&!same(formPlot,state.official))bad.push('official-plot-not-prioritized');
+            if(!/^rumore di passi sul sentiero del vettore/i.test(formPlot.trim()))bad.push('wrong-sperling-section');
+            if(/uno degli autori piu influenti e amati/i.test(norm(formPlot)))bad.push('author-bio-in-plot');
             await browser.close();
             if(bad.length)throw new Error(bad.join(', '));
-            console.log('SPERLING_PLOT_OK');
-          })().catch(e=>{console.error('SPERLING_PLOT_FAIL',e.stack||e.message);process.exit(1)});
+            console.log('SPERLING_V6_LIVE_OK');
+          })().catch(e=>{console.error('SPERLING_V6_LIVE_FAIL',e.stack||e.message);process.exit(1)});
           JS
           node test.js 2>&1 | tee /tmp/isbn-fast.log
           test ${PIPESTATUS[0]} -eq 0
@@ -92,7 +102,7 @@ jobs:
           {
             echo "outcome=${{ steps.live.outcome }}"
             echo "source_commit=${GITHUB_SHA}"
-            echo "mode=sperling-resolver-structure-v5"
+            echo "mode=sperling-live-v6"
             echo "isbn=9788868363710"
             echo '---'
             cat /tmp/isbn-fast.log 2>/dev/null || true
