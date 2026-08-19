@@ -1,1 +1,1 @@
-run-20260819-runtime-v23-openlibrary
+run-20260819-goodreads-genres-v10
