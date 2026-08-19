@@ -23,6 +23,7 @@ jobs:
         id: live
         continue-on-error: true
         run: |
+          node --check publisher-plot-priority-v2.js
           mkdir -p /tmp/isbn-fast && cd /tmp/isbn-fast
           npm init -y >/dev/null 2>&1
           npm install playwright-core@1.55.0 >/dev/null 2>&1
@@ -32,17 +33,18 @@ jobs:
           const norm=v=>String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
           const same=(a,b)=>norm(a)===norm(b);
           const read=page=>page.evaluate(()=>({
-            title:editTitle?.value||'',author:editAuthor?.value||'',publisher:editPublisher?.value||'',publishedDate:editPublishedDate?.value||'',genres:editCategory?.value||'',saga:editSaga?.value||'',prequel:editPrequel?.value||'',sequel:editSequel?.value||'',status:lookupStatus?.innerText||'',
-            v23:!!window.__LIB_SERIES_NEIGHBORS_STANDALONE_V23,olLoaded:!!window.__LIB_GENRE_OPENLIBRARY_WORK_V1,ol:window.__LIB_GENRE_OPENLIBRARY_LAST__||null,olError:window.__LIB_GENRE_OPENLIBRARY_ERROR__||'',wikiOriginal:window.__LIB_GENRE_WIKI_ORIGINAL_LAST__||null,
-            wikiV2:!!window.__LIB_WIKI_SEQUENCE_FIX_V2,wiki:window.__LIB_WIKI_SEQUENCE_FIX_LAST__||null,codeTabs:window.__LIB_GENRE_CODETABS_LAST__||null,directGenre:window.__LIB_GENRE_DIRECT_RETAILER_LAST__||null,genreDelegate:window.__LIB_GENRE_DELEGATE_LAST__||null,sbn:window.__LIB_SBN_RESCUE_LAST__||null,universal:window.__LIB_LAST_UNIVERSAL_SERIES_RESULT__||null
+            title:editTitle?.value||'',author:editAuthor?.value||'',publisher:editPublisher?.value||'',publishedDate:editPublishedDate?.value||'',genres:editCategory?.value||'',saga:editSaga?.value||'',prequel:editPrequel?.value||'',sequel:editSequel?.value||'',plot:editPlot?.value||'',status:lookupStatus?.innerText||'',
+            v29:!!window.__LIB_SERIES_NEIGHBORS_STANDALONE_V29,plotV2:!!window.__LIB_PUBLISHER_PLOT_PRIORITY_V2,plotPolicy:window.__LIB_PLOT_SOURCE_POLICY||'',genrePolicy:window.__LIB_GENRE_SOURCE_POLICY||''
           }));
           (async()=>{
             const browser=await chromium.launch({headless:true,executablePath:'/usr/bin/google-chrome',args:['--no-sandbox']});
             const page=await browser.newPage({viewport:{width:1400,height:1100}});page.on('pageerror',e=>console.log('PAGE_ERROR',e.message));page.on('response',r=>{if(r.status()>=400)console.log('HTTP',r.status(),r.url())});
             await page.goto('https://polentona.github.io/LibriSempreDiCarta/?fast='+Date.now(),{waitUntil:'domcontentloaded',timeout:90000});
             await page.locator('#addBookBtn').click();await page.locator('#editDialog[open]').waitFor({timeout:15000});await page.locator('#editCode').fill('9788845278389');await page.locator('#lookupMetadataBtn').click();
-            let last={};const until=Date.now()+75000;while(Date.now()<until){await page.waitForTimeout(1000);last=await read(page);const gs=last.genres.split(/[,;|]/).map(x=>x.trim()).filter(Boolean);if(same(last.title,expected.title)&&same(last.author,expected.author)&&same(last.publisher,expected.publisher)&&String(last.publishedDate).includes(expected.year)&&same(last.saga,expected.saga)&&same(last.prequel,expected.prequel)&&same(last.sequel,expected.sequel)&&expected.genres.every(g=>gs.some(x=>same(x,g))))break}
-            console.log('FINAL',JSON.stringify(last));const gs=last.genres.split(/[,;|]/).map(x=>x.trim()).filter(Boolean),bad=[];for(const k of ['title','author','publisher','saga','prequel','sequel'])if(!same(last[k],expected[k]))bad.push(k);if(!String(last.publishedDate).includes(expected.year))bad.push('year');for(const g of expected.genres)if(!gs.some(x=>same(x,g)))bad.push('genre:'+g);if(!last.v23)bad.push('resolver-v23');if(!last.olLoaded)bad.push('resolver-openlibrary');await browser.close();if(bad.length)throw new Error(bad.join(', '));console.log('FAST_ISBN_OK')
+            let last={};const until=Date.now()+90000;while(Date.now()<until){await page.waitForTimeout(1000);last=await read(page);const gs=last.genres.split(/[,;|]/).map(x=>x.trim()).filter(Boolean);if(same(last.title,expected.title)&&same(last.author,expected.author)&&same(last.publisher,expected.publisher)&&String(last.publishedDate).includes(expected.year)&&same(last.saga,expected.saga)&&same(last.prequel,expected.prequel)&&same(last.sequel,expected.sequel)&&expected.genres.every(g=>gs.some(x=>same(x,g)))&&last.plot.length>=200&&last.plotV2)break}
+            const official=await page.evaluate(async()=>typeof window.__LIB_RESOLVE_OFFICIAL_PLOT==='function'?await window.__LIB_RESOLVE_OFFICIAL_PLOT({code:'9788845278389',title:editTitle?.value||'',author:editAuthor?.value||'',publisher:editPublisher?.value||''}):'');
+            console.log('FINAL',JSON.stringify({...last,plot:last.plot.slice(0,120)+'…',officialLength:official.length}));
+            const gs=last.genres.split(/[,;|]/).map(x=>x.trim()).filter(Boolean),bad=[];for(const k of ['title','author','publisher','saga','prequel','sequel'])if(!same(last[k],expected[k]))bad.push(k);if(!String(last.publishedDate).includes(expected.year))bad.push('year');for(const g of expected.genres)if(!gs.some(x=>same(x,g)))bad.push('genre:'+g);if(!last.v29)bad.push('resolver-v29');if(!last.plotV2)bad.push('plot-resolver-v2');if(last.plotPolicy!=='publisher-first-then-clean-fallbacks')bad.push('plot-policy');if(official.length<200)bad.push('official-plot');if(!same(last.plot,official))bad.push('official-plot-not-prioritized');if(/a mio parere|secondo me|verified purchase|serie tv|adattamento cinematograf|netflix|prime video/i.test(last.plot))bad.push('plot-noise');await browser.close();if(bad.length)throw new Error(bad.join(', '));console.log('FAST_ISBN_OK')
           })().catch(e=>{console.error('FAST_ISBN_FAIL',e.stack||e.message);process.exit(1)});
           JS
           node test.js 2>&1 | tee /tmp/isbn-fast.log
