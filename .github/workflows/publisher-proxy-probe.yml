@@ -1,0 +1,57 @@
+name: Probe trama editore
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '_publisher-probe-trigger.txt'
+
+permissions:
+  contents: write
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+      - name: Prova accessi Bompiani
+        run: |
+          python - <<'PY'
+          import subprocess, urllib.parse
+          target='https://www.bompiani.it/catalogo/il-valzer-lento-delle-tartarughe-9788845278389'
+          routes=[
+            ('direct',target),
+            ('jina-https','https://r.jina.ai/'+target),
+            ('jina-http','https://r.jina.ai/'+target.replace('https://','http://',1)),
+            ('allorigins','https://api.allorigins.win/raw?url='+urllib.parse.quote(target,safe='')),
+            ('corsproxy','https://corsproxy.io/?url='+urllib.parse.quote(target,safe='')),
+            ('codetabs','https://api.codetabs.com/v1/proxy?quest='+urllib.parse.quote(target,safe='')),
+            ('isomorphic','https://cors.isomorphic-git.org/'+target),
+          ]
+          lines=[]
+          for name,url in routes:
+            headers='/tmp/h'; body='/tmp/b'
+            p=subprocess.run(['curl','-L','--max-time','18','-sS','-D',headers,'-o',body,'-w','%{http_code}',url],capture_output=True,text=True)
+            code=(p.stdout or '').strip() or 'ERR'
+            try: b=open(body,'rb').read()
+            except: b=b''
+            try: h=open(headers,encoding='latin1').read()
+            except: h=''
+            acao=''
+            for ln in h.splitlines():
+              if ln.lower().startswith('access-control-allow-origin:'): acao=ln.split(':',1)[1].strip()
+            text=b.decode('utf-8','ignore').lower()
+            lines += [f'ROUTE={name}',f'HTTP={code}',f'BYTES={len(b)}',f'ACAO={acao}',f'ISBN={"yes" if "9788845278389" in text else "no"}',f'TITLE={"yes" if "il valzer lento delle tartarughe" in text else "no"}',f'ERR={(p.stderr or "").strip()[:250]}','---']
+          open('publisher-proxy-probe-result.txt','w',encoding='utf-8').write('\n'.join(lines)+'\n')
+          PY
+          cat publisher-proxy-probe-result.txt
+      - name: Registra risultato
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git pull --rebase origin main || true
+          git add publisher-proxy-probe-result.txt
+          git commit -m 'Registra probe trama editore' || exit 0
+          git push
