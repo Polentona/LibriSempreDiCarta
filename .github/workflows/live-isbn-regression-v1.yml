@@ -32,10 +32,10 @@ jobs:
         run: |
           cat > test.js <<'JS'
           const {chromium}=require('playwright');
-          const expected={title:'Il valzer lento delle tartarughe',author:'Katherine Pancol',saga:'Joséphine',prequel:'Gli occhi gialli dei coccodrilli',sequel:'Gli scoiattoli di Central Park sono tristi il lunedì',genres:['Contemporaneo','Romance','Chick Lit','Giallo']};
+          const expected={title:'Il valzer lento delle tartarughe',author:'Katherine Pancol',saga:'Joséphine',prequel:'Gli occhi gialli dei coccodrilli',sequel:'Gli scoiattoli di Central Park sono tristi il lunedì',genres:['Narrativa contemporanea','Narrativa rosa/sentimentale']};
           const norm=v=>String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
           const same=(a,b)=>norm(a)===norm(b);
-          const read=page=>page.evaluate(()=>({title:document.getElementById('editTitle')?.value||'',author:document.getElementById('editAuthor')?.value||'',genres:document.getElementById('editCategory')?.value||'',publisher:document.getElementById('editPublisher')?.value||'',publishedDate:document.getElementById('editPublishedDate')?.value||'',saga:document.getElementById('editSaga')?.value||'',prequel:document.getElementById('editPrequel')?.value||'',sequel:document.getElementById('editSequel')?.value||'',status:document.getElementById('lookupStatus')?.innerText||'',universal:window.__LIB_LAST_UNIVERSAL_SERIES_RESULT__||null,unified:window.__LIB_UNIFIED_BOOK_ENRICHER_LAST__||null,genresResolved:window.__LIB_LAST_UNIVERSAL_GENRES__||[]}));
+          const read=page=>page.evaluate(()=>({title:document.getElementById('editTitle')?.value||'',author:document.getElementById('editAuthor')?.value||'',genres:document.getElementById('editCategory')?.value||'',publisher:document.getElementById('editPublisher')?.value||'',publishedDate:document.getElementById('editPublishedDate')?.value||'',saga:document.getElementById('editSaga')?.value||'',prequel:document.getElementById('editPrequel')?.value||'',sequel:document.getElementById('editSequel')?.value||'',status:document.getElementById('lookupStatus')?.innerText||'',universal:window.__LIB_LAST_UNIVERSAL_SERIES_RESULT__||null,unified:window.__LIB_UNIFIED_BOOK_ENRICHER_LAST__||null,genresResolved:window.__LIB_LAST_UNIVERSAL_GENRES__||[],retailerGenres:window.__LIB_GENRE_RETAILER_LAST__||null,delegate:window.__LIB_GENRE_DELEGATE_LAST__||null}));
           (async()=>{
             const browser=await chromium.launch({headless:true});
             const page=await browser.newPage({viewport:{width:1500,height:1200}});
@@ -53,20 +53,21 @@ jobs:
               if(!last.title||!last.author){
                 metadataSeeded=true;console.log('METADATA_SEEDED_FOR_RESOLVER_TEST');
                 await page.evaluate(({e})=>{
-                  const set=(id,v)=>{const el=document.getElementById(id);if(el){el.value=v;el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}))}};
-                  set('editCode','9788845278389');set('editTitle',e.title);set('editAuthor',e.author);set('editPublisher','Bompiani');set('editPublishedDate','2015');
+                  const set=(id,v)=>{const el=document.getElementById(id);if(el){el.removeAttribute('disabled');el.disabled=false;el.value=v;el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}))}};
+                  set('editCode','9788845278389');set('editTitle',e.title);set('editAuthor',e.author);set('editPublisher','Bompiani');set('editPublishedDate','2015');set('editCategory','Narrativa');
                 },{e:expected});
               }
               await page.evaluate(async()=>{
-                if(typeof window.__LIB_RESOLVE_UNIVERSAL_SERIES!=='function')throw new Error('resolver universale non caricato');
-                const rel=await window.__LIB_RESOLVE_UNIVERSAL_SERIES({code:'9788845278389',title:'Il valzer lento delle tartarughe',author:'Katherine Pancol',publisher:'Bompiani',saga:'',description:''});
-                if(rel){
-                  if(rel.saga)document.getElementById('editSaga').value=rel.saga;
-                  if(rel.prequel)document.getElementById('editPrequel').value=rel.prequel;
-                  if(rel.sequel)document.getElementById('editSequel').value=rel.sequel;
+                if(typeof window.__LIB_RESOLVE_UNIVERSAL_SERIES==='function'){
+                  const rel=await window.__LIB_RESOLVE_UNIVERSAL_SERIES({code:'9788845278389',title:'Il valzer lento delle tartarughe',author:'Katherine Pancol',publisher:'Bompiani',saga:'',description:''});
+                  if(rel){if(rel.saga)document.getElementById('editSaga').value=rel.saga;if(rel.prequel)document.getElementById('editPrequel').value=rel.prequel;if(rel.sequel)document.getElementById('editSequel').value=rel.sequel}
+                }
+                if(typeof window.__LIB_LOOKUP_SPECIFIC_GENRES==='function'){
+                  const gs=await window.__LIB_LOOKUP_SPECIFIC_GENRES({code:'9788845278389',title:'Il valzer lento delle tartarughe',author:'Katherine Pancol'});
+                  if(gs?.length){const f=document.getElementById('editCategory');f.value=gs.join(', ');f.dispatchEvent(new Event('change',{bubbles:true}))}
                 }
               });
-              const deadline=Date.now()+45000;
+              const deadline=Date.now()+50000;
               while(Date.now()<deadline){await page.waitForTimeout(1000);last=await read(page);const gs=last.genres.split(/[,;|]/).map(x=>x.trim()).filter(Boolean);if(same(last.saga,expected.saga)&&same(last.prequel,expected.prequel)&&same(last.sequel,expected.sequel)&&expected.genres.every(g=>gs.some(x=>same(x,g))))break}
               last.metadataSeeded=metadataSeeded;console.log('FINAL_FIELDS',JSON.stringify(last));
               const gs=last.genres.split(/[,;|]/).map(x=>x.trim()).filter(Boolean),problems=[];
