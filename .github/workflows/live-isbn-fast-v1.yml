@@ -57,7 +57,8 @@ jobs:
               for(const u of [target,'https://r.jina.ai/'+target,'https://r.jina.ai/'+target.replace(/^https:\/\//,'http://')]){
                 try{
                   const r=await fetch(u,{cache:'no-store'});const t=await r.text();
-                  probe.push({url:u,status:r.status,length:t.length,hasTitle:t.toLowerCase().includes('lupi del calla'),hasAuthor:t.toLowerCase().includes('stephen king'),sample:t.slice(0,500)});
+                  const lines=u.includes('r.jina.ai/')?t.split(/\r?\n/).map((x,i)=>({i,len:x.trim().length,s:x.trim().slice(0,180)})).filter(x=>x.len>=30).slice(0,80):[];
+                  probe.push({url:u,status:r.status,length:t.length,hasTitle:t.toLowerCase().includes('lupi del calla'),hasAuthor:t.toLowerCase().includes('stephen king'),lines});
                 }catch(e){probe.push({url:u,error:String(e)})}
               }
               let official='';
@@ -91,7 +92,7 @@ jobs:
           {
             echo "outcome=${{ steps.live.outcome }}"
             echo "source_commit=${GITHUB_SHA}"
-            echo "mode=sperling-resolver-isolated-v5"
+            echo "mode=sperling-resolver-structure-v5"
             echo "isbn=9788868363710"
             echo '---'
             cat /tmp/isbn-fast.log 2>/dev/null || true
