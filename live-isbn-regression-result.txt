@@ -1,9 +1,23 @@
 outcome=failure
 tested_isbn=9788845278389
-source_commit=2b6226324434a4cb248c5e9137b2c9a1a7b1e3cf
+source_commit=b1a1482f9e5857ea3d86e259355b3db85d7e94b0
 ---
 HTTP_ERROR 429 https://www.googleapis.com/books/v1/volumes?q=isbn%3A9788845278389&maxResults=20&projection=full&printType=all
+HTTP_ERROR 429 https://r.jina.ai/https://www.unilibro.it/libro/pancol-katherine/il-valzer-lento-delle-tartarughe/9788845278389
+HTTP_ERROR 429 https://r.jina.ai/https://www.eurolibro.it/libro/isbn/9788845278389.html
+HTTP_ERROR 429 https://r.jina.ai/https://it.wikipedia.org/wiki/Katherine_Pancol
+HTTP_ERROR 429 https://r.jina.ai/https://www.amazon.it/dp/8845278387
+HTTP_ERROR 429 https://r.jina.ai/https://www.bompiani.it/catalogo/il-valzer-lento-delle-tartarughe-9788845278389
+HTTP_ERROR 429 https://r.jina.ai/https://it.wikipedia.org/wiki/Lul%C3%B9_(Wedekind)
+HTTP_ERROR 429 https://r.jina.ai/https://it.wikipedia.org/wiki/Olivier_Auroy
+HTTP_ERROR 429 https://r.jina.ai/https://en.wikipedia.org/wiki/Katherine_Pancol
+HTTP_ERROR 429 https://r.jina.ai/https://en.wikipedia.org/wiki/Les_Yeux_jaunes_des_crocodiles
+HTTP_ERROR 429 https://r.jina.ai/https://en.wikipedia.org/wiki/William_Rodarmor
+HTTP_ERROR 429 https://r.jina.ai/https://www.google.com/search?hl=it&num=12&q=%22Il%20valzer%20lento%20delle%20tartarughe%22%20%22Katherine%20Pancol%22%20trilogia%20serie%20saga
+HTTP_ERROR 429 https://r.jina.ai/https://www.bing.com/search?setlang=it-IT&q=%229788845278389%22%20%22Katherine%20Pancol%22%20%22Il%20valzer%20lento%20delle%20tartarughe%22%20serie
+HTTP_ERROR 429 https://r.jina.ai/https://www.bing.com/search?setlang=it-IT&q=%22Il%20valzer%20lento%20delle%20tartarughe%22%20%22Katherine%20Pancol%22%20trilogia%20serie%20saga
 HTTP_ERROR 404 https://images.weserv.nl/?url=https%3A%2F%2Fcovers.openlibrary.org%2Fb%2Fisbn%2F9788845278389-L.jpg%3Fdefault%3Dfalse
-FINAL_FIELDS {"title":"","author":"","genres":"","publisher":"","publishedDate":"","saga":"","prequel":"","sequel":"","status":"Non ho trovato dati affidabili per questo ISBN. Puoi comunque compilare i campi manualmente.","rescueLoaded":true,"rescue":null,"resilient":null,"universal":null,"genreDelegate":null,"genreRetailer":null}
-ISBN_LIVE_FAIL Error: Campi non corretti: titolo, autore, editore, pubblicazione, saga, prequel, sequel, genere:Narrativa contemporanea, genere:Narrativa rosa/sentimentale
+HTTP_ERROR 404 https://images.weserv.nl/?url=https%3A%2F%2Fcovers.librarything.com%2Fdevkey%2Ffd11eebee79ccfcfe2f17d34a92e1011%2Fsmall%2Fisbn%2F9788845278389
+FINAL_FIELDS {"title":"Il valzer lento delle tartarughe","author":"Katherine Pancol","genres":"","publisher":"Bompiani","publishedDate":"2015","saga":"Josephine","prequel":"Gli occhi gialli dei coccodrilli","sequel":"","status":"","rescueLoaded":true,"rescue":null,"resilient":null,"universal":{"saga":"Josephine","prequel":"Gli occhi gialli dei coccodrilli","sequel":"","position":2,"total":2,"initial":false,"terminal":true,"authoritative":true,"checked":true,"sagaChecked":true,"source":"https://it.wikipedia.org/wiki/Katherine_Pancol"},"genreDelegate":{"sig":"9788845278389|il valzer lento delle tartarughe|katherine pancol","genres":[],"field":""},"genreRetailer":null}
+ISBN_LIVE_FAIL Error: Campi non corretti: sequel, genere:Narrativa contemporanea, genere:Narrativa rosa/sentimentale
     at /tmp/isbn-live/test.js:67:30
