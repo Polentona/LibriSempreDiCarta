@@ -22,38 +22,42 @@ jobs:
           import urllib.request, urllib.parse, json, re
           def get(url):
               req=urllib.request.Request(url,headers={'User-Agent':'Mozilla/5.0','Accept':'application/json,text/plain,text/html,*/*'})
-              with urllib.request.urlopen(req,timeout=20) as r:
-                  return r.status,r.read(2000000).decode('utf-8','replace')
+              try:
+                  with urllib.request.urlopen(req,timeout=25) as r:
+                      return r.status,r.read(2500000).decode('utf-8','replace'),dict(r.headers)
+              except urllib.error.HTTPError as e:
+                  try: body=e.read(500000).decode('utf-8','replace')
+                  except Exception: body=''
+                  return e.code,body,dict(e.headers)
+              except Exception as e:
+                  return 0,repr(e),{}
+
+          target='https://app.thestorygraph.com/browse?search_term=9788845278389'
+          proxies=[
+              ('DIRECT',target),
+              ('JINA','https://r.jina.ai/'+target),
+              ('ALLORIGINS','https://api.allorigins.win/raw?url='+urllib.parse.quote(target,safe='')),
+              ('CORSPROXY','https://corsproxy.io/?url='+urllib.parse.quote(target,safe='')),
+          ]
+          print('### STORYGRAPH ISBN 9788845278389')
+          for name,url in proxies:
+              st,raw,h=get(url)
+              low=raw.lower()
+              print('\n##',name,'STATUS',st,'LEN',len(raw),'ACAO',h.get('Access-Control-Allow-Origin') or h.get('access-control-allow-origin'))
+              print('HAS_TITLE', 'il valzer lento delle tartarughe' in low)
+              print('HAS_AUTHOR', 'katherine pancol' in low)
+              m=re.search(r'(?i)(fiction|nonfiction)[^\n<]{0,220}',raw)
+              print('GENRE_LINE', (m.group(0)[:240] if m else ''))
+              print('HEAD',re.sub(r'\s+',' ',raw[:500])[:500])
+
           title='La valse lente des tortues'
           author='Katherine Pancol'
-          print('### WIKIDATA SEARCH')
+          print('\n### WIKIDATA SEARCH')
           try:
               u='https://www.wikidata.org/w/api.php?'+urllib.parse.urlencode({'action':'wbsearchentities','search':title,'language':'fr','uselang':'it','format':'json','limit':'10','origin':'*'})
-              st,raw=get(u); print('STATUS',st,'LEN',len(raw)); d=json.loads(raw)
+              st,raw,_=get(u); print('STATUS',st,'LEN',len(raw)); d=json.loads(raw)
               for x in d.get('search',[]): print(json.dumps({'id':x.get('id'),'label':x.get('label'),'description':x.get('description'),'aliases':x.get('aliases')},ensure_ascii=False))
-              ids=[x.get('id') for x in d.get('search',[]) if x.get('id')]
-              if ids:
-                  u2='https://www.wikidata.org/w/api.php?'+urllib.parse.urlencode({'action':'wbgetentities','ids':'|'.join(ids[:5]),'props':'labels|aliases|claims','languages':'it|en|fr','format':'json','origin':'*'})
-                  st2,raw2=get(u2); print('\n### WIKIDATA ENTITIES STATUS',st2,'LEN',len(raw2)); e=json.loads(raw2)
-                  for qid,obj in e.get('entities',{}).items():
-                      print('ENTITY',qid)
-                      print('LABELS',json.dumps(obj.get('labels',{}),ensure_ascii=False))
-                      print('ALIASES',json.dumps(obj.get('aliases',{}),ensure_ascii=False))
           except Exception as e: print('WIKIDATA ERROR',repr(e))
-
-          print('\n### OPENLIBRARY ORIGINAL SEARCH')
-          try:
-              u='https://openlibrary.org/search.json?'+urllib.parse.urlencode({'title':title,'author':author,'fields':'key,title,author_name,subject,first_publish_year,isbn','limit':'10'})
-              st,raw=get(u); print('STATUS',st,'LEN',len(raw)); d=json.loads(raw)
-              for doc in d.get('docs',[]): print(json.dumps(doc,ensure_ascii=False))
-              for doc in d.get('docs',[])[:3]:
-                  key=doc.get('key','')
-                  if key.startswith('/works/'):
-                      eu='https://openlibrary.org'+key+'/editions.json?limit=100'
-                      est,eraw=get(eu); ed=json.loads(eraw); print('\nEDITIONS',key,'STATUS',est,'COUNT',len(ed.get('entries',[])))
-                      for ent in ed.get('entries',[]):
-                          print(json.dumps({'title':ent.get('title'),'subtitle':ent.get('subtitle'),'languages':ent.get('languages'),'publish_date':ent.get('publish_date'),'isbn_13':ent.get('isbn_13')},ensure_ascii=False))
-          except Exception as e: print('OPENLIBRARY ERROR',repr(e))
           PY
           cat /tmp/probe.txt
       - name: Registra risultato
