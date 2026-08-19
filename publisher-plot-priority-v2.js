@@ -1,0 +1,62 @@
+(()=>{
+if(window.__LIB_PUBLISHER_PLOT_PRIORITY_V2)return;
+window.__LIB_PUBLISHER_PLOT_PRIORITY_V2=true;
+
+const $=id=>document.getElementById(id);
+const codeOf=v=>String(v||'').replace(/[^0-9Xx]/g,'').toUpperCase();
+const clean=v=>String(v??'').replace(/[\u200B-\u200F\u202A-\u202E\u2060\u2066-\u2069\uFEFF]/g,'').replace(/\u00a0/g,' ').replace(/[ \t]+/g,' ').replace(/\n{3,}/g,'\n\n').trim();
+const norm=v=>clean(v).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[’‘]/g,"'").replace(/[^a-z0-9]+/g,' ').trim();
+const slug=v=>norm(v).replace(/\s+/g,'-');
+const PUBLISHERS=[
+  [/\bbompiani\b/i,'bompiani.it','Bompiani',(c,t)=>`https://www.bompiani.it/catalogo/${slug(t)}-${c}`],
+  [/\bmondadori\b/i,'mondadori.it','Mondadori'],[/\beinaudi\b/i,'einaudi.it','Einaudi'],[/\bfeltrinelli\b/i,'feltrinellieditore.it','Feltrinelli'],[/\brizzoli\b/i,'rizzolilibri.it','Rizzoli'],[/\bsperling\b/i,'sperling.it','Sperling & Kupfer'],[/\bpiemme\b/i,'edizpiemme.it','Piemme'],[/\bgarzanti\b/i,'garzanti.it','Garzanti'],[/\blonganesi\b/i,'longanesi.it','Longanesi'],[/\bnewton\s+compton\b/i,'newtoncompton.com','Newton Compton'],[/\bgiunti\b/i,'giunti.it','Giunti'],[/\bsalani\b/i,'salani.it','Salani'],[/\badelphi\b/i,'adelphi.it','Adelphi'],[/\bsellerio\b/i,'sellerio.it','Sellerio'],[/\bfazi\b/i,'fazieditore.it','Fazi'],[/\bmarsilio\b/i,'marsilioeditori.it','Marsilio'],[/\bneri\s+pozza\b/i,'neripozza.it','Neri Pozza'],[/\bharpercollins\b/i,'harpercollins.it','HarperCollins Italia']
+];
+const RETAILERS=['ibs.it','libraccio.it','libreriauniversitaria.it','lafeltrinelli.it','hoepli.it','unilibro.it','mondadoristore.it','giunti.it'];
+const cache=new Map();let timer=null,runId=0,lastKey='',manual=false;
+
+function publisher(v){const n=norm(v);for(const [re,domain,name,direct] of PUBLISHERS)if(re.test(n))return{domain,name,direct};return null}
+function hostIs(url,domain){try{const h=new URL(url).hostname.toLowerCase().replace(/^www\./,'');return h===domain||h.endsWith('.'+domain)}catch(e){return false}}
+function plainLine(v){return clean(String(v||'').replace(/!\[[^\]]*\]\([^)]*\)/g,' ').replace(/\[([^\]]+)\]\([^)]*\)/g,'$1').replace(/^\s*#{1,6}\s*/,'').replace(/[*_`>|]/g,' '))}
+function htmlToText(raw,base=''){
+  const s=String(raw||'');if(!/<(?:html|body|article|main|div|p|h1|h2|meta)\b/i.test(s))return s;
+  try{const d=new DOMParser().parseFromString(s,'text/html'),meta=[...d.querySelectorAll('meta[name="description"],meta[property="og:description"]')].map(x=>clean(x.content)).filter(Boolean),links=[...d.querySelectorAll('a[href]')].map(a=>{try{return `[${clean(a.textContent)}](${new URL(a.getAttribute('href'),base||location.href).href})`}catch(e){return''}}).filter(Boolean);return [...meta,...links,clean(d.body?.innerText||'')].join('\n')}catch(e){return s}
+}
+async function fetchText(url,timeout){const c=new AbortController(),t=setTimeout(()=>c.abort(),timeout);try{const r=await fetch(url,{signal:c.signal,headers:{Accept:'text/plain,text/html,*/*'}});if(!r.ok)return'';return htmlToText(await r.text(),url)}catch(e){return''}finally{clearTimeout(t)}}
+async function read(target){const routes=[[target,4000],['https://r.jina.ai/'+target,6500],['https://api.allorigins.win/raw?url='+encodeURIComponent(target),6500],['https://corsproxy.io/?url='+encodeURIComponent(target),6500],['https://api.codetabs.com/v1/proxy?quest='+encodeURIComponent(target),6500]];for(const [u,t] of routes){const x=await fetchText(u,t);if(x.length>180)return x}return''}
+function links(text,domains){const out=[],seen=new Set(),s=String(text||'');let m;for(const re of [/\[[^\]]*\]\((https?:\/\/[^)\s]+)\)/g,/href=["'](https?:\/\/[^"']+)["']/gi,/(https?:\/\/[^\s<>)\]]+)/gi])while((m=re.exec(s))){const u=String(m[1]||'').replace(/&amp;/g,'&').replace(/[),.;]+$/,'');if(u&&!seen.has(u)&&domains.some(d=>hostIs(u,d))){seen.add(u);out.push(u)}}return out}
+function exact(text,code){return !!code&&codeOf(text).includes(codeOf(code))}
+function titleVariants(v){const t=clean(v),o=[t],a=t.match(/^[^.!?]{2,70}[.!?]\s+(.{3,220})$/),b=t.match(/^[^:]{2,70}:\s*(.{3,220})$/);if(a)o.push(a[1]);if(b)o.push(b[1]);return [...new Set(o.map(clean).filter(Boolean))]}
+function rightTitle(text,title){const n=norm(text),vv=titleVariants(title).map(norm).filter(x=>x.length>4);return !vv.length||vv.some(x=>n.includes(x))}
+function reviewNoise(v){const n=norm(v);return /\b(?:recensione|recensioni|customer review|verified purchase|acquisto verificato|reviewed in|recensito in|a mio parere|secondo me|mi e piaciut|non mi e piaciut|ho letto|ho trovato|io penso|consiglio questo|consiglio il libro|stelle su 5|out of 5 stars)\b/i.test(n)}
+function screenNoise(v){const n=norm(v);return /\b(?:serie tv|serie televisiv|miniserie|miniserie tv|adattamento cinematograf|adattamento televisiv|trasposizione cinematograf|trasposizione televisiv|tratto dal film|tratta dal film|da cui e stato tratto il film|da cui e stata tratta la serie|netflix|prime video|disney plus|hbo|regia di|diretto da|starring|cast del film|sul grande schermo)\b/i.test(n)}
+function boiler(v){const n=norm(v);return /\b(?:cookie|privacy policy|aggiungi al carrello|acquista ora|spedizione|newsletter|servizio clienti|termini e condizioni|menu principale)\b/i.test(n)}
+function stripNoise(v){const out=[],seen=new Set();for(const raw of String(v||'').split(/\n+/)){const p=plainLine(raw),k=norm(p);if(!p||seen.has(k)){continue}seen.add(k);if(reviewNoise(p)||screenNoise(p)||boiler(p)){const ss=p.match(/[^.!?]+[.!?]+|[^.!?]+$/g)||[];const good=ss.map(clean).filter(x=>x&&!reviewNoise(x)&&!screenNoise(x)&&!boiler(x));if(good.join(' ').length>=45)out.push(good.join(' '))}else out.push(p)}return clean(out.join(' '))}
+function safe(v){let p=stripNoise(v);if(!p)return'';if(typeof window.__LIB_CLEAN_BOOK_PLOT==='function')p=window.__LIB_CLEAN_BOOK_PLOT(p)||'';p=stripNoise(p).replace(/^(?:descrizione(?: del libro| prodotto)?|sinossi|trama|abstract|presentazione)\s*[:\-]?\s*/i,'').trim();if(p.length<60)return'';if(p.length>2600)p=p.slice(0,2600).replace(/\s+\S*$/,'')+'…';return p}
+function stop(v){return /^(?:formato|legatura|pagine|in libreria da|ebook|isbn|ean|dettagli|dettagli prodotto|scheda tecnica|informazioni sul prodotto|recensioni|autore|l autore|biografia|acquista|compra|disponibilita|prodotti correlati|potrebbero interessarti)$/.test(norm(v))}
+function headed(text){const ls=String(text||'').split(/\r?\n/),head=/^(?:descrizione|descrizione del libro|descrizione dell editore|sinossi|trama|trama libro|abstract|presentazione|il libro)$/;for(let i=0;i<ls.length;i++){if(!head.test(norm(plainLine(ls[i]))))continue;const o=[];for(let j=i+1;j<Math.min(ls.length,i+35)&&o.join(' ').length<3000;j++){const p=plainLine(ls[j]);if(!p)continue;if((stop(p)||/^#{1,6}\s/.test(String(ls[j])))&&o.length)break;if(p.length>=35)o.push(p)}const x=safe(o.join('\n'));if(x)return x}return''}
+function bompiani(text,title,author){const ls=String(text||'').split(/\r?\n/),tv=titleVariants(title).map(norm),an=norm(author);let start=-1;for(let i=0;i<Math.min(ls.length,180);i++){const n=norm(plainLine(ls[i]));if(tv.some(t=>t&&n===t)){start=i+1;break}}if(start<0&&an)for(let i=0;i<Math.min(ls.length,180);i++)if(norm(plainLine(ls[i]))===an){start=i+1;break}if(start<0)return headed(text);const o=[];for(let i=start;i<Math.min(ls.length,start+45);i++){const raw=String(ls[i]),p=plainLine(raw),n=norm(p);if(!p)continue;if(an&&n===an&&!o.length)continue;if(stop(p)||/^(?:formato|legatura|pagine|in libreria da|ebook|isbn)\b/.test(n))break;if(/^#{1,6}\s/.test(raw)&&o.length)break;if(p.length>=45&&!boiler(p))o.push(p)}return safe(o.join('\n'))}
+function metaCandidate(text){for(const p of String(text||'').split(/\r?\n/).slice(0,40).map(plainLine).filter(Boolean)){const x=safe(p);if(x&&x.length>=120&&!/\b(?:isbn|prezzo|acquista|editore|publisher)\b/i.test(norm(x)))return x}return''}
+function extract(text,name,title,author){return name==='Bompiani'?bompiani(text,title,author):(headed(text)||metaCandidate(text))}
+async function discover(domain,code,title){const q=`site:${domain} \"${code}\" \"${titleVariants(title).slice(-1)[0]||title}\"`;for(const u of ['https://www.bing.com/search?setlang=it-IT&q='+encodeURIComponent(q),'https://html.duckduckgo.com/html/?q='+encodeURIComponent(q)]){const t=await read(u),ll=links(t,[domain]);if(ll.length)return ll}return[]}
+async function inspectPage(url,info,code,title,author){const t=await read(url);if(!t||!exact(t,code)||!rightTitle(t,title))return null;const p=extract(t,info.name,title,author);return p?{plot:p,source:info.name,url,official:true}:null}
+async function official(input={}){let code=codeOf(input.code||$('editCode')?.value||''),title=clean(input.title||$('editTitle')?.value||''),author=clean(input.author||$('editAuthor')?.value||''),pub=clean(input.publisher||$('editPublisher')?.value||'');const info=publisher(pub);if(!info||!/^97[89]\d{10}$/.test(code)||!title)return null;const k='o|'+code+'|'+info.domain+'|'+norm(title);if(cache.has(k))return cache.get(k);const promise=(async()=>{
+  if(info.direct){for(const t of titleVariants(title)){const r=await inspectPage(info.direct(code,t),info,code,title,author);if(r)return r}}
+  for(const u of (await discover(info.domain,code,title)).slice(0,6)){const r=await inspectPage(u,info,code,title,author);if(r)return r}
+  return null
+})();cache.set(k,promise);return promise}
+async function fallback(input={}){let code=codeOf(input.code||$('editCode')?.value||''),title=clean(input.title||$('editTitle')?.value||''),author=clean(input.author||$('editAuthor')?.value||'');if(!/^97[89]\d{10}$/.test(code)||!title)return null;const k='f|'+code+'|'+norm(title);if(cache.has(k))return cache.get(k);const promise=(async()=>{
+  try{const r=await window.__LIB_METADATA_RESCUE_LOOKUP?.(code),p=safe(r?.description||'');if(p)return{plot:p,source:r?.source||'catalogo italiano',official:false}}catch(e){}
+  const sites=RETAILERS.map(x=>'site:'+x).join(' OR '),q=`\"${code}\" (${sites})`,pages=[];for(const s of ['https://www.bing.com/search?setlang=it-IT&q='+encodeURIComponent(q),'https://html.duckduckgo.com/html/?q='+encodeURIComponent(q)]){const t=await read(s);for(const u of links(t,RETAILERS))if(!pages.includes(u))pages.push(u);if(pages.length>=8)break}for(const u of pages.slice(0,8)){const t=await read(u);if(!t||!exact(t,code)||!rightTitle(t,title))continue;const p=headed(t)||metaCandidate(t);if(p)return{plot:p,source:new URL(u).hostname.replace(/^www\./,''),url:u,official:false}}return null
+})();cache.set(k,promise);return promise}
+
+window.__LIB_RESOLVE_OFFICIAL_PLOT=async input=>(await official(input||{}))?.plot||'';
+window.__LIB_RESOLVE_PLOT_PRIORITY=async input=>await official(input||{})||await fallback(input||{});
+window.__LIB_PLOT_SOURCE_POLICY='publisher-first-then-clean-fallbacks';
+
+function status(msg){const s=$('lookupStatus');if(s){s.textContent=msg;s.className='lookup-status ok'}}
+function inputNow(){return{code:codeOf($('editCode')?.value||''),title:clean($('editTitle')?.value||''),author:clean($('editAuthor')?.value||''),publisher:clean($('editPublisher')?.value||'')}}
+async function run(){const inp=inputNow(),ta=$('editPlot');if(!ta||manual||!/^97[89]\d{10}$/.test(inp.code)||!inp.title||!inp.publisher)return;const key=[inp.code,norm(inp.title),norm(inp.publisher)].join('|');if(key===lastKey)return;lastKey=key;const mine=++runId;let r=await official(inp).catch(()=>null);if(mine!==runId||manual)return;if(r?.plot){ta.value=r.plot;status(`Trama recuperata dal sito ufficiale ${r.source}.`);return}const existing=safe(ta.value||'');if(existing){if(existing!==ta.value)ta.value=existing;return}r=await fallback(inp).catch(()=>null);if(mine!==runId||manual)return;if(r?.plot){ta.value=r.plot;status(`Trama recuperata da ${r.source} dopo il controllo del sito dell'editore.`)}}
+function schedule(ms=650){clearTimeout(timer);timer=setTimeout(run,ms)}
+function boot(){const code=$('editCode'),ta=$('editPlot'),st=$('lookupStatus');if(!code||!ta||!st){setTimeout(boot,120);return}code.addEventListener('input',()=>{manual=false;lastKey='';runId++;schedule(900)});ta.addEventListener('input',e=>{if(e.isTrusted)manual=true});['editTitle','editAuthor','editPublisher'].forEach(id=>$(id)?.addEventListener('input',e=>{if(e.isTrusted){lastKey='';schedule(700)}}));new MutationObserver(()=>schedule(650)).observe(st,{childList:true,subtree:true,characterData:true,attributes:true});schedule(900)}
+boot();
+})();
