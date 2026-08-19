@@ -1,0 +1,12 @@
+(()=>{
+if(window.__LIB_GENRE_DIRECT_RETAILER_V1)return;window.__LIB_GENRE_DIRECT_RETAILER_V1=true;
+const clean=v=>String(v??'').replace(/\s+/g,' ').trim();
+const norm=v=>clean(v).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[’‘]/g,"'").replace(/[^a-z0-9]+/g,' ').trim();
+const generic=v=>!v||['fiction','narrativa','letteratura','romanzo','novel','ragazzi','young adult','adult','libri per ragazzi','letterature straniere testi'].includes(norm(v));
+const slug=v=>norm(v).replace(/\s+/g,'-');
+function map(text){const n=norm(text),out=[];const add=x=>{if(!out.includes(x))out.push(x)};if(/narrativa rosa contemporanea|narrativa contemporanea|contemporary fiction|\bcontemporary\b/.test(n))add('Narrativa contemporanea');if(/narrativa rosa|narrativa sentimentale|romanzo rosa|romantic fiction|romance fiction|\bromance\b|\bsentimentale\b/.test(n))add('Narrativa rosa/sentimentale');return out}
+function apply(gs){const f=document.getElementById('editCategory');if(!f||!gs.length)return;const cur=generic(f.value)?[]:f.value.split(/[,;|]/).map(clean).filter(Boolean),all=[...new Set([...cur,...gs])];f.value=all.join(', ');f.dispatchEvent(new Event('input',{bubbles:true}));f.dispatchEvent(new Event('change',{bubbles:true}))}
+let last='',busy=false;
+async function run(){if(busy)return;const dlg=document.getElementById('editDialog'),f=document.getElementById('editCategory'),title=clean(document.getElementById('editTitle')?.value),author=clean(document.getElementById('editAuthor')?.value),isbn=String(document.getElementById('editCode')?.value||'').replace(/\D/g,'');if(!dlg?.open||!f||!generic(f.value)||!title||!author||!isbn)return;const sig=isbn+'|'+norm(title)+'|'+norm(author);if(sig===last)return;last=sig;busy=true;try{const p=author.split(/\s+/),u=`https://www.unilibro.it/libro/${slug([...p.slice(-1),...p.slice(0,-1)].join(' '))}/${slug(title)}/${isbn}`,r=await fetch(u,{headers:{Accept:'text/html'}});if(!r.ok)throw new Error('HTTP '+r.status);const text=await r.text(),i=norm(text).indexOf('classificazione'),gs=map(i>=0?text.slice(Math.max(0,i-150),i+1200):text);window.__LIB_GENRE_DIRECT_RETAILER_LAST__={url:u,status:r.status,genres:gs};if(gs.length)apply(gs)}catch(e){window.__LIB_GENRE_DIRECT_RETAILER_LAST__={error:String(e&&e.message||e)}}finally{busy=false}}
+let tries=0;const t=setInterval(()=>{tries++;run();if(tries>=360)clearInterval(t)},500);setTimeout(run,0);
+})();
