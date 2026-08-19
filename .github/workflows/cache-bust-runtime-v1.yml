@@ -10,7 +10,7 @@ permissions:
 jobs:
   cache-bust:
     if: ${{ !startsWith(github.event.head_commit.message, 'Aggiorna cache runtime') }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     steps:
       - uses: actions/checkout@v6
         with:
@@ -23,7 +23,7 @@ jobs:
           p=Path('index.html')
           s=p.read_text(encoding='utf-8')
           versions={
-            'series-neighbors-standalone-v5.js':'20260819-28',
+            'series-neighbors-standalone-v5.js':'20260820-29',
             'series-universal-resolver-v1.js':'20260819-7',
             'isbn-resilient-fallback-v1.js':'20260819-11'
           }
