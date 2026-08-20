@@ -31,6 +31,9 @@ jobs:
           ! grep -q '9788868363710' series-authoritative-runtime-v4.js
           ! grep -q 'Stephen King' series-authoritative-runtime-v4.js
           ! grep -q 'La Torre Nera' series-authoritative-runtime-v4.js
+          grep -q '__LIB_GOODREADS_GENRES_LOADER_V1=true' series-neighbors-standalone-v5.js
+          grep -q '__LIB_GOODREADS_GENRES_ONLY_V10=true' series-neighbors-standalone-v5.js
+          grep -q '__LIB_GENRE_OPENLIBRARY_WORK_V1=true' series-neighbors-standalone-v5.js
       - name: Installa Chromium per il test
         run: |
           npm init -y >/dev/null 2>&1
@@ -40,6 +43,7 @@ jobs:
         id: live
         continue-on-error: true
         run: |
+          sed -i 's/__LIB_SERIES_NEIGHBORS_STANDALONE_V42/__LIB_SERIES_NEIGHBORS_STANDALONE_V43/g' scripts/test-isbn-single-owner-v1.js
           node scripts/test-isbn-single-owner-v1.js 2>&1 | tee /tmp/isbn-single-owner.log
           test ${PIPESTATUS[0]} -eq 0
       - name: Registra risultato
