@@ -8,6 +8,7 @@ on:
       - 'series-wikipedia-authoritative-v3.js'
       - 'series-neighbors-standalone-v5.js'
       - 'series-authoritative-runtime-v5.js'
+      - 'series-authoritative-runtime-v6.js'
       - 'series-single-owner-guard-v1.js'
       - 'series-google-books-order-v10.js'
       - 'series-authoritative-catalog-v1.js'
@@ -15,6 +16,7 @@ on:
       - 'storygraph-goodreads-genres-v3.js'
       - 'genres-multi-v1.js'
       - 'publisher-plot-lock-v8.js'
+      - 'isbn-field-sanitizer-v1.js'
       - 'isbn-resilient-fallback-v1.js'
       - 'isbn-cover.js'
       - '.github/workflows/pages.yml'
@@ -39,6 +41,8 @@ jobs:
           grep -q "GITHUB_SHA" .github/workflows/pages.yml
           grep -q "series-neighbors-standalone-v5.js" .github/workflows/pages.yml
           grep -q "isbn-cover.js" .github/workflows/pages.yml
+          grep -q "series-authoritative-runtime-v6.js" series-neighbors-standalone-v5.js
+          grep -q "isbn-field-sanitizer-v1.js" series-neighbors-standalone-v5.js
           if grep -Eq '^[[:space:]]*git[[:space:]]+push\b' .github/workflows/cache-bust-runtime-v1.yml; then
             echo "Il workflow cache non deve più creare commit automatici su main."
             exit 1
