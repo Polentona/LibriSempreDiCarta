@@ -1,0 +1,59 @@
+name: Test ISBN generico V2
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '_generic-v2-test-trigger.txt'
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Verifica codice produzione non specifico
+        run: |
+          node --check series-verified-order-v2.js
+          node --check publisher-plot-lock-v8.js
+          ! grep -q '9788868363710' series-verified-order-v2.js
+          ! grep -q 'Stephen King' series-verified-order-v2.js
+          ! grep -q 'La Torre Nera' series-verified-order-v2.js
+      - name: Test browser completo
+        id: live
+        continue-on-error: true
+        run: |
+          mkdir -p /tmp/isbn-generic-v2
+          cd /tmp/isbn-generic-v2
+          npm init -y >/dev/null 2>&1
+          npm install playwright-core@1.55.0 >/dev/null 2>&1
+          cp "$GITHUB_WORKSPACE/scripts/test-isbn-generic-v2.js" ./test.js
+          node test.js 2>&1 | tee /tmp/isbn-generic-v2.log
+          test ${PIPESTATUS[0]} -eq 0
+      - name: Registra risultato
+        if: always()
+        run: |
+          {
+            echo "outcome=${{ steps.live.outcome }}"
+            echo "source_commit=${GITHUB_SHA}"
+            echo "mode=isbn-9788868363710-all-fields-generic-v2"
+            echo "isbn=9788868363710"
+            echo '---'
+            cat /tmp/isbn-generic-v2.log 2>/dev/null || true
+          } > live-isbn-generic-v2-result.txt
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git pull --rebase origin main || true
+          git add live-isbn-generic-v2-result.txt
+          git commit -m 'Registra test ISBN generico V2' || exit 0
+          git push
+      - name: Fallisci se test KO
+        if: steps.live.outcome != 'success'
+        run: exit 1
