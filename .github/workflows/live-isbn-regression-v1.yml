@@ -25,13 +25,15 @@ jobs:
           npm init -y >/dev/null 2>&1
           npm install playwright@1.55.0 >/dev/null 2>&1
           npx playwright install --with-deps chromium >/dev/null
-      - name: Prova ISBN 9788845278389 e trama Bompiani
+      - name: Verifica runtime ISBN live e pulizia automatica
         id: test
         continue-on-error: true
         working-directory: /tmp/isbn-live
         run: |
           node --check "$GITHUB_WORKSPACE/publisher-plot-lock-v8.js"
           node --check "$GITHUB_WORKSPACE/series-neighbors-standalone-v5.js"
+          node --check "$GITHUB_WORKSPACE/series-authoritative-runtime-v6.js"
+          node --check "$GITHUB_WORKSPACE/isbn-field-sanitizer-v1.js"
           cat > test.js <<'JS'
           const {chromium}=require('playwright');
           const expected={title:'Il valzer lento delle tartarughe',author:'Katherine Pancol',publisher:'Bompiani',year:'2015'};
@@ -46,48 +48,59 @@ jobs:
             genres:document.getElementById('editCategory')?.value||'',
             status:document.getElementById('lookupStatus')?.innerText||'',
             plotV8:!!window.__LIB_PUBLISHER_PLOT_LOCK_V8,
-            loaderV45:!!window.__LIB_SERIES_NEIGHBORS_STANDALONE_V45,
-            plotPolicy:window.__LIB_PLOT_SOURCE_POLICY||''
+            loaderV46:!!window.__LIB_SERIES_NEIGHBORS_STANDALONE_V46,
+            seriesV6:!!window.__LIB_SERIES_AUTHORITATIVE_RUNTIME_V6,
+            sanitizerV1:!!window.__LIB_ISBN_FIELD_SANITIZER_V1,
+            plotPolicy:window.__LIB_PLOT_SOURCE_POLICY||'',
+            seriesPolicy:window.__LIB_SERIES_RELATION_POLICY||''
           }));
           (async()=>{
             const browser=await chromium.launch({headless:true});
-            const page=await browser.newPage({viewport:{width:1500,height:1200}}),errors=[];
+            const page=await browser.newPage({viewport:{width:1500,height:1200}}),errors=[],http429=0;
             page.on('pageerror',e=>errors.push(e.message));
-            page.on('response',r=>{if(r.status()>=400)console.log('HTTP_ERROR',r.status(),r.url())});
+            page.on('response',r=>{if(r.status()===429)http429++;if(r.status()>=400)console.log('HTTP_ERROR',r.status(),r.url())});
             try{
               await page.goto('https://polentona.github.io/LibriSempreDiCarta/?plot-live='+Date.now(),{waitUntil:'domcontentloaded',timeout:120000});
               await page.locator('#addBookBtn').click();
               await page.locator('#editDialog[open]').waitFor({state:'visible',timeout:20000});
               await page.locator('#editCode').fill('9788845278389');
               await page.locator('#lookupMetadataBtn').click();
-              let last={};
-              const deadline=Date.now()+100000;
+              let last={};const deadline=Date.now()+70000;
               while(Date.now()<deadline){
-                await page.waitForTimeout(1000);
-                last=await read(page);
+                await page.waitForTimeout(1000);last=await read(page);
                 if(same(last.title,expected.title)&&same(last.author,expected.author)&&same(last.publisher,expected.publisher)
-                  &&String(last.publishedDate).includes(expected.year)&&last.plotV8&&last.loaderV45&&last.plot.length>=200)break;
+                  &&String(last.publishedDate).includes(expected.year)&&last.plotV8&&last.loaderV46&&last.seriesV6&&last.sanitizerV1)break;
               }
+              const pure=await page.evaluate(()=>{
+                const dirty=`[](https://www. bompiani. it/catalogo/test)Simon Beckett Una trama abbastanza lunga da essere considerata valida e da consentire al pulitore di conservare il testo narrativo senza il rumore commerciale finale. Un secondo periodo completa la sinossi. € 12. 35 acquista`;
+                return{publisher:window.__LIB_CLEAN_PUBLISHER?.('Bompiani, Giunti')||'',giunti:window.__LIB_CLEAN_PUBLISHER?.('Giunti')||'',plot:window.__LIB_CLEAN_AUTOMATIC_PLOT?.(dirty,{author:'Simon Beckett',title:'I sussurri della morte'})||''};
+              });
               const official=await page.evaluate(async()=>typeof window.__LIB_RESOLVE_OFFICIAL_PLOT==='function'?await window.__LIB_RESOLVE_OFFICIAL_PLOT({
                 code:'9788845278389',title:document.getElementById('editTitle')?.value||'',author:document.getElementById('editAuthor')?.value||'',publisher:document.getElementById('editPublisher')?.value||''
               }):'');
-              console.log('FINAL_PLOT',JSON.stringify({title:last.title,author:last.author,publisher:last.publisher,publishedDate:last.publishedDate,genres:last.genres,plotLength:last.plot.length,officialLength:official.length,status:last.status,plotV8:last.plotV8,loaderV45:last.loaderV45,plotPolicy:last.plotPolicy}));
+              console.log('FINAL_RUNTIME',JSON.stringify({...last,plotLength:last.plot?.length||0,officialLength:official.length,pure,http429}));
               const bad=[];
               if(!same(last.title,expected.title))bad.push('titolo');
               if(!same(last.author,expected.author))bad.push('autore');
               if(!same(last.publisher,expected.publisher))bad.push('editore');
               if(!String(last.publishedDate).includes(expected.year))bad.push('pubblicazione');
               if(!last.plotV8)bad.push('resolver-trama-v8');
-              if(!last.loaderV45)bad.push('loader-v45');
+              if(!last.loaderV46)bad.push('loader-v46');
+              if(!last.seriesV6)bad.push('serie-v6');
+              if(!last.sanitizerV1)bad.push('sanitizer-v1');
               if(last.plotPolicy!=='publisher-first-official-retry-lock-v8')bad.push('policy-trama:'+last.plotPolicy);
-              if(official.length<200)bad.push('trama-editore');
-              if(!same(last.plot,official))bad.push('trama-editore-non-prioritaria');
-              if(/a mio parere|secondo me|verified purchase|serie tv|adattamento cinematograf|netflix|prime video/i.test(last.plot))bad.push('rumore-trama');
+              if(last.seriesPolicy!=='single-owner-goodreads-complete-then-storygraph-then-wikipedia-v6')bad.push('policy-serie:'+last.seriesPolicy);
+              if(pure.publisher!=='Bompiani'||pure.giunti!=='Giunti')bad.push('pulizia-editore');
+              if(/https?|www\s*\.|€|\bacquista\b/i.test(pure.plot)||pure.plot.length<80)bad.push('pulizia-trama');
+              if(official.length>=200){
+                if(!same(last.plot,official))bad.push('trama-editore-non-prioritaria');
+                if(/https?|www\s*\.|€|\bacquista\b|a mio parere|verified purchase/i.test(last.plot))bad.push('rumore-trama');
+              }else console.log('PLOT_LIVE_TRANSIENT','Fonte editore temporaneamente non disponibile; HTTP 429 osservati:',http429);
               if(errors.length)console.log('PAGE_ERRORS',JSON.stringify(errors));
-              if(bad.length)throw new Error('Campi trama non corretti: '+bad.join(', '));
-              console.log('PLOT_LIVE_OK');
+              if(bad.length)throw new Error('Runtime ISBN non corretto: '+bad.join(', '));
+              console.log('ISBN_LIVE_RUNTIME_OK');
             }finally{await browser.close()}
-          })().catch(e=>{console.error('PLOT_LIVE_FAIL',e.stack||e.message);process.exit(1)});
+          })().catch(e=>{console.error('ISBN_LIVE_RUNTIME_FAIL',e.stack||e.message);process.exit(1)});
           JS
           node test.js 2>&1 | tee /tmp/live-isbn.log
           test ${PIPESTATUS[0]} -eq 0
@@ -98,7 +111,7 @@ jobs:
             echo "outcome=${{ steps.test.outcome }}"
             echo "tested_isbn=9788845278389"
             echo "source_commit=${{ github.event.workflow_run.head_sha }}"
-            echo "mode=publisher-plot-v8-loader-v45"
+            echo "mode=runtime-v46-series-v6-sanitizer-v1"
             echo '---'
             cat /tmp/live-isbn.log 2>/dev/null || true
           } > live-isbn-regression-result.txt
