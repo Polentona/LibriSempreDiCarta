@@ -1,8 +1,8 @@
 outcome=failure
-source_commit=9221dc71c846cb9c6ee7a7eac542708d28af077d
-mode=isbn-9788868363710-all-fields-generic-v1
+source_commit=c956e199de98cfa1299f923cdabadc9c809dd19d
+mode=isbn-9788868363710-all-fields-generic-v2
 isbn=9788868363710
 ---
-ISBN_9788868363710_ALL_FIELDS_GENERIC_FAIL browserType.launch: Failed to launch chromium because executable doesn't exist at /usr/bin/google-chrome
-    at /tmp/isbn-fast/test.js:21:32
-    at Object.<anonymous> (/tmp/isbn-fast/test.js:138:3)
+ISBN_9788868363710_ALL_FIELDS_GENERIC_V2_FAIL browserType.launch: Failed to launch chromium because executable doesn't exist at /usr/bin/google-chrome
+    at /tmp/isbn-fast/test.js:11:32
+    at Object.<anonymous> (/tmp/isbn-fast/test.js:60:3)
