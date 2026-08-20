@@ -9,6 +9,7 @@ on:
       - 'series-authoritative-catalog-v1.js'
       - 'series-verified-order-v1.js'
       - 'series-verified-order-v2.js'
+      - 'series-verified-saga-v3.js'
       - 'publisher-plot-lock-v8.js'
       - 'genre-whitelist-enforcer-v2.js'
       - 'isbn-resilient-fallback-v1.js'
@@ -37,7 +38,7 @@ jobs:
           s=p.read_text(encoding='utf-8')
           versions={
             'series-authoritative-catalog-v1.js':'6',
-            'series-neighbors-standalone-v5.js':'20260820-36',
+            'series-neighbors-standalone-v5.js':'20260820-37',
             'series-universal-resolver-v1.js':'20260819-7',
             'isbn-resilient-fallback-v1.js':'20260819-11'
           }
