@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     steps:
       - uses: actions/checkout@v6
         with:
@@ -59,9 +59,6 @@ jobs:
             page.on('pageerror',e=>console.log('PAGE_ERROR',e.message));
             page.on('response',r=>{if(r.status()>=400&&!r.url().includes('googleapis.com/books/v1/volumes'))console.log('HTTP',r.status(),r.url())});
 
-            // Google Books viene spesso limitato in GitHub Actions. Mockiamo soltanto
-            // i metadati bibliografici dell'edizione: generi, relazioni di saga, trama
-            // editore e logica dell'app restano quelli del sito LIVE.
             await page.route('**://www.googleapis.com/books/v1/volumes**',async route=>{
               const u=new URL(route.request().url()),q=u.searchParams.get('q')||'';
               if(!q.includes(ISBN)){await route.continue();return}
