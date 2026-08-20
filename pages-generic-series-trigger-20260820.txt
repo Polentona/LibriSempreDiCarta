@@ -1,0 +1,1 @@
+Deploy del resolver generico verificato per prequel e sequel.
