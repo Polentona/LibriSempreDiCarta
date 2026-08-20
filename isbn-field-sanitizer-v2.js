@@ -10,11 +10,22 @@ const IMPRINT_PARENT=[
   ['sperling & kupfer','mondadori'],['sperling e kupfer','mondadori'],
   ['einaudi','mondadori'],['rizzoli','mondadori'],['piemme','mondadori']
 ];
+const CANONICAL_PUBLISHERS=new Map([
+  ['bompiani','Bompiani'],
+  ['sperling kupfer','Sperling & Kupfer'],
+  ['sperling e kupfer','Sperling & Kupfer'],
+  ['einaudi','Einaudi'],
+  ['rizzoli','Rizzoli'],
+  ['piemme','Piemme'],
+  ['giunti','Giunti'],
+  ['giunti editore','Giunti']
+]);
+function canonicalPublisher(v){const x=clean(v),n=norm(x);return CANONICAL_PUBLISHERS.get(n)||x}
 function joinedImprint(v){
   const n=norm(v);if(!n)return'';
   for(const [imprint,parent] of IMPRINT_PARENT){
     const i=norm(imprint),p=norm(parent);
-    if(n===`${i} ${p}`||n===`${p} ${i}`)return clean(imprint);
+    if(n===`${i} ${p}`||n===`${p} ${i}`)return canonicalPublisher(imprint);
   }
   return'';
 }
@@ -29,15 +40,15 @@ function cleanPublisher(v){
     .replace(/\s+(?:provider|fornitore|distributore)\s*[:\-].*$/i,'').trim();
   if(!x)return'';
   const joined=joinedImprint(x);if(joined)return joined;
-  let parts=publisherParts(x);if(parts.length<=1)return x;
+  let parts=publisherParts(x);if(parts.length<=1)return canonicalPublisher(x);
   const normalized=parts.map(norm),keep=parts.map(()=>true);
   for(let i=0;i<parts.length;i++)if(RETAILERS.has(normalized[i])&&parts.length>1)keep[i]=false;
   for(const [imprint,parent] of IMPRINT_PARENT){
     const ii=normalized.indexOf(norm(imprint)),pi=normalized.indexOf(norm(parent));
     if(ii>=0&&pi>=0)keep[pi]=false;
   }
-  parts=parts.filter((_,i)=>keep[i]);
-  return clean(parts.join(', '))||x;
+  parts=parts.filter((_,i)=>keep[i]).map(canonicalPublisher);
+  return clean(parts.join(', '))||canonicalPublisher(x);
 }
 function markdownToText(v){
   let s=String(v||'');
@@ -104,5 +115,5 @@ function boot(){
 boot();
 root.__LIB_CLEAN_PUBLISHER=cleanPublisher;
 root.__LIB_CLEAN_AUTOMATIC_PLOT=(v,meta)=>cleanPlot(v,meta||{});
-root.__LIB_ISBN_FIELD_SANITIZER_TEST__={cleanPublisher,cleanPlot,cutCommerceTail,rawUrlNoise,markdownToText,publisherParts,joinedImprint};
+root.__LIB_ISBN_FIELD_SANITIZER_TEST__={cleanPublisher,cleanPlot,cutCommerceTail,rawUrlNoise,markdownToText,publisherParts,joinedImprint,canonicalPublisher};
 })();
