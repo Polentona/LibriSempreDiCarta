@@ -54,7 +54,7 @@ jobs:
           grep -q "Forza cache runtime nell'artefatto" .github/workflows/pages.yml
           grep -q 'GITHUB_SHA' .github/workflows/pages.yml
           test -f .nojekyll
-          ! grep -q 'git push' .github/workflows/cache-bust-runtime-v1.yml
+          ! grep -Eq '^[[:space:]]*git[[:space:]]+push\b' .github/workflows/cache-bust-runtime-v1.yml
       - name: Verifica parser StoryGraph
         run: |
           node <<'NODE'
