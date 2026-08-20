@@ -1,8 +1,8 @@
 (()=>{
 const root=typeof window!=='undefined'?window:globalThis;
-if(root.__LIB_SERIES_NEIGHBORS_STANDALONE_V49)return;
-root.__LIB_SERIES_NEIGHBORS_STANDALONE_V49=true;
-root.__LIB_SINGLE_OWNER_RUNTIME='20260820-14';
+if(root.__LIB_SERIES_NEIGHBORS_STANDALONE_V50)return;
+root.__LIB_SERIES_NEIGHBORS_STANDALONE_V50=true;
+root.__LIB_SINGLE_OWNER_RUNTIME='20260820-15';
 
 /* I resolver legacy non devono più poter diventare proprietari dei campi. */
 root.__LIB_UNIFIED_BOOK_ENRICHER_V1=true;
@@ -24,7 +24,8 @@ function loadOnce(id,src){
   const s=document.createElement('script');s.id=id;s.src=src;s.async=false;document.head.appendChild(s);
 }
 
-/* Metadati ISBN e trama. Il sanitizer interviene solo sui valori automatici. */
+/* Metadati ISBN e trama. Il lock trama V9 espone uno stato di completamento
+   affinché la ricerca non termini prima che la sinossi ufficiale sia pronta. */
 loadOnce('libIsbnMetadataRescueV1','isbn-metadata-rescue-v1.js?v=20260819-1');
 loadOnce('libIsbnSbnRescueV3','isbn-sbn-rescue-v1.js?v=20260819-3');
 loadOnce('libIsbnDirectCatalogV2','isbn-direct-catalog-v1.js?v=20260819-2');
@@ -32,7 +33,7 @@ loadOnce('libPublisherPlotPriorityV3','publisher-plot-priority-v3.js?v=20260819-
 loadOnce('libPublisherPlotResilienceV5','publisher-plot-resilience-v5.js?v=20260820-5');
 loadOnce('libPublisherPlotResilienceV6','publisher-plot-resilience-v6.js?v=20260820-6');
 loadOnce('libPublisherPlotResilienceV7','publisher-plot-resilience-v7.js?v=20260820-7');
-loadOnce('libPublisherPlotLockV8','publisher-plot-lock-v8.js?v=20260820-11');
+loadOnce('libPublisherPlotLockV8','publisher-plot-lock-v8.js?v=20260820-12');
 loadOnce('libIsbnFieldSanitizerV2','isbn-field-sanitizer-v2.js?v=20260820-2');
 
 /* Goodreads stabilisce ordine e posizione. V7 mantiene il resolver canonico;
@@ -49,11 +50,11 @@ loadOnce('libGenresMultiV6','genres-multi-v1.js?v=20260820-8');
 loadOnce('libStoryGraphGoodreadsGenresV3','storygraph-goodreads-genres-v3.js?v=20260820-1');
 loadOnce('libStoryGraphGenreLockV4','storygraph-genre-lock-v4.js?v=20260820-2');
 
-/* L'icona di caricamento termina soltanto quando metadati, generi e relazioni
-   hanno concluso il loro ciclo automatico. */
-loadOnce('libIsbnEnrichmentProgressV10','isbn-enrichment-progress-v10.js?v=20260820-1');
+/* L'icona di caricamento termina soltanto quando metadati, generi, relazioni
+   e trama hanno concluso il loro ciclo automatico. */
+loadOnce('libIsbnEnrichmentProgressV11','isbn-enrichment-progress-v10.js?v=20260820-2');
 
 root.__LIB_GENRE_SOURCE_POLICY='storygraph-direct-then-goodreads-only-if-absent-v3';
-root.__LIB_PLOT_SOURCE_POLICY='publisher-first-official-retry-lock-v8-sanitized';
+root.__LIB_PLOT_SOURCE_POLICY='publisher-first-official-retry-lock-v9-sanitized';
 root.__LIB_SERIES_RELATION_POLICY='goodreads-order-canonical-localization-stable-v8';
 })();
