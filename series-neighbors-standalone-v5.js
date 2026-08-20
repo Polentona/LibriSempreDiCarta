@@ -2,7 +2,12 @@
 const root=typeof window!=='undefined'?window:globalThis;
 if(root.__LIB_SERIES_NEIGHBORS_STANDALONE_V42)return;
 root.__LIB_SERIES_NEIGHBORS_STANDALONE_V42=true;
-root.__LIB_SINGLE_OWNER_RUNTIME='20260820-1';
+root.__LIB_SINGLE_OWNER_RUNTIME='20260820-2';
+
+/* Gli script legacy sono ancora referenziati dall'HTML storico. Impediamo che
+   quelli caricati dopo questo loader possano reinstallare resolver concorrenti. */
+root.__LIB_UNIFIED_BOOK_ENRICHER_V1=true;
+root.__LIB_UNIVERSAL_SERIES_V2=true;
 
 function loadOnce(id,src){
   if(document.getElementById(id))return;
