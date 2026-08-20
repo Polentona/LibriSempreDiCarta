@@ -1,0 +1,68 @@
+name: Verifica live ISBN multipli
+
+on:
+  workflow_run:
+    workflows: ["Deploy GitHub Pages"]
+    types: [completed]
+
+permissions:
+  contents: write
+
+jobs:
+  live:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Installa Playwright
+        run: |
+          mkdir -p /tmp/isbn-dual && cd /tmp/isbn-dual
+          npm init -y >/dev/null 2>&1
+          npm install playwright@1.55.0 >/dev/null 2>&1
+          npx playwright install --with-deps chromium >/dev/null
+      - name: Verifica Beckett e Cooper
+        id: test
+        continue-on-error: true
+        working-directory: /tmp/isbn-dual
+        run: |
+          cat > test.js <<'JS'
+          const {chromium}=require('playwright');
+          const norm=v=>String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
+          const genres=v=>String(v||'').split(/[,;|/\n]+/).map(norm).filter(Boolean).sort();
+          const sameGenres=(a,b)=>JSON.stringify(genres(a))===JSON.stringify(b.map(norm).sort());
+          const dirty=v=>/https?|www\s*\.|€|\bacquista\b/i.test(String(v||''));
+          const cases=[
+            {isbn:'9788845279553',title:'I sussurri della morte',author:'Simon Beckett',publisher:'Bompiani',saga:/^David Hunter$/i,prequel:'Scritto nelle ossa',sequel:'La voce dei morti',genres:['Crime','Giallo','Thriller'],plot:/bungalow|Body Farm/i},
+            {isbn:'9788850225798',title:'Il libro delle anime',author:'Glenn Cooper',publisher:'TEA',saga:/^(?:Will Piper|(?:La )?Biblioteca dei Morti)$/i,prequel:'La biblioteca dei morti',sequel:'I custodi della biblioteca',genres:['Storico','Giallo','Thriller'],plot:/libro antico|biblioteca dei morti/i}
+          ];
+          const read=page=>page.evaluate(()=>({title:document.getElementById('editTitle')?.value||'',author:document.getElementById('editAuthor')?.value||'',publisher:document.getElementById('editPublisher')?.value||'',genre:document.getElementById('editCategory')?.value||'',genreSource:document.getElementById('editCategory')?.dataset?.genreSource||'',saga:document.getElementById('editSaga')?.value||'',prequel:document.getElementById('editPrequel')?.value||'',sequel:document.getElementById('editSequel')?.value||'',plot:document.getElementById('editPlot')?.value||'',spinner:document.getElementById('lookupStatus')?.classList?.contains('lookup-busy')||false,progress:window.__LIB_LOOKUP_PROGRESS_V11_LAST__||window.__LIB_LOOKUP_PROGRESS_V10_LAST__||null,broker:!!window.__LIB_ISBN_REQUEST_BROKER_V1,seriesStable:!!window.__LIB_SERIES_RESOLVER_STABILITY_V1_INSTALLED,genreRetry:!!window.__LIB_GENRE_RESOLVER_RESILIENT_V1_INSTALLED,plotRetry:!!window.__LIB_PLOT_RESOLVER_RESILIENT_V1_INSTALLED,loader:!!window.__LIB_SERIES_NEIGHBORS_STANDALONE_V51,brokerStats:window.__LIB_ISBN_REQUEST_BROKER_STATS__||null}));
+          (async()=>{const browser=await chromium.launch({headless:true});const results=[];try{
+            for(const c of cases){const page=await browser.newPage({viewport:{width:1450,height:1200}});let http429=0;page.on('response',r=>{if(r.status()===429)http429++});await page.goto('https://polentona.github.io/LibriSempreDiCarta/?dual-live='+c.isbn+'-'+Date.now(),{waitUntil:'domcontentloaded',timeout:120000});await page.locator('#addBookBtn').click();await page.locator('#editDialog[open]').waitFor({state:'visible',timeout:20000});await page.locator('#editCode').fill(c.isbn);await page.locator('#lookupMetadataBtn').click();let last={};const deadline=Date.now()+190000;while(Date.now()<deadline){await page.waitForTimeout(500);last=await read(page);const ok=norm(last.title)===norm(c.title)&&norm(last.author)===norm(c.author)&&norm(last.publisher)===norm(c.publisher)&&c.saga.test(last.saga)&&norm(last.prequel)===norm(c.prequel)&&norm(last.sequel)===norm(c.sequel)&&sameGenres(last.genre,c.genres)&&last.genreSource==='storygraph'&&last.plot.length>=180&&c.plot.test(last.plot)&&!dirty(last.plot)&&!last.spinner&&last.loader&&last.broker&&last.seriesStable&&last.genreRetry&&last.plotRetry;if(ok)break}last=await read(page);const bad=[];if(norm(last.title)!==norm(c.title))bad.push('titolo:'+last.title);if(norm(last.author)!==norm(c.author))bad.push('autore:'+last.author);if(norm(last.publisher)!==norm(c.publisher))bad.push('editore:'+last.publisher);if(!c.saga.test(last.saga))bad.push('saga:'+last.saga);if(norm(last.prequel)!==norm(c.prequel))bad.push('prequel:'+last.prequel);if(norm(last.sequel)!==norm(c.sequel))bad.push('sequel:'+last.sequel);if(!sameGenres(last.genre,c.genres))bad.push('generi:'+last.genre);if(last.genreSource!=='storygraph')bad.push('fonte-generi:'+last.genreSource);if(last.plot.length<180||!c.plot.test(last.plot)||dirty(last.plot))bad.push('trama:'+last.plot.slice(0,100));if(last.spinner)bad.push('spinner');if(!last.loader||!last.broker||!last.seriesStable||!last.genreRetry||!last.plotRetry)bad.push('runtime');results.push({isbn:c.isbn,last,http429,bad});console.log('DUAL_ISBN_RESULT',JSON.stringify(results.at(-1)));await page.close();if(bad.length)throw new Error(c.isbn+' => '+bad.join(', '))}
+            console.log('ISBN_DUAL_LIVE_OK',JSON.stringify(results.map(x=>({isbn:x.isbn,http429:x.http429,broker:x.last.brokerStats}))));
+          }finally{await browser.close()}})().catch(e=>{console.error('ISBN_DUAL_LIVE_FAIL',e.stack||e.message);process.exit(1)});
+          JS
+          node test.js 2>&1 | tee /tmp/live-dual.log
+          test ${PIPESTATUS[0]} -eq 0
+      - name: Registra esito
+        if: always()
+        run: |
+          {
+            echo "outcome=${{ steps.test.outcome }}"
+            echo "source_commit=${{ github.event.workflow_run.head_sha }}"
+            echo "mode=dual-isbn-network-resilience-v1"
+            echo '---'
+            cat /tmp/live-dual.log 2>/dev/null || true
+          } > live-isbn-dual-result.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add live-isbn-dual-result.txt
+          git commit -m "Registra esito test ISBN multipli" || exit 0
+          git push || true
+      - name: Fallisci se il test non passa
+        if: steps.test.outcome != 'success'
+        run: exit 1
