@@ -1,1 +1,1 @@
-Deploy runtime unico generico per saga, prequel, sequel e generi. Legacy generi disattivati.
+Deploy runtime unico generico per saga, prequel, sequel e generi. Bootstrap legacy neutralizzati prima del caricamento ISBN.
