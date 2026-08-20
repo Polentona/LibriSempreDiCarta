@@ -1,12 +1,23 @@
 outcome=failure
 tested_isbn=9788845278389
-source_commit=2913b10f68e584d40bc41e7171d8ff71b599ef24
+source_commit=44017c2f90ab2665fc255e9988f8caa925cfad03
 mode=runtime-v46-series-v6-sanitizer-v1
 ---
 HTTP_ERROR 429 https://www.googleapis.com/books/v1/volumes?q=isbn%3A9788845278389&maxResults=20&projection=full&printType=all
-HTTP_ERROR 403 https://corsproxy.io/?url=https%3A%2F%2Fwww.bompiani.it%2Fimg%2Fbompiani%2Flogo_giunti_gray.png
-HTTP_ERROR 403 https://corsproxy.io/?url=https%3A%2F%2Fwww.bompiani.it%2Fimg%2Fbompiani%2Flogo.png
-HTTP_ERROR 403 https://corsproxy.io/?url=https%3A%2F%2Fwww.bompiani.it%2Fimg%2Fbompiani%2Flogo_square.png
-FINAL_RUNTIME {"title":"Il valzer lento delle tartarughe","author":"Katherine Pancol","publisher":"Bompiani","publishedDate":"2015","plot":"","genres":"","status":"📖","plotV8":true,"loaderV46":true,"seriesV6":true,"sanitizerV1":true,"plotPolicy":"publisher-first-official-retry-lock-v8","seriesPolicy":"single-owner-goodreads-complete-then-storygraph-then-wikipedia-v6","plotLength":0,"officialLength":652,"pure":{"publisher":"Bompiani","giunti":"Giunti","plot":"Una trama abbastanza lunga da essere considerata valida e da consentire al pulitore di conservare il testo narrativo senza il rumore commerciale finale. Un secondo periodo completa la sinossi."},"http429":1}
+HTTP_ERROR 429 https://r.jina.ai/https://html.duckduckgo.com/html/?q=site%3Aapp.thestorygraph.com%2Fbooks%20%229788845278389%22%20%22Il%20valzer%20lento%20delle%20tartarughe%22
+HTTP_ERROR 429 https://r.jina.ai/http://html.duckduckgo.com/html/?q=site%3Aapp.thestorygraph.com%2Fbooks%20%229788845278389%22%20%22Il%20valzer%20lento%20delle%20tartarughe%22
+HTTP_ERROR 429 https://r.jina.ai/https://html.duckduckgo.com/html/?q=site%3Abeta.thestorygraph.com%2Fbooks%20%229788845278389%22%20%22Il%20valzer%20lento%20delle%20tartarughe%22
+HTTP_ERROR 429 https://r.jina.ai/http://html.duckduckgo.com/html/?q=site%3Abeta.thestorygraph.com%2Fbooks%20%229788845278389%22%20%22Il%20valzer%20lento%20delle%20tartarughe%22
+HTTP_ERROR 429 https://r.jina.ai/https://app.thestorygraph.com/browse?search_term=%229788845278389%22%20%22Il%20valzer%20lento%20delle%20tartarughe%22
+HTTP_ERROR 429 https://r.jina.ai/http://app.thestorygraph.com/browse?search_term=%229788845278389%22%20%22Il%20valzer%20lento%20delle%20tartarughe%22
+HTTP_ERROR 429 https://r.jina.ai/https://html.duckduckgo.com/html/?q=site%3Aapp.thestorygraph.com%2Fbooks%20Il%20valzer%20lento%20delle%20tartarughe%20Katherine%20Pancol
+HTTP_ERROR 429 https://r.jina.ai/https://www.bompiani.it/catalogo/il-valzer-lento-delle-tartarughe-9788845278389
+HTTP_ERROR 429 https://r.jina.ai/http://html.duckduckgo.com/html/?q=site%3Aapp.thestorygraph.com%2Fbooks%20Il%20valzer%20lento%20delle%20tartarughe%20Katherine%20Pancol
+HTTP_ERROR 429 https://r.jina.ai/https://html.duckduckgo.com/html/?q=site%3Abeta.thestorygraph.com%2Fbooks%20Il%20valzer%20lento%20delle%20tartarughe%20Katherine%20Pancol
+HTTP_ERROR 429 https://r.jina.ai/http://html.duckduckgo.com/html/?q=site%3Abeta.thestorygraph.com%2Fbooks%20Il%20valzer%20lento%20delle%20tartarughe%20Katherine%20Pancol
+HTTP_ERROR 429 https://r.jina.ai/http://www.bompiani.it/catalogo/il-valzer-lento-delle-tartarughe-9788845278389
+HTTP_ERROR 429 https://r.jina.ai/https://app.thestorygraph.com/browse?search_term=Il%20valzer%20lento%20delle%20tartarughe%20Katherine%20Pancol
+HTTP_ERROR 429 https://r.jina.ai/http://app.thestorygraph.com/browse?search_term=Il%20valzer%20lento%20delle%20tartarughe%20Katherine%20Pancol
+FINAL_RUNTIME {"title":"Il valzer lento delle tartarughe","author":"Katherine Pancol","publisher":"Bompiani","publishedDate":"2015","plot":"","genres":"Narrativa rosa/sentimentale","status":"📖","plotV8":true,"loaderV46":true,"seriesV6":true,"sanitizerV1":true,"plotPolicy":"publisher-first-official-retry-lock-v8","seriesPolicy":"single-owner-goodreads-complete-then-storygraph-then-wikipedia-v6","plotLength":0,"officialLength":532,"pure":{"publisher":"Bompiani","giunti":"Giunti","plot":"Una trama abbastanza lunga da essere considerata valida e da consentire al pulitore di conservare il testo narrativo senza il rumore commerciale finale. Un secondo periodo completa la sinossi."},"http429":15}
 ISBN_LIVE_RUNTIME_FAIL Error: Runtime ISBN non corretto: trama-editore-non-prioritaria
     at /tmp/isbn-live/test.js:64:25
