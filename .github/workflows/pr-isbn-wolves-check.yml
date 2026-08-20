@@ -11,6 +11,7 @@ on:
       - 'series-single-owner-guard-v1.js'
       - 'storygraph-goodreads-genres-v3.js'
       - 'storygraph-genre-lock-v4.js'
+      - 'isbn-enrichment-progress-v10.js'
       - 'publisher-plot-lock-v8.js'
       - 'isbn-field-sanitizer-v2.js'
       - 'isbn-cover.js'
@@ -42,6 +43,7 @@ jobs:
         run: |
           node --check storygraph-goodreads-genres-v3.js
           node --check storygraph-genre-lock-v4.js
+          node --check isbn-enrichment-progress-v10.js
           node --check series-neighbors-standalone-v5.js
           node --check series-authoritative-runtime-v7.js
           node --check series-relation-stabilizer-v8.js
@@ -54,18 +56,22 @@ jobs:
           grep -q '__LIB_SERIES_NEIGHBORS_STANDALONE_V49' series-neighbors-standalone-v5.js
           grep -q 'series-authoritative-runtime-v7.js?v=20260820-11' series-neighbors-standalone-v5.js
           grep -q 'series-relation-stabilizer-v8.js?v=20260820-1' series-neighbors-standalone-v5.js
-          grep -q 'series-saga-lock-v9.js?v=20260820-1' series-neighbors-standalone-v5.js
+          grep -q 'series-saga-lock-v9.js?v=20260820-2' series-neighbors-standalone-v5.js
           grep -q 'series-single-owner-guard-v1.js?v=20260820-6' series-neighbors-standalone-v5.js
           grep -q 'publisher-plot-lock-v8.js?v=20260820-11' series-neighbors-standalone-v5.js
           grep -q 'isbn-field-sanitizer-v2.js?v=20260820-2' series-neighbors-standalone-v5.js
           grep -q 'storygraph-goodreads-genres-v3.js?v=20260820-1' series-neighbors-standalone-v5.js
-          grep -q 'storygraph-genre-lock-v4.js?v=20260820-1' series-neighbors-standalone-v5.js
+          grep -q 'storygraph-genre-lock-v4.js?v=20260820-2' series-neighbors-standalone-v5.js
+          grep -q 'isbn-enrichment-progress-v10.js?v=20260820-1' series-neighbors-standalone-v5.js
           grep -q 'goodreads-order-canonical-localization-stable-v8' series-neighbors-standalone-v5.js
           grep -q '__LIB_SERIES_RELATION_STABILIZER_V8' series-relation-stabilizer-v8.js
           grep -q '__LIB_SERIES_AUTHORITATIVE_RUNTIME_V8' series-relation-stabilizer-v8.js
           grep -q 'canonical-title-localizer-v8' series-relation-stabilizer-v8.js
           grep -q '__LIB_SERIES_SAGA_LOCK_V9' series-saga-lock-v9.js
+          grep -q '__LIB_SERIES_SAGA_LOCK_V10' series-saga-lock-v9.js
           grep -q '__LIB_STORYGRAPH_GENRE_LOCK_V4' storygraph-genre-lock-v4.js
+          grep -q '__LIB_STORYGRAPH_GENRE_LOCK_V5' storygraph-genre-lock-v4.js
+          grep -q '__LIB_ISBN_ENRICHMENT_PROGRESS_V10' isbn-enrichment-progress-v10.js
           grep -q 'goodreads-ordered-series-primary-v7' series-authoritative-runtime-v7.js
           grep -q '__LIB_ISBN_FIELD_SANITIZER_V2' isbn-field-sanitizer-v2.js
           grep -q '__LIB_PUBLISHER_PLOT_LOCK_V8_SANITIZED' publisher-plot-lock-v8.js
@@ -75,14 +81,17 @@ jobs:
           ! grep -q '9788845279553' series-relation-stabilizer-v8.js
           ! grep -q '9788845279553' series-saga-lock-v9.js
           ! grep -q '9788845279553' storygraph-genre-lock-v4.js
+          ! grep -q '9788845279553' isbn-enrichment-progress-v10.js
           ! grep -q 'Simon Beckett' series-authoritative-runtime-v7.js
           ! grep -q 'Simon Beckett' series-relation-stabilizer-v8.js
           ! grep -q 'Simon Beckett' series-saga-lock-v9.js
           ! grep -q 'Simon Beckett' storygraph-genre-lock-v4.js
+          ! grep -q 'Simon Beckett' isbn-enrichment-progress-v10.js
           ! grep -q 'David Hunter' series-authoritative-runtime-v7.js
           ! grep -q 'David Hunter' series-relation-stabilizer-v8.js
           ! grep -q 'David Hunter' series-saga-lock-v9.js
           ! grep -q 'David Hunter' storygraph-genre-lock-v4.js
+          ! grep -q 'David Hunter' isbn-enrichment-progress-v10.js
           ! grep -q '9788868363697' series-authoritative-runtime-v7.js
           ! grep -q '9788868363710' series-authoritative-runtime-v7.js
           ! grep -q 'Stephen King' series-authoritative-runtime-v7.js
@@ -150,5 +159,5 @@ jobs:
           node-version: 20
       - name: Test stabilizzatore relazioni V8
         run: node scripts/test-series-stabilizer-v8.js
-      - name: Test lock Saga e Generi V9
+      - name: Test progress, Saga e Generi
         run: node scripts/test-saga-genres-v9.js
