@@ -2,7 +2,7 @@
 const root=typeof window!=='undefined'?window:globalThis;
 if(root.__LIB_SERIES_NEIGHBORS_STANDALONE_V42)return;
 root.__LIB_SERIES_NEIGHBORS_STANDALONE_V42=true;
-root.__LIB_SINGLE_OWNER_RUNTIME='20260820-2';
+root.__LIB_SINGLE_OWNER_RUNTIME='20260820-3';
 
 /* Gli script legacy sono ancora referenziati dall'HTML storico. Impediamo che
    quelli caricati dopo questo loader possano reinstallare resolver concorrenti. */
@@ -26,6 +26,7 @@ loadOnce('libPublisherPlotLockV8','publisher-plot-lock-v8.js?v=20260820-8');
 
 /* Un solo proprietario dei campi Saga / Prequel / Sequel. */
 loadOnce('libSeriesAuthoritativeRuntimeV4','series-authoritative-runtime-v4.js?v=20260820-4');
+loadOnce('libSeriesSingleOwnerGuardV1','series-single-owner-guard-v1.js?v=20260820-1');
 
 /* Il modulo multi-genere gestisce solo salvataggio/UI; la rete e la fonte dei
    generi appartengono esclusivamente al resolver StoryGraph/Goodreads V3. */
