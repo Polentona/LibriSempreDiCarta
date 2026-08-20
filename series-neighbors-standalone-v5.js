@@ -1,8 +1,8 @@
 (()=>{
 const root=typeof window!=='undefined'?window:globalThis;
-if(root.__LIB_SERIES_NEIGHBORS_STANDALONE_V43)return;
-root.__LIB_SERIES_NEIGHBORS_STANDALONE_V43=true;
-root.__LIB_SINGLE_OWNER_RUNTIME='20260820-7';
+if(root.__LIB_SERIES_NEIGHBORS_STANDALONE_V44)return;
+root.__LIB_SERIES_NEIGHBORS_STANDALONE_V44=true;
+root.__LIB_SINGLE_OWNER_RUNTIME='20260820-8';
 
 /* I resolver legacy non devono più poter diventare proprietari dei campi.
    Questi marker sono letti dagli stessi moduli legacy prima di inizializzarsi:
@@ -17,6 +17,7 @@ root.__LIB_GENRE_CODETABS_V1=true;
 root.__LIB_GENRE_DIRECT_RETAILER_V1=true;
 root.__LIB_STORYGRAPH_GOODREADS_GENRES_V1=true;
 root.__LIB_STORYGRAPH_GOODREADS_GENRES_V2=true;
+root.__LIB_GENRES_AUTHORITATIVE_V3=true;
 root.__LIB_GENRE_WHITELIST_V1=true;
 root.__LIB_GENRE_WHITELIST_ENFORCER_V2=true;
 
@@ -35,15 +36,18 @@ loadOnce('libPublisherPlotResilienceV6','publisher-plot-resilience-v6.js?v=20260
 loadOnce('libPublisherPlotResilienceV7','publisher-plot-resilience-v7.js?v=20260820-7');
 loadOnce('libPublisherPlotLockV8','publisher-plot-lock-v8.js?v=20260820-8');
 
-/* Un solo proprietario dei campi Saga / Prequel / Sequel. */
-loadOnce('libSeriesAuthoritativeRuntimeV4','series-authoritative-runtime-v4.js?v=20260820-4');
-loadOnce('libSeriesSingleOwnerGuardV1','series-single-owner-guard-v1.js?v=20260820-1');
+/* Un solo proprietario dei campi Saga / Prequel / Sequel. Versione query nuova
+   per impedire a Chrome di riutilizzare copie precedenti dei due runtime. */
+loadOnce('libSeriesAuthoritativeRuntimeV4','series-authoritative-runtime-v4.js?v=20260820-8');
+loadOnce('libSeriesSingleOwnerGuardV1','series-single-owner-guard-v1.js?v=20260820-2');
 
-/* genres-multi gestisce persistenza/UI; una sola sorgente di rete scrive i generi. */
-loadOnce('libGenresMultiV6','genres-multi-v1.js?v=20260820-7');
-loadOnce('libGenresAuthoritativeV3','genres-authoritative-v3.js?v=20260820-3');
+/* genres-multi gestisce persistenza/UI. StoryGraph v3 è l'unica sorgente di rete:
+   prova anche la pagina libro diretta e usa Goodreads solo se StoryGraph è raggiungibile
+   ma il libro non è presente. */
+loadOnce('libGenresMultiV6','genres-multi-v1.js?v=20260820-8');
+loadOnce('libStoryGraphGoodreadsGenresV3','storygraph-goodreads-genres-v3.js?v=20260820-1');
 
-root.__LIB_GENRE_SOURCE_POLICY='storygraph-then-goodreads-only-if-storygraph-absent-v3';
+root.__LIB_GENRE_SOURCE_POLICY='storygraph-direct-then-goodreads-only-if-absent-v3';
 root.__LIB_PLOT_SOURCE_POLICY='publisher-first-official-retry-lock-v8';
 root.__LIB_SERIES_RELATION_POLICY='single-owner-structured-book-then-ordered-series-v4';
 })();
