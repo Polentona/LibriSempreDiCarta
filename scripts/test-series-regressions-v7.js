@@ -124,7 +124,7 @@ function sgPage(url){
   const page=await browser.newPage({viewport:{width:1400,height:1000}}),errors=[];
   page.on('pageerror',e=>errors.push(e.message));
   await page.route('**://r.jina.ai/**',async route=>{
-    let requested=route.request().url();try{requested=decodeURIComponent(requested)}catch(e){}
+    let requested=route.request().url();
     let target=requested;const marker=requested.indexOf('https://r.jina.ai/');if(marker>=0)target=requested.slice(marker+'https://r.jina.ai/'.length);
     if(target.startsWith('http://'))target='https://'+target.slice('http://'.length);
     let body='';
