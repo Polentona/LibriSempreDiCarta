@@ -4,6 +4,15 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 let networkCalls=0;
 global.fetch=async url=>{
   networkCalls++;const u=String(url);await sleep(15);
+  if(u.includes('it.wikipedia.org/w/api.php')){
+    const x=new URL(u),search=x.searchParams.get('srsearch')||'',pageids=x.searchParams.get('pageids')||'';
+    if(x.searchParams.get('list')==='search'){
+      if(search.includes('Library of the Dead'))return new Response(JSON.stringify({query:{search:[{pageid:101,title:'La biblioteca dei morti',snippet:'Library of the Dead è un romanzo di Glenn Cooper.'}]}}),{status:200,headers:{'content-type':'application/json'}});
+      if(search.includes('The Librarians'))return new Response(JSON.stringify({query:{search:[{pageid:102,title:'I custodi della biblioteca',snippet:'The Librarians è un romanzo di Glenn Cooper.'},{pageid:103,title:'The Librarians',snippet:'serie televisiva'}]}}),{status:200,headers:{'content-type':'application/json'}})
+    }
+    if(pageids.includes('101'))return new Response(JSON.stringify({query:{pages:{101:{pageid:101,title:'La biblioteca dei morti',extract:'La biblioteca dei morti, titolo originale Library of the Dead, è un romanzo di Glenn Cooper.'}}}}),{status:200,headers:{'content-type':'application/json'}});
+    if(pageids.includes('102'))return new Response(JSON.stringify({query:{pages:{102:{pageid:102,title:'I custodi della biblioteca',extract:'I custodi della biblioteca, titolo originale The Librarians, è un romanzo di Glenn Cooper.'},103:{pageid:103,title:'The Librarians',extract:'Serie televisiva.'}}}}),{status:200,headers:{'content-type':'application/json'}})
+  }
   if(u.includes('libraccio.it'))return new Response(`## Descrizione\nÈ un semplice libro antico, ma custodisce un segreto. Questa è una trama italiana sufficientemente lunga per verificare il fallback diretto senza URL, prezzi o pulsanti commerciali. Un secondo periodo completa la sinossi del romanzo.\n\n## Dettagli\nEditore: TEA`,{status:200});
   if(u.includes('thestorygraph.com'))return new Response('STORYGRAPH_OK '.repeat(30),{status:200});
   return new Response('GENERIC_OK '.repeat(30),{status:200});
@@ -16,14 +25,16 @@ vm.runInThisContext(fs.readFileSync('isbn-request-broker-v1.js','utf8'));
   if(networkCalls-before!==1)throw new Error('Il broker non ha deduplicato le richieste identiche: '+(networkCalls-before));
 
   global.__LIB_SERIES_AUTHORITATIVE_RUNTIME_V8=true;let seriesCalls=0;
-  const good={saga:'Will Piper',prequel:'La biblioteca dei morti',sequel:'I custodi della biblioteca',authoritative:true,verified:true,checked:true,position:2,initial:false,terminal:false,localizedPrequel:true,localizedSequel:true,localizationPending:false};
-  global.__LIB_RESOLVE_AUTHORITATIVE_SERIES_NEIGHBORS=async()=>{seriesCalls++;return seriesCalls===1?good:null};
+  const canonical={saga:'Will Piper',prequel:'Library of the Dead',sequel:'The Librarians',authoritative:true,verified:true,checked:true,position:2,initial:false,terminal:false,localizedPrequel:false,localizedSequel:false,localizationPending:true};
+  global.__LIB_RESOLVE_AUTHORITATIVE_SERIES_NEIGHBORS=async()=>{seriesCalls++;return canonical};
   global.__LIB_RESOLVE_VERIFIED_SERIES_NEIGHBORS=global.__LIB_RESOLVE_AUTHORITATIVE_SERIES_NEIGHBORS;
+  vm.runInThisContext(fs.readFileSync('series-localization-resilient-v1.js','utf8'));
+  global.__LIB_SERIES_LOCALIZATION_RESILIENT_V1_TEST__.install();
   vm.runInThisContext(fs.readFileSync('series-resolver-stability-v1.js','utf8'));
   global.__LIB_SERIES_RESOLVER_STABILITY_V1_TEST__.install();
   const r1=await global.__LIB_RESOLVE_AUTHORITATIVE_SERIES_NEIGHBORS({code:'9788850225798',title:'Il libro delle anime',author:'Glenn Cooper',saga:''});
   const r2=await global.__LIB_RESOLVE_AUTHORITATIVE_SERIES_NEIGHBORS({code:'9788850225798',title:'Il libro delle anime',author:'Glenn Cooper',saga:'Will Piper'});
-  if(r1?.prequel!=='La biblioteca dei morti'||r2?.sequel!=='I custodi della biblioteca'||seriesCalls!==1)throw new Error('Cache relazioni instabile: '+JSON.stringify({r1,r2,seriesCalls}));
+  if(r1?.prequel!=='La biblioteca dei morti'||r1?.sequel!=='I custodi della biblioteca'||r1?.localizedPrequel!==true||r1?.localizedSequel!==true||r2?.sequel!=='I custodi della biblioteca'||seriesCalls!==1)throw new Error('Localizzazione/cache relazioni instabile: '+JSON.stringify({r1,r2,seriesCalls}));
 
   global.__LIB_STORYGRAPH_GOODREADS_GENRES_V3=true;
   global.__LIB_RESOLVE_AUTHORITATIVE_GENRES=async()=>({found:false,transient:true,genres:[],source:'storygraph-unavailable'});
