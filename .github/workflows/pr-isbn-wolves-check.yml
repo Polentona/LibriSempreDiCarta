@@ -14,6 +14,7 @@ on:
       - '.github/workflows/pages.yml'
       - '.github/workflows/live-isbn-regression-v1.yml'
       - '.github/workflows/pr-isbn-wolves-check.yml'
+      - '.nojekyll'
 
 permissions:
   contents: read
@@ -39,7 +40,12 @@ jobs:
           grep -q '__LIB_SERIES_NEIGHBORS_STANDALONE_V44' series-neighbors-standalone-v5.js
           grep -q 'series-authoritative-runtime-v4.js?v=20260820-8' series-neighbors-standalone-v5.js
           grep -q 'storygraph-goodreads-genres-v3.js?v=20260820-1' series-neighbors-standalone-v5.js
-          grep -q "'isbn-cover.js':'20260820-relations-cache-1'" .github/workflows/cache-bust-runtime-v1.yml
+          grep -q "Forza cache runtime nell'artefatto" .github/workflows/pages.yml
+          grep -q 'GITHUB_SHA' .github/workflows/pages.yml
+          grep -q 'series-neighbors-standalone-v5.js' .github/workflows/pages.yml
+          grep -q 'isbn-cover.js' .github/workflows/pages.yml
+          test -f .nojekyll
+          ! grep -q 'git push' .github/workflows/cache-bust-runtime-v1.yml
           ! grep -q '9788868363710' series-authoritative-runtime-v4.js
           ! grep -q 'Stephen King' series-authoritative-runtime-v4.js
           ! grep -q 'La Torre Nera' series-authoritative-runtime-v4.js

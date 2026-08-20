@@ -32,6 +32,41 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+
+      - name: Forza cache runtime nell'artefatto
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import os,re
+
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          version=os.environ['GITHUB_SHA'][:12]
+          targets=[
+            'isbn-resilient-fallback-v1.js',
+            'series-bounded-resolver-v1.js',
+            'series-relations-direct-v7.js',
+            'series-wikipedia-authoritative-v3.js',
+            'series-google-books-order-v10.js',
+            'series-authoritative-catalog-v1.js',
+            'series-neighbors-standalone-v5.js',
+            'series-universal-resolver-v1.js',
+            'isbn-cover.js',
+            'lookup-lock.js'
+          ]
+          changed=[]
+          for filename in targets:
+              pattern=re.escape(filename)+r'\?v=[^"\']+'
+              if re.search(pattern,s):
+                  s=re.sub(pattern,filename+'?v='+version,s)
+                  changed.append(filename)
+          p.write_text(s,encoding='utf-8')
+          print('CACHE_VERSION='+version)
+          print('CACHE_TARGETS='+','.join(changed))
+          if 'series-neighbors-standalone-v5.js' not in changed or 'isbn-cover.js' not in changed:
+              raise SystemExit('Runtime critici non trovati in index.html')
+          PY
+
       - name: Configure Pages
         uses: actions/configure-pages@v5
         with:
@@ -50,6 +85,7 @@ jobs:
           ok=0
           runtime=0
           bytes=0
+          token="${GITHUB_SHA::12}"
           for i in $(seq 1 18); do
             if curl -fsSL --max-time 20 "https://polentona.github.io/LibriSempreDiCarta/?pages-live=${GITHUB_RUN_ID}-${i}" -o /tmp/pages-live.html; then
               bytes=$(wc -c </tmp/pages-live.html)
@@ -58,7 +94,8 @@ jobs:
                 && grep -q 'data-author-letter' /tmp/pages-live.html \
                 && grep -q 'class="series-row"' /tmp/pages-live.html \
                 && grep -q 'id="addBookBtn"' /tmp/pages-live.html \
-                && grep -Eq 'series-neighbors-standalone-v5\.js\?v=(20260820-39|20260820-40)' /tmp/pages-live.html; then
+                && grep -Fq "series-neighbors-standalone-v5.js?v=${token}" /tmp/pages-live.html \
+                && grep -Fq "isbn-cover.js?v=${token}" /tmp/pages-live.html; then
                 if curl -fsSL --max-time 20 "https://polentona.github.io/LibriSempreDiCarta/series-neighbors-standalone-v5.js?runtime=${GITHUB_RUN_ID}-${i}" -o /tmp/loader-live.js \
                   && grep -q '__LIB_SERIES_NEIGHBORS_STANDALONE_V44' /tmp/loader-live.js \
                   && grep -q '__LIB_GOODREADS_GENRES_LOADER_V1=true' /tmp/loader-live.js \
@@ -96,11 +133,16 @@ jobs:
           echo "HTML_OK=$ok" | tee /tmp/pages-result.log
           echo "RUNTIME_OK=$runtime" | tee -a /tmp/pages-result.log
           echo "HTML_BYTES=$bytes" | tee -a /tmp/pages-result.log
+          echo "CACHE_TOKEN=$token" | tee -a /tmp/pages-result.log
           test "$ok" = 1
           test "$runtime" = 1
       - name: Registra risultato Pages
         if: always()
+        continue-on-error: true
         run: |
+          git reset --hard
+          git fetch origin main
+          git checkout -B main origin/main
           {
             echo "deploy=${{ steps.deployment.outcome }}"
             echo "html=${{ steps.live.outcome }}"
@@ -111,10 +153,9 @@ jobs:
           } > pages-deploy-result.txt
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git pull --rebase origin main || true
           git add pages-deploy-result.txt
           git commit -m "Registra esito deploy GitHub Pages" || exit 0
-          git push
+          git push origin HEAD:main || echo "::warning::Esito Pages non registrato perché main è avanzato durante il deploy."
       - name: Fallisci se la verifica live non passa
         if: steps.deployment.outcome != 'success' || steps.live.outcome != 'success'
         run: exit 1

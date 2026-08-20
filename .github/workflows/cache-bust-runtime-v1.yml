@@ -1,4 +1,4 @@
-name: Aggiorna versioni runtime
+name: Verifica cache runtime
 
 on:
   push:
@@ -17,50 +17,30 @@ on:
       - 'publisher-plot-lock-v8.js'
       - 'isbn-resilient-fallback-v1.js'
       - 'isbn-cover.js'
+      - '.github/workflows/pages.yml'
       - '.github/workflows/cache-bust-runtime-v1.yml'
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: cache-bust-runtime
+  group: cache-runtime-policy
   cancel-in-progress: true
 
 jobs:
-  cache-bust:
-    if: ${{ !startsWith(github.event.head_commit.message, 'Aggiorna cache runtime') }}
+  verify:
     runs-on: ubuntu-slim
     steps:
       - uses: actions/checkout@v6
-        with:
-          ref: main
-      - name: Forza caricamento script aggiornati
+      - name: Verifica cache-busting gestito dal deploy
         run: |
-          python - <<'PY'
-          from pathlib import Path
-          import re
-          p=Path('index.html')
-          s=p.read_text(encoding='utf-8')
-          versions={
-            'series-relations-direct-v7.js':'20260820-guard-1',
-            'series-wikipedia-authoritative-v3.js':'20260820-disabled-1',
-            'series-authoritative-catalog-v1.js':'6',
-            'series-google-books-order-v10.js':'20260820-single-owner-2',
-            'series-neighbors-standalone-v5.js':'20260820-40',
-            'series-universal-resolver-v1.js':'20260819-7',
-            'isbn-resilient-fallback-v1.js':'20260819-11',
-            'isbn-cover.js':'20260820-relations-cache-1'
-          }
-          for filename,version in versions.items():
-              s=re.sub(re.escape(filename)+r'\?v=[^"\']+', filename+'?v='+version, s)
-          p.write_text(s,encoding='utf-8')
-          PY
-          if git diff --quiet -- index.html; then
-            echo 'Versioni già aggiornate.'
-            exit 0
+          grep -q "Forza cache runtime nell'artefatto" .github/workflows/pages.yml
+          grep -q "GITHUB_SHA" .github/workflows/pages.yml
+          grep -q "series-neighbors-standalone-v5.js" .github/workflows/pages.yml
+          grep -q "isbn-cover.js" .github/workflows/pages.yml
+          if grep -q "git push" .github/workflows/cache-bust-runtime-v1.yml; then
+            echo "Il workflow cache non deve più creare commit automatici su main."
+            exit 1
           fi
-          git config user.name "github-actions[bot]"
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add index.html
-          git commit -m 'Aggiorna cache runtime ISBN' || exit 0
-          git push
+          echo "Cache runtime gestita nel singolo deploy Pages: OK"
