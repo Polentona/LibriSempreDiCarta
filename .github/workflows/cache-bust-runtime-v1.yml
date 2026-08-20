@@ -5,13 +5,13 @@ on:
     branches: [main]
     paths:
       - 'series-neighbors-standalone-v5.js'
-      - 'series-universal-resolver-v1.js'
+      - 'series-authoritative-runtime-v4.js'
+      - 'series-single-owner-guard-v1.js'
+      - 'series-google-books-order-v10.js'
       - 'series-authoritative-catalog-v1.js'
-      - 'series-verified-order-v1.js'
-      - 'series-verified-order-v2.js'
-      - 'series-verified-saga-v3.js'
+      - 'genres-authoritative-v3.js'
+      - 'genres-multi-v1.js'
       - 'publisher-plot-lock-v8.js'
-      - 'genre-whitelist-enforcer-v2.js'
       - 'isbn-resilient-fallback-v1.js'
 
 permissions:
@@ -38,7 +38,8 @@ jobs:
           s=p.read_text(encoding='utf-8')
           versions={
             'series-authoritative-catalog-v1.js':'6',
-            'series-neighbors-standalone-v5.js':'20260820-37',
+            'series-google-books-order-v10.js':'20260820-single-owner-1',
+            'series-neighbors-standalone-v5.js':'20260820-38',
             'series-universal-resolver-v1.js':'20260819-7',
             'isbn-resilient-fallback-v1.js':'20260819-11'
           }
