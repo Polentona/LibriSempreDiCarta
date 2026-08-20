@@ -3,9 +3,17 @@ name: Aggiorna versioni runtime
 on:
   push:
     branches: [main]
+    paths:
+      - 'series-neighbors-standalone-v5.js'
+      - 'series-universal-resolver-v1.js'
+      - 'isbn-resilient-fallback-v1.js'
 
 permissions:
   contents: write
+
+concurrency:
+  group: cache-bust-runtime
+  cancel-in-progress: true
 
 jobs:
   cache-bust:
