@@ -1,23 +1,13 @@
 outcome=failure
-tested_isbn=9788845278389
-source_commit=44017c2f90ab2665fc255e9988f8caa925cfad03
-mode=runtime-v46-series-v6-sanitizer-v1
+tested_isbn=9788845279553
+source_commit=e57c39285d3d1761c418b591bd6e46ec182927f9
+mode=beckett-runtime-v47-series-v7-sanitizer-v2
 ---
-HTTP_ERROR 429 https://www.googleapis.com/books/v1/volumes?q=isbn%3A9788845278389&maxResults=20&projection=full&printType=all
-HTTP_ERROR 429 https://r.jina.ai/https://html.duckduckgo.com/html/?q=site%3Aapp.thestorygraph.com%2Fbooks%20%229788845278389%22%20%22Il%20valzer%20lento%20delle%20tartarughe%22
-HTTP_ERROR 429 https://r.jina.ai/http://html.duckduckgo.com/html/?q=site%3Aapp.thestorygraph.com%2Fbooks%20%229788845278389%22%20%22Il%20valzer%20lento%20delle%20tartarughe%22
-HTTP_ERROR 429 https://r.jina.ai/https://html.duckduckgo.com/html/?q=site%3Abeta.thestorygraph.com%2Fbooks%20%229788845278389%22%20%22Il%20valzer%20lento%20delle%20tartarughe%22
-HTTP_ERROR 429 https://r.jina.ai/http://html.duckduckgo.com/html/?q=site%3Abeta.thestorygraph.com%2Fbooks%20%229788845278389%22%20%22Il%20valzer%20lento%20delle%20tartarughe%22
-HTTP_ERROR 429 https://r.jina.ai/https://app.thestorygraph.com/browse?search_term=%229788845278389%22%20%22Il%20valzer%20lento%20delle%20tartarughe%22
-HTTP_ERROR 429 https://r.jina.ai/http://app.thestorygraph.com/browse?search_term=%229788845278389%22%20%22Il%20valzer%20lento%20delle%20tartarughe%22
-HTTP_ERROR 429 https://r.jina.ai/https://html.duckduckgo.com/html/?q=site%3Aapp.thestorygraph.com%2Fbooks%20Il%20valzer%20lento%20delle%20tartarughe%20Katherine%20Pancol
-HTTP_ERROR 429 https://r.jina.ai/https://www.bompiani.it/catalogo/il-valzer-lento-delle-tartarughe-9788845278389
-HTTP_ERROR 429 https://r.jina.ai/http://html.duckduckgo.com/html/?q=site%3Aapp.thestorygraph.com%2Fbooks%20Il%20valzer%20lento%20delle%20tartarughe%20Katherine%20Pancol
-HTTP_ERROR 429 https://r.jina.ai/https://html.duckduckgo.com/html/?q=site%3Abeta.thestorygraph.com%2Fbooks%20Il%20valzer%20lento%20delle%20tartarughe%20Katherine%20Pancol
-HTTP_ERROR 429 https://r.jina.ai/http://html.duckduckgo.com/html/?q=site%3Abeta.thestorygraph.com%2Fbooks%20Il%20valzer%20lento%20delle%20tartarughe%20Katherine%20Pancol
-HTTP_ERROR 429 https://r.jina.ai/http://www.bompiani.it/catalogo/il-valzer-lento-delle-tartarughe-9788845278389
-HTTP_ERROR 429 https://r.jina.ai/https://app.thestorygraph.com/browse?search_term=Il%20valzer%20lento%20delle%20tartarughe%20Katherine%20Pancol
-HTTP_ERROR 429 https://r.jina.ai/http://app.thestorygraph.com/browse?search_term=Il%20valzer%20lento%20delle%20tartarughe%20Katherine%20Pancol
-FINAL_RUNTIME {"title":"Il valzer lento delle tartarughe","author":"Katherine Pancol","publisher":"Bompiani","publishedDate":"2015","plot":"","genres":"Narrativa rosa/sentimentale","status":"📖","plotV8":true,"loaderV46":true,"seriesV6":true,"sanitizerV1":true,"plotPolicy":"publisher-first-official-retry-lock-v8","seriesPolicy":"single-owner-goodreads-complete-then-storygraph-then-wikipedia-v6","plotLength":0,"officialLength":532,"pure":{"publisher":"Bompiani","giunti":"Giunti","plot":"Una trama abbastanza lunga da essere considerata valida e da consentire al pulitore di conservare il testo narrativo senza il rumore commerciale finale. Un secondo periodo completa la sinossi."},"http429":15}
-ISBN_LIVE_RUNTIME_FAIL Error: Runtime ISBN non corretto: trama-editore-non-prioritaria
-    at /tmp/isbn-live/test.js:64:25
+HTTP_ERROR 429 https://www.googleapis.com/books/v1/volumes?q=isbn%3A9788845279553&maxResults=20&projection=full&printType=all
+HTTP_ERROR 403 https://corsproxy.io/?url=https%3A%2F%2Fwww.bompiani.it%2Fimg%2Fbompiani%2Flogo_giunti_gray.png
+HTTP_ERROR 403 https://corsproxy.io/?url=https%3A%2F%2Fwww.bompiani.it%2Fimg%2Fbompiani%2Flogo.png
+HTTP_ERROR 404 https://corsproxy.io/?url=http%3A%2F%2Fwww.giunti.it%2Fprivacy-policy
+HTTP_ERROR 413 https://corsproxy.io/?url=https%3A%2F%2Fwww.bompiani.it%2Fcatalogo
+FINAL_BECKETT {"last":{"title":"I sussurri della morte","author":"Simon Beckett","publisher":"Bompiani","saga":"","prequel":"","sequel":"","plot":"[](https://www. bompiani. it/catalogo/i-sussurri-della-morte-9788845279553)Simon Beckett All'interno del bungalow, la vittima giace nuda, supina su un tavolo, legata mani e piedi, con evidenti ferite d'arma da taglio, inferte quando, forse, era ancora in vita. La temperatura all'interno dell'edificio supera i 43 gradi. Una sedia davanti al corpo fa pensare che l'assassino abbia assistito allo spettacolo degli ultimi attimi di vita della vittima. Ma un particolare risulta incoerente: l'avanzato stato di decomposizione del corpo induce a pensare che il decesso sia avvenuto da almeno 6 giorni. Eppure il bungalow risulta affittato solo da 4 giorni. Le uniche impronte sulla scena, inoltre, risalgono a un certo Dexter, morto sei mesi prima. Almeno così registra l'anagrafe. E' chiaro che l'assassino non solo è molto astuto e non lascia tracce; non solo è molto cattivo; è anche, scientificamente, molto preparato. Dopo \"La chimica della morte\" e \"Scritto nelle ossa\", continua la saga di David Hunter. Stavolta lo scenario è la Body Farm di Knoxville, nel Tennessee, l'unico laboratorio al mondo dove si utilizzano autentici cadaveri umani per studiarne il processo di decomposizione all'aperto. E stavolta Hunter conduce l'indagine con il suo maestro, Tom Lieberman. Insieme affrontano una nuova, sconcertante avventura nel regno del male e della scienza. € 12. 35 acquista","status":"Trama recuperata dal sito ufficiale Bompiani.","loaderV47":true,"seriesV7":true,"sanitizerV2":true,"policy":"goodreads-order-storygraph-localization-retry-v7"},"pure":{"colon":"Bompiani","joined":"Bompiani","giunti":"Giunti","plot":"Una trama abbastanza lunga da essere considerata valida e da consentire al pulitore di conservare il testo narrativo senza il rumore commerciale finale. Un secondo periodo completa la sinossi."},"direct":{"saga":"David Hunter","prequel":"Written in Bone","sequel":"The Calling of the Grave","verified":true,"authoritative":true,"checked":true,"source":"https://www.goodreads.com/series/54603-david-hunter","method":"goodreads-ordered-series-primary-v7","position":3,"initial":false,"terminal":false,"prequelRow":{"title":"Written in Bone","position":2,"url":"http://www.goodreads.com/book/show/1328721.Written_in_Bone","order":2},"sequelRow":{"title":"The Calling of the Grave","position":4,"url":"http://www.goodreads.com/book/show/7927358-the-calling-of-the-grave","order":4},"localizationPending":true},"http429":1}
+ISBN_BECKETT_LIVE_FAIL Error: ISBN Beckett non corretto: saga:, prequel:, sequel:
+    at /tmp/isbn-live/test.js:50:25
