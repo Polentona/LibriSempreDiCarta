@@ -104,6 +104,7 @@ jobs:
                   && grep -q '__LIB_GENRE_SEARCH_FALLBACK_V2=true' /tmp/loader-live.js \
                   && grep -q 'series-authoritative-runtime-v6.js?v=20260820-10' /tmp/loader-live.js \
                   && grep -q 'series-single-owner-guard-v1.js?v=20260820-4' /tmp/loader-live.js \
+                  && grep -q 'publisher-plot-lock-v8.js?v=20260820-10' /tmp/loader-live.js \
                   && grep -q 'isbn-field-sanitizer-v1.js?v=20260820-1' /tmp/loader-live.js \
                   && grep -q 'storygraph-goodreads-genres-v3.js?v=20260820-1' /tmp/loader-live.js \
                   && grep -q 'single-owner-goodreads-complete-then-storygraph-then-wikipedia-v6' /tmp/loader-live.js \
@@ -136,7 +137,8 @@ jobs:
                   && grep -q "'fantasy':'Fantasy'" /tmp/genre-live.js \
                   && grep -q "'horror':'Horror'" /tmp/genre-live.js \
                   && curl -fsSL --max-time 20 "https://polentona.github.io/LibriSempreDiCarta/publisher-plot-lock-v8.js?runtime=${GITHUB_RUN_ID}-${i}" -o /tmp/plot-live.js \
-                  && grep -q '__LIB_PUBLISHER_PLOT_LOCK_V8' /tmp/plot-live.js; then
+                  && grep -q '__LIB_PUBLISHER_PLOT_LOCK_V8' /tmp/plot-live.js \
+                  && grep -q '__LIB_PUBLISHER_PLOT_LOCK_V8_LATE_RESOLVER' /tmp/plot-live.js; then
                   runtime=1
                   ok=1
                   break
