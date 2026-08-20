@@ -64,6 +64,7 @@ loadOnce('libPublisherPlotLockV8','publisher-plot-lock-v8.js?v=20260820-12');
 loadOnce('libSeriesSagaLockV9','series-saga-lock-v9.js?v=20260820-2');
 loadOnce('libStoryGraphGenreLockV4','storygraph-genre-lock-v4.js?v=20260820-3');
 loadOnce('libIsbnEnrichmentProgressV11','isbn-enrichment-progress-v10.js?v=20260820-2');
+loadOnce('libGoodreadsPrimarySpinnerGuardV1','goodreads-primary-spinner-guard-v1.js?v=20260820-1');
 
 root.__LIB_METADATA_SOURCE_POLICY='goodreads-primary-then-storygraph-then-fallback-v1';
 root.__LIB_GENRE_SOURCE_POLICY='goodreads-primary-then-storygraph-v1';
