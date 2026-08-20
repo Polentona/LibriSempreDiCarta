@@ -6,6 +6,8 @@ on:
     paths:
       - 'series-neighbors-standalone-v5.js'
       - 'series-universal-resolver-v1.js'
+      - 'series-authoritative-catalog-v1.js'
+      - 'series-verified-order-v1.js'
       - 'isbn-resilient-fallback-v1.js'
 
 permissions:
@@ -31,7 +33,8 @@ jobs:
           p=Path('index.html')
           s=p.read_text(encoding='utf-8')
           versions={
-            'series-neighbors-standalone-v5.js':'20260820-34',
+            'series-authoritative-catalog-v1.js':'6',
+            'series-neighbors-standalone-v5.js':'20260820-35',
             'series-universal-resolver-v1.js':'20260819-7',
             'isbn-resilient-fallback-v1.js':'20260819-11'
           }
