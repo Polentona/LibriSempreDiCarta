@@ -48,10 +48,11 @@ jobs:
           grep -q "series-relation-stabilizer-v8.js" series-neighbors-standalone-v5.js
           grep -q "series-saga-lock-v9.js?v=20260820-2" series-neighbors-standalone-v5.js
           grep -q "storygraph-genre-lock-v4.js?v=20260820-2" series-neighbors-standalone-v5.js
-          grep -q "isbn-enrichment-progress-v10.js?v=20260820-1" series-neighbors-standalone-v5.js
+          grep -q "isbn-enrichment-progress-v10.js?v=20260820-2" series-neighbors-standalone-v5.js
           grep -q "isbn-field-sanitizer-v2.js" series-neighbors-standalone-v5.js
-          grep -q "publisher-plot-lock-v8.js?v=20260820-11" series-neighbors-standalone-v5.js
+          grep -q "publisher-plot-lock-v8.js?v=20260820-12" series-neighbors-standalone-v5.js
           grep -q "goodreads-order-canonical-localization-stable-v8" series-neighbors-standalone-v5.js
+          grep -q "publisher-first-official-retry-lock-v9-sanitized" series-neighbors-standalone-v5.js
           ! grep -q "series-authoritative-runtime-v6.js" series-neighbors-standalone-v5.js
           ! grep -q "isbn-field-sanitizer-v1.js" series-neighbors-standalone-v5.js
           if grep -Eq '^[[:space:]]*git[[:space:]]+push\b' .github/workflows/cache-bust-runtime-v1.yml; then
