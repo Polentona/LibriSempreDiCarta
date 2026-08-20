@@ -1,13 +1,15 @@
 (()=>{
 const root=typeof window!=='undefined'?window:globalThis;
-if(root.__LIB_SERIES_NEIGHBORS_STANDALONE_V41)return;root.__LIB_SERIES_NEIGHBORS_STANDALONE_V41=true;
-root.__LIB_SERIES_GENERIC_DEPLOY='20260820-6';
-const clean=v=>String(v??'').replace(/\s+/g,' ').trim();
-const norm=v=>clean(v).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[’‘]/g,"'").replace(/[^a-z0-9']+/g,' ').trim();
-function safeSaga(v,title=''){let x=clean(v).replace(/^["“”«»']+|["“”«»']+$/g,'');const n=norm(x);if(!x||x.length>100||n===norm(title)||/(?:18|19|20)\d{2}|https?:|www\.|\.{2,}|…/.test(x)||/\b(?:iniziat[ao]|seguit[oa]|precedut[oa]|pubblicat[ao]|romanzo|libro|volume|capitolo|autore|editore|isbn|ean|film|cinema)\b/i.test(n))return'';return x.replace(/^(?:la\s+|the\s+)?(?:serie|series|saga|trilogia|trilogy)\s+(?:di\s+|of\s+)?/i,'').trim()}
-function safeBook(v,title=''){let x=clean(v).replace(/^["“”«»']+|["“”«»']+$/g,'').replace(/[.;:\s]+$/,'');const n=norm(x);if(!x||x.length>190||n===norm(title)||/https?:|www\.|\.{2,}|…|[{}<>]|['’]{2}/.test(x)||/\b(?:isbn|ean|editore|publisher|autore|author|followed by|preceded by|iniziat[ao] con|seguit[oa] da|pubblicat[ao] nel)\b/i.test(n)||/\b(?:she|he|they|we|you)\s+(?:is|are|was|were|has|have|had|got|will|would|can|could)\b/i.test(n)||/\bduring his\b/i.test(n))return'';return x}
-root.__LIB_RESOLVE_SERIES_NEIGHBORS=async function(input={}){if(typeof root.__LIB_RESOLVE_UNIVERSAL_SERIES==='function'){const r=await root.__LIB_RESOLVE_UNIVERSAL_SERIES(input).catch(()=>null);if(r)return {...r,saga:safeSaga(r.saga,input.title),prequel:safeBook(r.prequel,input.title),sequel:safeBook(r.sequel,input.title),checked:true}}return{saga:safeSaga(input.saga,input.title),prequel:'',sequel:'',authoritative:false,checked:false,source:''}};
-function loadOnce(id,src){if(document.getElementById(id))return;const s=document.createElement('script');s.id=id;s.src=src;s.async=false;document.head.appendChild(s)}
+if(root.__LIB_SERIES_NEIGHBORS_STANDALONE_V42)return;
+root.__LIB_SERIES_NEIGHBORS_STANDALONE_V42=true;
+root.__LIB_SINGLE_OWNER_RUNTIME='20260820-1';
+
+function loadOnce(id,src){
+  if(document.getElementById(id))return;
+  const s=document.createElement('script');s.id=id;s.src=src;s.async=false;document.head.appendChild(s);
+}
+
+/* Metadati ISBN e trama: restano separati dalle relazioni di saga e dai generi. */
 loadOnce('libIsbnMetadataRescueV1','isbn-metadata-rescue-v1.js?v=20260819-1');
 loadOnce('libIsbnSbnRescueV3','isbn-sbn-rescue-v1.js?v=20260819-3');
 loadOnce('libIsbnDirectCatalogV2','isbn-direct-catalog-v1.js?v=20260819-2');
@@ -16,15 +18,16 @@ loadOnce('libPublisherPlotResilienceV5','publisher-plot-resilience-v5.js?v=20260
 loadOnce('libPublisherPlotResilienceV6','publisher-plot-resilience-v6.js?v=20260820-6');
 loadOnce('libPublisherPlotResilienceV7','publisher-plot-resilience-v7.js?v=20260820-7');
 loadOnce('libPublisherPlotLockV8','publisher-plot-lock-v8.js?v=20260820-8');
-loadOnce('libVerifiedSeriesOrderV1','series-verified-order-v1.js?v=20260820-1');
-loadOnce('libVerifiedSeriesOrderV2','series-verified-order-v2.js?v=20260820-2');
-loadOnce('libVerifiedSeriesSagaV3','series-verified-saga-v3.js?v=20260820-3');
-loadOnce('libGenresMultiV6','genres-multi-v1.js?v=20260819-6');
-loadOnce('libGenreStoryGraphGoodreadsV2','storygraph-goodreads-genres-v2.js?v=20260819-2');
-loadOnce('libGenreWhitelistV1','genre-whitelist-v1.js?v=20260820-2');
-loadOnce('libGenreWhitelistEnforcerV2','genre-whitelist-enforcer-v2.js?v=20260820-2');
-root.__LIB_GENRE_SOURCE_POLICY='storygraph-then-goodreads-whitelist';
+
+/* Un solo proprietario dei campi Saga / Prequel / Sequel. */
+loadOnce('libSeriesAuthoritativeRuntimeV4','series-authoritative-runtime-v4.js?v=20260820-4');
+
+/* Il modulo multi-genere gestisce solo salvataggio/UI; la rete e la fonte dei
+   generi appartengono esclusivamente al resolver StoryGraph/Goodreads V3. */
+loadOnce('libGenresMultiV6','genres-multi-v1.js?v=20260820-7');
+loadOnce('libGenresAuthoritativeV3','genres-authoritative-v3.js?v=20260820-3');
+
+root.__LIB_GENRE_SOURCE_POLICY='storygraph-then-goodreads-only-if-storygraph-absent-v3';
 root.__LIB_PLOT_SOURCE_POLICY='publisher-first-official-retry-lock-v8';
-root.__LIB_SERIES_RELATION_POLICY='structured-book-relations-with-verified-series-name';
-root.__LIB_SERIES_NEIGHBORS_V41_TEST__={safeSaga,safeBook};
+root.__LIB_SERIES_RELATION_POLICY='single-owner-structured-book-then-ordered-series-v4';
 })();
