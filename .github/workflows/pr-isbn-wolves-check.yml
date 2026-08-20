@@ -1,0 +1,83 @@
+name: PR ISBN Wolves check
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'series-neighbors-standalone-v5.js'
+      - 'series-authoritative-runtime-v4.js'
+      - 'series-single-owner-guard-v1.js'
+      - 'storygraph-goodreads-genres-v3.js'
+      - 'isbn-cover.js'
+      - 'scripts/test-pr-isbn-wolves-v1.js'
+      - '.github/workflows/cache-bust-runtime-v1.yml'
+      - '.github/workflows/pages.yml'
+      - '.github/workflows/live-isbn-regression-v1.yml'
+      - '.github/workflows/pr-isbn-wolves-check.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-isbn-wolves-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  static:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Sintassi e configurazione runtime
+        run: |
+          node --check storygraph-goodreads-genres-v3.js
+          node --check series-neighbors-standalone-v5.js
+          node --check series-authoritative-runtime-v4.js
+          node --check scripts/test-pr-isbn-wolves-v1.js
+          grep -q '__LIB_SERIES_NEIGHBORS_STANDALONE_V44' series-neighbors-standalone-v5.js
+          grep -q 'series-authoritative-runtime-v4.js?v=20260820-8' series-neighbors-standalone-v5.js
+          grep -q 'storygraph-goodreads-genres-v3.js?v=20260820-1' series-neighbors-standalone-v5.js
+          grep -q "'isbn-cover.js':'20260820-relations-cache-1'" .github/workflows/cache-bust-runtime-v1.yml
+          ! grep -q '9788868363710' series-authoritative-runtime-v4.js
+          ! grep -q 'Stephen King' series-authoritative-runtime-v4.js
+          ! grep -q 'La Torre Nera' series-authoritative-runtime-v4.js
+      - name: Verifica parser StoryGraph
+        run: |
+          node <<'NODE'
+          const fs=require('fs'),vm=require('vm');
+          global.window=global;
+          global.document={getElementById(){return null}};
+          global.setInterval=()=>0;global.clearInterval=()=>{};global.setTimeout=()=>0;global.clearTimeout=()=>{};
+          vm.runInThisContext(fs.readFileSync('storygraph-goodreads-genres-v3.js','utf8'));
+          const got=window.__LIB_STORYGRAPH_GENRES_TEST__.storyGenresFromLine('fiction fantasy horror adventurous dark mysterious medium-paced');
+          if(JSON.stringify(got)!==JSON.stringify(['Fantasy','Horror']))throw new Error('Generi inattesi: '+JSON.stringify(got));
+          console.log('Generi:',got.join(', '));
+          NODE
+
+  integration:
+    needs: static
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Installa Playwright
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install playwright@1.55.0 >/dev/null 2>&1
+          npx playwright install --with-deps chromium >/dev/null
+      - name: Avvia sito locale della PR
+        run: |
+          python3 -m http.server 8000 --bind 127.0.0.1 >/tmp/pr-http.log 2>&1 &
+          echo $! >/tmp/pr-http.pid
+          for i in $(seq 1 20); do
+            curl -fsS http://127.0.0.1:8000/ >/dev/null && exit 0
+            sleep 1
+          done
+          cat /tmp/pr-http.log
+          exit 1
+      - name: Test ISBN 9788868363710
+        run: node scripts/test-pr-isbn-wolves-v1.js
