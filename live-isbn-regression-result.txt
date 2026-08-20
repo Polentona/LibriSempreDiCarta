@@ -1,11 +1,18 @@
 outcome=failure
 tested_isbn=9788845278389
-source_commit=9c1cdc91ffebca94cf27696d9a4aea26b48d92ff
+source_commit=6209b7897d67bcc68cc027e91a3f6b4f9303d714
 mode=publisher-plot-v3
 ---
-HTTP_ERROR 429 https://www.googleapis.com/books/v1/volumes?q=isbn%3A9788845278389&maxResults=20&projection=full&printType=all
-HTTP_ERROR 404 https://images.weserv.nl/?url=https%3A%2F%2Fcovers.openlibrary.org%2Fb%2Fisbn%2F9788845278389-L.jpg%3Fdefault%3Dfalse
+HTTP_ERROR 429 https://www.googleapis.com/books/v1/volumes?q=isbn%3A9788845278389&maxResults=20&projection=full&printType=all&langRestrict=it
+HTTP_ERROR 429 https://r.jina.ai/https://www.goodreads.com/search?q=9788845278389%20Il%20valzer%20lento%20delle%20tartarughe%20Katherine%20Pancol&search_type=books
+HTTP_ERROR 429 https://r.jina.ai/http://www.goodreads.com/search?q=9788845278389%20Il%20valzer%20lento%20delle%20tartarughe%20Katherine%20Pancol&search_type=books
+HTTP_ERROR 429 https://r.jina.ai/https://www.bompiani.it/catalogo/il-valzer-lento-delle-tartarughe-9788845278389
+HTTP_ERROR 429 https://r.jina.ai/http://www.bompiani.it/catalogo/il-valzer-lento-delle-tartarughe-9788845278389
+HTTP_ERROR 429 https://r.jina.ai/https://www.unilibro.it/libro/pancol-katherine/il-valzer-lento-delle-tartarughe/9788845278389
+HTTP_ERROR 429 https://r.jina.ai/https://www.goodreads.com/search?q=9788845278389%20Il%20valzer%20lento%20delle%20tartarughe%20Katherine%20Pancol&search_type=books
+HTTP_ERROR 429 https://r.jina.ai/https://www.eurolibro.it/libro/isbn/9788845278389.html
 HTTP_ERROR 404 https://images.weserv.nl/?url=https%3A%2F%2Fcovers.librarything.com%2Fdevkey%2Ffd11eebee79ccfcfe2f17d34a92e1011%2Fsmall%2Fisbn%2F9788845278389
-FINAL_PLOT {"title":"Il valzer lento delle tartarughe","author":"Katherine Pancol","publisher":"Bompiani","publishedDate":"2015","genres":"Romanzo rosa","plotLength":652,"officialLength":652,"status":"","plotV3":true,"loaderV30":false,"plotPolicy":"publisher-first-then-clean-fallbacks-resilient"}
+HTTP_ERROR 404 https://images.weserv.nl/?url=https%3A%2F%2Fcovers.openlibrary.org%2Fb%2Fisbn%2F9788845278389-L.jpg%3Fdefault%3Dfalse
+FINAL_PLOT {"title":"Il valzer lento delle tartarughe","author":"Katherine Pancol","publisher":"Bompiani","publishedDate":"2015","genres":"Romanzo rosa","plotLength":532,"officialLength":532,"status":"Trama recuperata dal sito ufficiale Bompiani.","plotV3":true,"loaderV30":false,"plotPolicy":"publisher-first-official-retry-lock-v8"}
 PLOT_LIVE_FAIL Error: Campi trama non corretti: loader-v30, policy-trama
     at /tmp/isbn-live/test.js:17:798
