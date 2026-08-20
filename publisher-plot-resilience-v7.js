@@ -1,6 +1,7 @@
 (()=>{
 const root=typeof window!=='undefined'?window:globalThis;
 if(root.__LIB_PUBLISHER_PLOT_RESILIENCE_V7)return;root.__LIB_PUBLISHER_PLOT_RESILIENCE_V7=true;
+root.__LIB_PLOT_V7_DEPLOY_MARKER='20260820-all-fields';
 const $=id=>document.getElementById(id);
 const clean=v=>String(v??'').replace(/[\u200B-\u200F\u202A-\u202E\u2060\u2066-\u2069\uFEFF]/g,'').replace(/\u00a0/g,' ').replace(/\s+/g,' ').trim();
 const norm=v=>clean(v).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[’‘]/g,"'").replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim();
