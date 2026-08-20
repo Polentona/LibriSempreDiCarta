@@ -1,15 +1,15 @@
-name: PR ISBN Wolves check
+name: PR metadata and series check
 
 on:
   pull_request:
     branches: [main]
     paths:
       - 'series-neighbors-standalone-v5.js'
-      - 'series-authoritative-runtime-v4.js'
+      - 'series-authoritative-runtime-v5.js'
       - 'series-single-owner-guard-v1.js'
       - 'storygraph-goodreads-genres-v3.js'
       - 'isbn-cover.js'
-      - 'scripts/test-pr-isbn-wolves-v1.js'
+      - 'scripts/test-goodreads-series-primary-v1.js'
       - '.github/workflows/cache-bust-runtime-v1.yml'
       - '.github/workflows/pages.yml'
       - '.github/workflows/live-isbn-regression-v1.yml'
@@ -20,7 +20,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: pr-isbn-wolves-${{ github.event.pull_request.number }}
+  group: pr-metadata-series-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:
@@ -35,20 +35,26 @@ jobs:
         run: |
           node --check storygraph-goodreads-genres-v3.js
           node --check series-neighbors-standalone-v5.js
-          node --check series-authoritative-runtime-v4.js
-          node --check scripts/test-pr-isbn-wolves-v1.js
-          grep -q '__LIB_SERIES_NEIGHBORS_STANDALONE_V44' series-neighbors-standalone-v5.js
-          grep -q 'series-authoritative-runtime-v4.js?v=20260820-8' series-neighbors-standalone-v5.js
+          node --check series-authoritative-runtime-v5.js
+          node --check series-single-owner-guard-v1.js
+          node --check scripts/test-goodreads-series-primary-v1.js
+          grep -q '__LIB_SERIES_NEIGHBORS_STANDALONE_V45' series-neighbors-standalone-v5.js
+          grep -q 'series-authoritative-runtime-v5.js?v=20260820-9' series-neighbors-standalone-v5.js
+          grep -q 'series-single-owner-guard-v1.js?v=20260820-3' series-neighbors-standalone-v5.js
+          grep -q 'single-owner-goodreads-ordered-series-then-structured-book-v5' series-neighbors-standalone-v5.js
+          grep -q 'goodreads-ordered-series-primary' series-authoritative-runtime-v5.js
           grep -q 'storygraph-goodreads-genres-v3.js?v=20260820-1' series-neighbors-standalone-v5.js
+          ! grep -q 'series-authoritative-runtime-v4.js' series-neighbors-standalone-v5.js
+          ! grep -q '9788868363697' series-authoritative-runtime-v5.js
+          ! grep -q '9788868363710' series-authoritative-runtime-v5.js
+          ! grep -q 'Stephen King' series-authoritative-runtime-v5.js
+          ! grep -q 'La Torre Nera' series-authoritative-runtime-v5.js
+          ! grep -q 'Alexandra Adornetto' series-authoritative-runtime-v5.js
+          ! grep -q 'Sacrifice' series-authoritative-runtime-v5.js
           grep -q "Forza cache runtime nell'artefatto" .github/workflows/pages.yml
           grep -q 'GITHUB_SHA' .github/workflows/pages.yml
-          grep -q 'series-neighbors-standalone-v5.js' .github/workflows/pages.yml
-          grep -q 'isbn-cover.js' .github/workflows/pages.yml
           test -f .nojekyll
-          ! grep -q 'git push' .github/workflows/cache-bust-runtime-v1.yml
-          ! grep -q '9788868363710' series-authoritative-runtime-v4.js
-          ! grep -q 'Stephen King' series-authoritative-runtime-v4.js
-          ! grep -q 'La Torre Nera' series-authoritative-runtime-v4.js
+          ! grep -Eq '^[[:space:]]*git[[:space:]]+push\b' .github/workflows/cache-bust-runtime-v1.yml
       - name: Verifica parser StoryGraph
         run: |
           node <<'NODE'
@@ -85,5 +91,5 @@ jobs:
           done
           cat /tmp/pr-http.log
           exit 1
-      - name: Test ISBN 9788868363710
-        run: node scripts/test-pr-isbn-wolves-v1.js
+      - name: Test Goodreads primario su saghe diverse
+        run: node scripts/test-goodreads-series-primary-v1.js
