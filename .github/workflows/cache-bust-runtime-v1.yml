@@ -7,7 +7,7 @@ on:
       - 'series-relations-direct-v7.js'
       - 'series-wikipedia-authoritative-v3.js'
       - 'series-neighbors-standalone-v5.js'
-      - 'series-authoritative-runtime-v4.js'
+      - 'series-authoritative-runtime-v5.js'
       - 'series-single-owner-guard-v1.js'
       - 'series-google-books-order-v10.js'
       - 'series-authoritative-catalog-v1.js'
