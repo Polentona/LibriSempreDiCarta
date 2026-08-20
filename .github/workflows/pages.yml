@@ -97,7 +97,7 @@ jobs:
                 && grep -Fq "series-neighbors-standalone-v5.js?v=${token}" /tmp/pages-live.html \
                 && grep -Fq "isbn-cover.js?v=${token}" /tmp/pages-live.html; then
                 if curl -fsSL --max-time 20 "https://polentona.github.io/LibriSempreDiCarta/series-neighbors-standalone-v5.js?runtime=${GITHUB_RUN_ID}-${i}" -o /tmp/loader-live.js \
-                  && grep -q '__LIB_SERIES_NEIGHBORS_STANDALONE_V49' /tmp/loader-live.js \
+                  && grep -q '__LIB_SERIES_NEIGHBORS_STANDALONE_V50' /tmp/loader-live.js \
                   && grep -q '__LIB_GOODREADS_GENRES_LOADER_V1=true' /tmp/loader-live.js \
                   && grep -q '__LIB_GOODREADS_GENRES_ONLY_V10=true' /tmp/loader-live.js \
                   && grep -q '__LIB_GENRE_OPENLIBRARY_WORK_V1=true' /tmp/loader-live.js \
@@ -106,12 +106,13 @@ jobs:
                   && grep -q 'series-relation-stabilizer-v8.js?v=20260820-1' /tmp/loader-live.js \
                   && grep -q 'series-saga-lock-v9.js?v=20260820-2' /tmp/loader-live.js \
                   && grep -q 'series-single-owner-guard-v1.js?v=20260820-6' /tmp/loader-live.js \
-                  && grep -q 'publisher-plot-lock-v8.js?v=20260820-11' /tmp/loader-live.js \
+                  && grep -q 'publisher-plot-lock-v8.js?v=20260820-12' /tmp/loader-live.js \
                   && grep -q 'isbn-field-sanitizer-v2.js?v=20260820-2' /tmp/loader-live.js \
                   && grep -q 'storygraph-goodreads-genres-v3.js?v=20260820-1' /tmp/loader-live.js \
                   && grep -q 'storygraph-genre-lock-v4.js?v=20260820-2' /tmp/loader-live.js \
-                  && grep -q 'isbn-enrichment-progress-v10.js?v=20260820-1' /tmp/loader-live.js \
+                  && grep -q 'isbn-enrichment-progress-v10.js?v=20260820-2' /tmp/loader-live.js \
                   && grep -q 'goodreads-order-canonical-localization-stable-v8' /tmp/loader-live.js \
+                  && grep -q 'publisher-first-official-retry-lock-v9-sanitized' /tmp/loader-live.js \
                   && ! grep -q 'series-authoritative-runtime-v6.js' /tmp/loader-live.js \
                   && ! grep -q 'isbn-field-sanitizer-v1.js' /tmp/loader-live.js \
                   && ! grep -q 'series-verified-order-v1.js' /tmp/loader-live.js \
@@ -132,7 +133,6 @@ jobs:
                   && ! grep -q 'Simon Beckett' /tmp/stabilizer-live.js \
                   && ! grep -q 'David Hunter' /tmp/stabilizer-live.js \
                   && curl -fsSL --max-time 20 "https://polentona.github.io/LibriSempreDiCarta/series-saga-lock-v9.js?runtime=${GITHUB_RUN_ID}-${i}" -o /tmp/saga-lock-live.js \
-                  && grep -q '__LIB_SERIES_SAGA_LOCK_V9' /tmp/saga-lock-live.js \
                   && grep -q '__LIB_SERIES_SAGA_LOCK_V10' /tmp/saga-lock-live.js \
                   && ! grep -q '9788845279553' /tmp/saga-lock-live.js \
                   && ! grep -q 'Simon Beckett' /tmp/saga-lock-live.js \
@@ -148,18 +148,19 @@ jobs:
                   && grep -q "'mystery':'Giallo'" /tmp/genre-live.js \
                   && grep -q "'thriller':'Thriller'" /tmp/genre-live.js \
                   && curl -fsSL --max-time 20 "https://polentona.github.io/LibriSempreDiCarta/storygraph-genre-lock-v4.js?runtime=${GITHUB_RUN_ID}-${i}" -o /tmp/genre-lock-live.js \
-                  && grep -q '__LIB_STORYGRAPH_GENRE_LOCK_V4' /tmp/genre-lock-live.js \
                   && grep -q '__LIB_STORYGRAPH_GENRE_LOCK_V5' /tmp/genre-lock-live.js \
                   && ! grep -q '9788845279553' /tmp/genre-lock-live.js \
                   && ! grep -q 'Simon Beckett' /tmp/genre-lock-live.js \
                   && ! grep -q 'David Hunter' /tmp/genre-lock-live.js \
                   && curl -fsSL --max-time 20 "https://polentona.github.io/LibriSempreDiCarta/isbn-enrichment-progress-v10.js?runtime=${GITHUB_RUN_ID}-${i}" -o /tmp/progress-live.js \
-                  && grep -q '__LIB_ISBN_ENRICHMENT_PROGRESS_V10' /tmp/progress-live.js \
+                  && grep -q '__LIB_ISBN_ENRICHMENT_PROGRESS_V11' /tmp/progress-live.js \
+                  && grep -q '__LIB_PUBLISHER_PLOT_LOCK_STATE__' /tmp/progress-live.js \
                   && ! grep -q '9788845279553' /tmp/progress-live.js \
                   && ! grep -q 'Simon Beckett' /tmp/progress-live.js \
                   && ! grep -q 'David Hunter' /tmp/progress-live.js \
                   && curl -fsSL --max-time 20 "https://polentona.github.io/LibriSempreDiCarta/publisher-plot-lock-v8.js?runtime=${GITHUB_RUN_ID}-${i}" -o /tmp/plot-live.js \
-                  && grep -q '__LIB_PUBLISHER_PLOT_LOCK_V8' /tmp/plot-live.js \
+                  && grep -q '__LIB_PUBLISHER_PLOT_LOCK_V9' /tmp/plot-live.js \
+                  && grep -q '__LIB_PUBLISHER_PLOT_LOCK_STATE__' /tmp/plot-live.js \
                   && grep -q '__LIB_PUBLISHER_PLOT_LOCK_V8_LATE_RESOLVER' /tmp/plot-live.js \
                   && grep -q '__LIB_PUBLISHER_PLOT_LOCK_V8_SANITIZED' /tmp/plot-live.js; then
                   runtime=1
