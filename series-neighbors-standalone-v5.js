@@ -1,12 +1,10 @@
 (()=>{
 const root=typeof window!=='undefined'?window:globalThis;
-if(root.__LIB_SERIES_NEIGHBORS_STANDALONE_V45)return;
-root.__LIB_SERIES_NEIGHBORS_STANDALONE_V45=true;
-root.__LIB_SINGLE_OWNER_RUNTIME='20260820-9';
+if(root.__LIB_SERIES_NEIGHBORS_STANDALONE_V46)return;
+root.__LIB_SERIES_NEIGHBORS_STANDALONE_V46=true;
+root.__LIB_SINGLE_OWNER_RUNTIME='20260820-10';
 
-/* I resolver legacy non devono più poter diventare proprietari dei campi.
-   Questi marker sono letti dagli stessi moduli legacy prima di inizializzarsi:
-   non correggiamo i loro valori dopo, impediamo direttamente che partano. */
+/* I resolver legacy non devono più poter diventare proprietari dei campi. */
 root.__LIB_UNIFIED_BOOK_ENRICHER_V1=true;
 root.__LIB_UNIVERSAL_SERIES_V2=true;
 root.__LIB_GOODREADS_GENRES_LOADER_V1=true;
@@ -26,7 +24,7 @@ function loadOnce(id,src){
   const s=document.createElement('script');s.id=id;s.src=src;s.async=false;document.head.appendChild(s);
 }
 
-/* Metadati ISBN e trama: restano separati dalle relazioni di saga e dai generi. */
+/* Metadati ISBN e trama. Il sanitizer interviene solo sui valori automatici. */
 loadOnce('libIsbnMetadataRescueV1','isbn-metadata-rescue-v1.js?v=20260819-1');
 loadOnce('libIsbnSbnRescueV3','isbn-sbn-rescue-v1.js?v=20260819-3');
 loadOnce('libIsbnDirectCatalogV2','isbn-direct-catalog-v1.js?v=20260819-2');
@@ -35,19 +33,19 @@ loadOnce('libPublisherPlotResilienceV5','publisher-plot-resilience-v5.js?v=20260
 loadOnce('libPublisherPlotResilienceV6','publisher-plot-resilience-v6.js?v=20260820-6');
 loadOnce('libPublisherPlotResilienceV7','publisher-plot-resilience-v7.js?v=20260820-7');
 loadOnce('libPublisherPlotLockV8','publisher-plot-lock-v8.js?v=20260820-8');
+loadOnce('libIsbnFieldSanitizerV1','isbn-field-sanitizer-v1.js?v=20260820-1');
 
-/* Un solo proprietario dei campi Saga / Prequel / Sequel.
-   Goodreads determina prima l'ordine della serie; Wikipedia è solo fallback. */
-loadOnce('libSeriesAuthoritativeRuntimeV5','series-authoritative-runtime-v5.js?v=20260820-9');
-loadOnce('libSeriesSingleOwnerGuardV1','series-single-owner-guard-v1.js?v=20260820-3');
+/* Un solo proprietario di Saga / Prequel / Sequel.
+   Goodreads deve produrre una relazione completa; StoryGraph completa i buchi;
+   Wikipedia resta l'ultima risorsa. */
+loadOnce('libSeriesAuthoritativeRuntimeV6','series-authoritative-runtime-v6.js?v=20260820-10');
+loadOnce('libSeriesSingleOwnerGuardV1','series-single-owner-guard-v1.js?v=20260820-4');
 
-/* genres-multi gestisce persistenza/UI. StoryGraph v3 è l'unica sorgente di rete:
-   prova anche la pagina libro diretta e usa Goodreads solo se StoryGraph è raggiungibile
-   ma il libro non è presente. */
+/* Generi: StoryGraph resta la sorgente primaria. */
 loadOnce('libGenresMultiV6','genres-multi-v1.js?v=20260820-8');
 loadOnce('libStoryGraphGoodreadsGenresV3','storygraph-goodreads-genres-v3.js?v=20260820-1');
 
 root.__LIB_GENRE_SOURCE_POLICY='storygraph-direct-then-goodreads-only-if-absent-v3';
 root.__LIB_PLOT_SOURCE_POLICY='publisher-first-official-retry-lock-v8';
-root.__LIB_SERIES_RELATION_POLICY='single-owner-goodreads-ordered-series-then-structured-book-v5';
+root.__LIB_SERIES_RELATION_POLICY='single-owner-goodreads-complete-then-storygraph-then-wikipedia-v6';
 })();
