@@ -19,10 +19,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Test live compilazione automatica trama Sperling V6
+      - name: Test live completo ISBN 9788868363710
         id: live
         continue-on-error: true
         run: |
+          node --check series-dark-tower-authoritative-v1.js
+          node --check series-neighbors-standalone-v5.js
           node --check publisher-plot-resilience-v6.js
           mkdir -p /tmp/isbn-fast && cd /tmp/isbn-fast
           npm init -y >/dev/null 2>&1
@@ -30,68 +32,111 @@ jobs:
           cat > test.js <<'JS'
           const {chromium}=require('playwright-core');
           const ISBN='9788868363710';
-          const TITLE='I lupi del Calla. La torre nera (Vol. 5)';
-          const AUTHOR='Stephen King';
-          const PUBLISHER='Sperling & Kupfer';
-          const SAGA='La Torre Nera';
+          const EXPECTED={
+            title:'I lupi del Calla. La torre nera (Vol. 5)',
+            author:'Stephen King',
+            publisher:'Sperling & Kupfer',
+            year:'2017',
+            genres:['Fantasy','Horror'],
+            saga:'La Torre Nera',
+            prequel:'La sfera del buio',
+            sequel:'La canzone di Susannah'
+          };
           const norm=v=>String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
           const same=(a,b)=>norm(a)===norm(b);
+          const genreSet=v=>new Set(String(v||'').split(/[,;|]/).map(x=>norm(x)).filter(Boolean));
+          const exactGenres=v=>{const got=genreSet(v),exp=new Set(EXPECTED.genres.map(norm));return got.size===exp.size&&[...exp].every(x=>got.has(x))};
           (async()=>{
             const browser=await chromium.launch({headless:true,executablePath:'/usr/bin/google-chrome',args:['--no-sandbox']});
             const page=await browser.newPage({viewport:{width:1400,height:1100}});
             page.on('pageerror',e=>console.log('PAGE_ERROR',e.message));
-            page.on('response',r=>{if(r.status()>=400)console.log('HTTP',r.status(),r.url())});
-            await page.goto('https://polentona.github.io/LibriSempreDiCarta/?test-sperling-v6-auto='+Date.now(),{waitUntil:'domcontentloaded',timeout:90000});
+            page.on('response',r=>{if(r.status()>=400&&!r.url().includes('googleapis.com/books/v1/volumes'))console.log('HTTP',r.status(),r.url())});
+
+            // In CI Google Books viene spesso limitato con HTTP 429. Intercettiamo solo
+            // la scheda bibliografica ISBN, usando i metadati già verificati dell'edizione,
+            // così il test continua a esercitare il runtime LIVE di generi, saga,
+            // prequel/sequel, trama editore e copertina senza dipendere dal rate limit.
+            await page.route('**://www.googleapis.com/books/v1/volumes**',async route=>{
+              const u=new URL(route.request().url()),q=u.searchParams.get('q')||'';
+              if(!q.includes(ISBN)){await route.continue();return}
+              const body={kind:'books#volumes',totalItems:1,items:[{
+                id:'GeGoswEACAAJ',
+                volumeInfo:{
+                  title:EXPECTED.title,authors:[EXPECTED.author],publisher:EXPECTED.publisher,publishedDate:EXPECTED.year,
+                  industryIdentifiers:[{type:'ISBN_13',identifier:ISBN},{type:'ISBN_10',identifier:'8868363712'}],
+                  imageLinks:{thumbnail:'https://books.google.com/books/content?id=GeGoswEACAAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api'}
+                }
+              }]};
+              await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(body)});
+            });
+
+            await page.goto('https://polentona.github.io/LibriSempreDiCarta/?test-all-fields='+Date.now(),{waitUntil:'domcontentloaded',timeout:90000});
             await page.locator('#addBookBtn').click();
             await page.locator('#editDialog[open]').waitFor({timeout:15000});
-            await page.evaluate(({ISBN,TITLE,AUTHOR,PUBLISHER,SAGA})=>{
-              const set=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v};
-              set('editCode',ISBN);set('editTitle',TITLE);set('editAuthor',AUTHOR);set('editPublisher',PUBLISHER);set('editSaga',SAGA);set('editPlot','');
-            },{ISBN,TITLE,AUTHOR,PUBLISHER,SAGA});
+            await page.locator('#editCode').fill(ISBN);
+            await page.locator('#lookupMetadataBtn').click();
 
-            let formPlot='';
-            const until=Date.now()+30000;
+            let current={};
+            const ids=['editCode','editTitle','editAuthor','editPublisher','editPublishedDate','editCategory','editSaga','editPrequel','editSequel','editPlot','editCover'];
+            const until=Date.now()+90000;
             while(Date.now()<until){
               await page.waitForTimeout(1000);
-              formPlot=await page.locator('#editPlot').inputValue();
-              if(formPlot.length>=500)break;
+              current=await page.evaluate(ids=>Object.fromEntries(ids.map(id=>[id,document.getElementById(id)?.value||''])),ids);
+              if(same(current.editTitle,EXPECTED.title)&&same(current.editAuthor,EXPECTED.author)&&same(current.editPublisher,EXPECTED.publisher)
+                && String(current.editPublishedDate).includes(EXPECTED.year)&&exactGenres(current.editCategory)
+                && same(current.editSaga,EXPECTED.saga)&&same(current.editPrequel,EXPECTED.prequel)&&same(current.editSequel,EXPECTED.sequel)
+                && current.editPlot.length>=500&&current.editCover)break;
             }
-            const state=await page.evaluate(async({ISBN,TITLE,AUTHOR,PUBLISHER,SAGA})=>{
-              let official='';
-              try{official=await window.__LIB_RESOLVE_OFFICIAL_PLOT({code:ISBN,title:TITLE,author:AUTHOR,publisher:PUBLISHER,saga:SAGA})||''}catch(e){official='__ERROR__'+String(e)}
-              const hooks=window.__LIB_PUBLISHER_PLOT_RESILIENCE_V6_TEST__;
-              const current={};for(const id of ['editCode','editTitle','editAuthor','editPublisher','editSaga','editPlot'])current[id]=document.getElementById(id)?.value||'';
+
+            const state=await page.evaluate(async({ISBN,EXPECTED})=>{
+              const input={code:ISBN,title:document.getElementById('editTitle')?.value||EXPECTED.title,author:document.getElementById('editAuthor')?.value||EXPECTED.author,publisher:document.getElementById('editPublisher')?.value||EXPECTED.publisher,saga:document.getElementById('editSaga')?.value||EXPECTED.saga};
+              let rel=null,canonical=null,official='';
+              try{rel=await window.__LIB_RESOLVE_SERIES_NEIGHBORS?.(input)}catch(e){rel={error:String(e)}}
+              try{canonical=await window.__LIB_RESOLVE_AUTHORITATIVE_SERIES_NEIGHBORS?.(input)}catch(e){canonical={error:String(e)}}
+              try{official=await window.__LIB_RESOLVE_OFFICIAL_PLOT?.(input)||''}catch(e){official='__ERROR__'+String(e)}
               return {
-                official,current,
-                loaderV34:!!window.__LIB_SERIES_NEIGHBORS_STANDALONE_V34,
+                rel,canonical,official,
+                loaderV36:!!window.__LIB_SERIES_NEIGHBORS_STANDALONE_V36,
+                darkTowerV1:!!window.__LIB_DARK_TOWER_AUTHORITATIVE_V1,
+                darkTowerReady:!!window.__LIB_DARK_TOWER_AUTHORITATIVE_READY,
+                orderPolicy:window.__LIB_DARK_TOWER_ORDER_POLICY||'',
                 plotV6:!!window.__LIB_PUBLISHER_PLOT_RESILIENCE_V6,
-                policy:window.__LIB_PLOT_SOURCE_POLICY||'',
-                slugs:hooks?.sperlingSlugs?.(TITLE,SAGA,AUTHOR)||[],
-                titleMatch:hooks?.sperlingTitleMatch?.('Title: La Torre Nera - I lupi del Calla - Sperling & Kupfer Editore',TITLE,SAGA)||false
-              }
-            },{ISBN,TITLE,AUTHOR,PUBLISHER,SAGA});
-            formPlot=state.current.editPlot;
+                genrePolicy:window.__LIB_GENRE_SOURCE_POLICY||'',
+                plotPolicy:window.__LIB_PLOT_SOURCE_POLICY||'',
+                genreLast:window.__LIB_GENRE_WHITELIST_LAST__||null,
+                relationGuard:window.__LIB_CANONICAL_RELATION_GUARD_LAST__||null
+              };
+            },{ISBN,EXPECTED});
             const status=await page.locator('#lookupStatus').innerText();
-            console.log('FINAL',JSON.stringify({
-              loaderV34:state.loaderV34,plotV6:state.plotV6,policy:state.policy,slugs:state.slugs,titleMatch:state.titleMatch,current:state.current,
-              officialLength:state.official.length,officialPreview:state.official.slice(0,260),formPlotLength:formPlot.length,formPlotPreview:formPlot.slice(0,260),status
-            }));
+            current=await page.evaluate(ids=>Object.fromEntries(ids.map(id=>[id,document.getElementById(id)?.value||''])),ids);
+            console.log('FINAL',JSON.stringify({current,status,state:{...state,officialLength:state.official.length,officialPreview:state.official.slice(0,180)}}));
+
             const bad=[];
-            if(!state.loaderV34)bad.push('loader-v34');
+            if(!state.loaderV36)bad.push('loader-v36');
+            if(!state.darkTowerV1||!state.darkTowerReady)bad.push('dark-tower-runtime');
+            if(state.orderPolicy!=='numbered-main-series')bad.push('dark-tower-order-policy');
             if(!state.plotV6)bad.push('plot-v6');
-            if(state.policy!=='publisher-first-sperling-direct-v6-then-clean-fallbacks-resilient')bad.push('plot-policy');
-            if(!state.slugs.includes('la-torre-nera-i-lupi-del-calla-stephen-king'))bad.push('sperling-slug');
-            if(!state.titleMatch)bad.push('title-match');
-            if(String(state.official||'').startsWith('__ERROR__'))bad.push('official-error');
-            if((state.official||'').length<500)bad.push('official-plot');
-            if(formPlot.length<500)bad.push('form-plot');
-            if(state.official&&!same(formPlot,state.official))bad.push('official-plot-not-prioritized');
-            if(!/^rumore di passi sul sentiero del vettore/i.test(formPlot.trim()))bad.push('wrong-sperling-section');
-            if(/uno degli autori piu influenti e amati/i.test(norm(formPlot)))bad.push('author-bio-in-plot');
+            if(!same(current.editCode,ISBN))bad.push('isbn');
+            if(!same(current.editTitle,EXPECTED.title))bad.push('title');
+            if(!same(current.editAuthor,EXPECTED.author))bad.push('author');
+            if(!same(current.editPublisher,EXPECTED.publisher))bad.push('publisher');
+            if(!String(current.editPublishedDate).includes(EXPECTED.year))bad.push('year');
+            if(!exactGenres(current.editCategory))bad.push('genres:'+current.editCategory);
+            if(!same(current.editSaga,EXPECTED.saga))bad.push('saga:'+current.editSaga);
+            if(!same(current.editPrequel,EXPECTED.prequel))bad.push('prequel:'+current.editPrequel);
+            if(!same(current.editSequel,EXPECTED.sequel))bad.push('sequel:'+current.editSequel);
+            if(/during his|chancellor|the shining/i.test(current.editPrequel+' '+current.editSequel))bad.push('relation-garbage');
+            if((current.editPlot||'').length<500)bad.push('plot');
+            if(!/^rumore di passi sul sentiero del vettore/i.test(current.editPlot.trim()))bad.push('wrong-plot-section');
+            if(/uno degli autori piu influenti e amati/i.test(norm(current.editPlot)))bad.push('author-bio-in-plot');
+            if(!current.editCover)bad.push('cover');
+            if(!state.canonical||!same(state.canonical.prequel,EXPECTED.prequel)||!same(state.canonical.sequel,EXPECTED.sequel))bad.push('canonical-relations');
+            if(!state.rel||!same(state.rel.prequel,EXPECTED.prequel)||!same(state.rel.sequel,EXPECTED.sequel))bad.push('runtime-relations');
+            if(String(state.official||'').startsWith('__ERROR__')||(state.official||'').length<500)bad.push('official-plot');
             await browser.close();
-            if(bad.length)throw new Error(bad.join(', '));
-            console.log('SPERLING_V6_LIVE_OK');
-          })().catch(e=>{console.error('SPERLING_V6_LIVE_FAIL',e.stack||e.message);process.exit(1)});
+            if(bad.length)throw new Error(bad.join(' | '));
+            console.log('ISBN_9788868363710_ALL_FIELDS_OK');
+          })().catch(e=>{console.error('ISBN_9788868363710_ALL_FIELDS_FAIL',e.stack||e.message);process.exit(1)});
           JS
           node test.js 2>&1 | tee /tmp/isbn-fast.log
           test ${PIPESTATUS[0]} -eq 0
@@ -101,7 +146,7 @@ jobs:
           {
             echo "outcome=${{ steps.live.outcome }}"
             echo "source_commit=${GITHUB_SHA}"
-            echo "mode=sperling-live-auto-v6"
+            echo "mode=isbn-9788868363710-all-fields"
             echo "isbn=9788868363710"
             echo '---'
             cat /tmp/isbn-fast.log 2>/dev/null || true
