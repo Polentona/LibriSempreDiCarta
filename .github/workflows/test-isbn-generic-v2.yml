@@ -9,9 +9,13 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: isbn-generic-v2-test
+  cancel-in-progress: true
+
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
         with:
@@ -22,10 +26,14 @@ jobs:
       - name: Verifica codice produzione non specifico
         run: |
           node --check series-verified-order-v2.js
+          node --check series-verified-saga-v3.js
           node --check publisher-plot-lock-v8.js
           ! grep -q '9788868363710' series-verified-order-v2.js
           ! grep -q 'Stephen King' series-verified-order-v2.js
           ! grep -q 'La Torre Nera' series-verified-order-v2.js
+          ! grep -q '9788868363710' series-verified-saga-v3.js
+          ! grep -q 'Stephen King' series-verified-saga-v3.js
+          ! grep -q 'La Torre Nera' series-verified-saga-v3.js
       - name: Test browser completo
         id: live
         continue-on-error: true
@@ -43,7 +51,7 @@ jobs:
           {
             echo "outcome=${{ steps.live.outcome }}"
             echo "source_commit=${GITHUB_SHA}"
-            echo "mode=isbn-9788868363710-all-fields-generic-v2"
+            echo "mode=isbn-9788868363710-all-fields-generic-v3"
             echo "isbn=9788868363710"
             echo '---'
             cat /tmp/isbn-generic-v2.log 2>/dev/null || true
