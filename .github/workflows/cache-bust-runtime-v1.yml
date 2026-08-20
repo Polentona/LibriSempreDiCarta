@@ -16,6 +16,7 @@ on:
       - 'genres-authoritative-v3.js'
       - 'storygraph-goodreads-genres-v3.js'
       - 'storygraph-genre-lock-v4.js'
+      - 'isbn-enrichment-progress-v10.js'
       - 'genres-multi-v1.js'
       - 'publisher-plot-lock-v8.js'
       - 'isbn-field-sanitizer-v2.js'
@@ -45,8 +46,9 @@ jobs:
           grep -q "isbn-cover.js" .github/workflows/pages.yml
           grep -q "series-authoritative-runtime-v7.js" series-neighbors-standalone-v5.js
           grep -q "series-relation-stabilizer-v8.js" series-neighbors-standalone-v5.js
-          grep -q "series-saga-lock-v9.js" series-neighbors-standalone-v5.js
-          grep -q "storygraph-genre-lock-v4.js" series-neighbors-standalone-v5.js
+          grep -q "series-saga-lock-v9.js?v=20260820-2" series-neighbors-standalone-v5.js
+          grep -q "storygraph-genre-lock-v4.js?v=20260820-2" series-neighbors-standalone-v5.js
+          grep -q "isbn-enrichment-progress-v10.js?v=20260820-1" series-neighbors-standalone-v5.js
           grep -q "isbn-field-sanitizer-v2.js" series-neighbors-standalone-v5.js
           grep -q "publisher-plot-lock-v8.js?v=20260820-11" series-neighbors-standalone-v5.js
           grep -q "goodreads-order-canonical-localization-stable-v8" series-neighbors-standalone-v5.js
