@@ -1,9 +1,5 @@
-deploy=success
-html=success
+deploy=failure
+html=skipped
 run_id=32376260621
 commit=ae82f2d83a4ec6a395c534aa37c2c6f9b89b866c
 ---
-HTML_OK=1
-RUNTIME_OK=1
-HTML_BYTES=34127
-CACHE_TOKEN=ae82f2d83a4e
