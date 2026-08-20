@@ -1,1 +1,2 @@
 Trigger deploy GitHub Pages con runner ubuntu-slim.
+Redeploy dopo correzione test live ISBN: 2026-08-20T13:55Z
