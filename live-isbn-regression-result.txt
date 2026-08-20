@@ -1,22 +1,12 @@
 outcome=failure
 tested_isbn=9788845278389
-source_commit=ae82f2d83a4ec6a395c534aa37c2c6f9b89b866c
+source_commit=2913b10f68e584d40bc41e7171d8ff71b599ef24
 mode=runtime-v46-series-v6-sanitizer-v1
 ---
-/tmp/isbn-live/test.js:24
-  page.on('response',r=>{if(r.status()===429)http429++;if(r.status()>=400)console.log('HTTP_ERROR',r.status(),r.url())});
-                                                    ^
-
-TypeError: Assignment to constant variable.
-    at Page.<anonymous> (/tmp/isbn-live/test.js:24:53)
-    at Page._callHandler (/tmp/isbn-live/node_modules/playwright-core/lib/client/eventEmitter.js:66:29)
-    at Page.emit (/tmp/isbn-live/node_modules/playwright-core/lib/client/eventEmitter.js:56:12)
-    at BrowserContext._onResponse (/tmp/isbn-live/node_modules/playwright-core/lib/client/browserContext.js:178:12)
-    at Proxy.<anonymous> (/tmp/isbn-live/node_modules/playwright-core/lib/client/browserContext.js:129:63)
-    at Proxy._callHandler (/tmp/isbn-live/node_modules/playwright-core/lib/client/eventEmitter.js:66:29)
-    at Proxy.emit (/tmp/isbn-live/node_modules/playwright-core/lib/client/eventEmitter.js:56:12)
-    at Connection.dispatch (/tmp/isbn-live/node_modules/playwright-core/lib/client/connection.js:175:21)
-    at Immediate.<anonymous> (/tmp/isbn-live/node_modules/playwright-core/lib/inProcessFactory.js:48:85)
-    at process.processImmediate (node:internal/timers:483:21)
-
-Node.js v20.20.2
+HTTP_ERROR 429 https://www.googleapis.com/books/v1/volumes?q=isbn%3A9788845278389&maxResults=20&projection=full&printType=all
+HTTP_ERROR 403 https://corsproxy.io/?url=https%3A%2F%2Fwww.bompiani.it%2Fimg%2Fbompiani%2Flogo_giunti_gray.png
+HTTP_ERROR 403 https://corsproxy.io/?url=https%3A%2F%2Fwww.bompiani.it%2Fimg%2Fbompiani%2Flogo.png
+HTTP_ERROR 403 https://corsproxy.io/?url=https%3A%2F%2Fwww.bompiani.it%2Fimg%2Fbompiani%2Flogo_square.png
+FINAL_RUNTIME {"title":"Il valzer lento delle tartarughe","author":"Katherine Pancol","publisher":"Bompiani","publishedDate":"2015","plot":"","genres":"","status":"📖","plotV8":true,"loaderV46":true,"seriesV6":true,"sanitizerV1":true,"plotPolicy":"publisher-first-official-retry-lock-v8","seriesPolicy":"single-owner-goodreads-complete-then-storygraph-then-wikipedia-v6","plotLength":0,"officialLength":652,"pure":{"publisher":"Bompiani","giunti":"Giunti","plot":"Una trama abbastanza lunga da essere considerata valida e da consentire al pulitore di conservare il testo narrativo senza il rumore commerciale finale. Un secondo periodo completa la sinossi."},"http429":1}
+ISBN_LIVE_RUNTIME_FAIL Error: Runtime ISBN non corretto: trama-editore-non-prioritaria
+    at /tmp/isbn-live/test.js:64:25
