@@ -1,9 +1,20 @@
 (()=>{
 /* Compatibilità: questo file resta referenziato dall'HTML, ma non risolve più
-   saga/prequel/sequel e non carica resolver o gestori generi concorrenti. */
+   saga/prequel/sequel. Poiché viene caricato prima del runtime principale,
+   disattiva qui i vecchi gestori generi prima di avviare il recupero ISBN. */
 if(window.__LIB_GOOGLE_SERIES_V10_BOOT)return;
 window.__LIB_GOOGLE_SERIES_V10_BOOT=true;
 window.__LIB_GOOGLE_SERIES_V10_DISABLED='single-owner-series-runtime-v4';
+window.__LIB_GOODREADS_GENRES_LOADER_V1=true;
+window.__LIB_GOODREADS_GENRES_ONLY_V10=true;
+window.__LIB_GENRE_SEARCH_FALLBACK_V2=true;
+window.__LIB_GENRE_OPENLIBRARY_WORK_V1=true;
+window.__LIB_GENRE_CODETABS_V1=true;
+window.__LIB_GENRE_DIRECT_RETAILER_V1=true;
+window.__LIB_STORYGRAPH_GOODREADS_GENRES_V1=true;
+window.__LIB_STORYGRAPH_GOODREADS_GENRES_V2=true;
+window.__LIB_GENRE_WHITELIST_V1=true;
+window.__LIB_GENRE_WHITELIST_ENFORCER_V2=true;
 })();
 
 /* BOOK_TITLE_UNDERLINE_FIT_V1: la riga sotto il titolo termina con il testo. */
@@ -31,7 +42,8 @@ function installHomeOrder(){if(typeof getFilteredBooks!=='function')return false
 let tries=0;const timer=setInterval(()=>{tries++;if(installHomeOrder()||tries>=80)clearInterval(timer)},100);setTimeout(installHomeOrder,0);
 })();
 
-/* Manteniamo soltanto il recupero ISBN aggiuntivo, che non scrive generi o relazioni. */
+/* Manteniamo soltanto il recupero ISBN aggiuntivo: il loader Goodreads interno
+   viene neutralizzato dai marker impostati sopra. */
 (()=>{
 if(window.__LIB_ISBN_SEARCH_RECOVERY_LOADED)return;window.__LIB_ISBN_SEARCH_RECOVERY_LOADED=true;
 const s=document.createElement('script');s.src='isbn-search-recovery-v2.js?v=20260819-1';s.async=false;document.head.appendChild(s);
