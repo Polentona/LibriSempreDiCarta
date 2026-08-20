@@ -1,13 +1,24 @@
 (()=>{
 const root=typeof window!=='undefined'?window:globalThis;
-if(root.__LIB_SERIES_NEIGHBORS_STANDALONE_V42)return;
-root.__LIB_SERIES_NEIGHBORS_STANDALONE_V42=true;
-root.__LIB_SINGLE_OWNER_RUNTIME='20260820-4';
+if(root.__LIB_SERIES_NEIGHBORS_STANDALONE_V43)return;
+root.__LIB_SERIES_NEIGHBORS_STANDALONE_V43=true;
+root.__LIB_SINGLE_OWNER_RUNTIME='20260820-5';
 
-/* Gli script legacy sono ancora referenziati dall'HTML storico. Impediamo che
-   quelli caricati dopo questo loader possano reinstallare resolver concorrenti. */
+/* I resolver legacy non devono più poter diventare proprietari dei campi.
+   Questi marker sono letti dagli stessi moduli legacy prima di inizializzarsi:
+   non correggiamo i loro valori dopo, impediamo direttamente che partano. */
 root.__LIB_UNIFIED_BOOK_ENRICHER_V1=true;
 root.__LIB_UNIVERSAL_SERIES_V2=true;
+root.__LIB_GOODREADS_GENRES_LOADER_V1=true;
+root.__LIB_GOODREADS_GENRES_ONLY_V10=true;
+root.__LIB_GENRE_SEARCH_FALLBACK_V2=true;
+root.__LIB_GENRE_OPENLIBRARY_WORK_V1=true;
+root.__LIB_GENRE_CODETABS_V1=true;
+root.__LIB_GENRE_DIRECT_RETAILER_V1=true;
+root.__LIB_STORYGRAPH_GOODREADS_GENRES_V1=true;
+root.__LIB_STORYGRAPH_GOODREADS_GENRES_V2=true;
+root.__LIB_GENRE_WHITELIST_V1=true;
+root.__LIB_GENRE_WHITELIST_ENFORCER_V2=true;
 
 function loadOnce(id,src){
   if(document.getElementById(id))return;
@@ -28,8 +39,7 @@ loadOnce('libPublisherPlotLockV8','publisher-plot-lock-v8.js?v=20260820-8');
 loadOnce('libSeriesAuthoritativeRuntimeV4','series-authoritative-runtime-v4.js?v=20260820-4');
 loadOnce('libSeriesSingleOwnerGuardV1','series-single-owner-guard-v1.js?v=20260820-1');
 
-/* Il modulo multi-genere gestisce solo salvataggio/UI; la rete e la fonte dei
-   generi appartengono esclusivamente al resolver StoryGraph/Goodreads V3. */
+/* genres-multi gestisce persistenza/UI; una sola sorgente di rete scrive i generi. */
 loadOnce('libGenresMultiV6','genres-multi-v1.js?v=20260820-7');
 loadOnce('libGenresAuthoritativeV3','genres-authoritative-v3.js?v=20260820-3');
 
