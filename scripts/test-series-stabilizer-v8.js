@@ -20,6 +20,7 @@ global.__LIB_RESOLVE_VERIFIED_SERIES_NEIGHBORS=async()=>({
   method:'goodreads-ordered-series-primary-v7'
 });
 global.__LIB_RESOLVE_AUTHORITATIVE_SERIES_NEIGHBORS=global.__LIB_RESOLVE_VERIFIED_SERIES_NEIGHBORS;
+const pad=s=>String(s)+'\nStoryGraph deterministic fixture content for realistic response size. '.repeat(3);
 function response(status,body,contentType='text/plain'){return Promise.resolve({ok:status>=200&&status<300,status,text:async()=>body,json:async()=>JSON.parse(body),headers:{get:()=>contentType}})}
 global.fetch=async url=>{
   url=String(url);
@@ -29,13 +30,13 @@ global.fetch=async url=>{
   let decoded=target;try{decoded=decodeURIComponent(target)}catch(e){}
   const n=decoded.toLowerCase();
   if(n.includes('thestorygraph.com/browse')||n.includes('duckduckgo.com/html')){
-    if(n.includes('written in bone'))return response(200,'[Written in Bone](https://app.thestorygraph.com/books/1191ad0c-733e-4770-b642-0af72c515804)\nSimon Beckett');
-    if(n.includes('calling of the grave'))return response(200,'[The Calling of the Grave](https://app.thestorygraph.com/books/0edbd72c-d6a2-4f35-af42-7eb0ffa63e99)\nSimon Beckett');
+    if(n.includes('written in bone'))return response(200,pad('[Written in Bone](https://app.thestorygraph.com/books/1191ad0c-733e-4770-b642-0af72c515804)\nSimon Beckett'));
+    if(n.includes('calling of the grave'))return response(200,pad('[The Calling of the Grave](https://app.thestorygraph.com/books/0edbd72c-d6a2-4f35-af42-7eb0ffa63e99)\nSimon Beckett'));
   }
-  if(n.includes('/books/1191ad0c-733e-4770-b642-0af72c515804/editions'))return response(200,'David Hunter #2\n### Scritto nelle ossa\nSimon Beckett\nLanguage: Italian');
-  if(n.includes('/books/0edbd72c-d6a2-4f35-af42-7eb0ffa63e99/editions'))return response(200,'David Hunter #4\n### La voce dei morti\nSimon Beckett\nLanguage: Italian');
-  if(n.includes('/books/1191ad0c-733e-4770-b642-0af72c515804'))return response(200,'### Written in Bone\nSimon Beckett\nDavid Hunter #2');
-  if(n.includes('/books/0edbd72c-d6a2-4f35-af42-7eb0ffa63e99'))return response(200,'### The Calling of the Grave\nSimon Beckett\nDavid Hunter #4');
+  if(n.includes('/books/1191ad0c-733e-4770-b642-0af72c515804/editions'))return response(200,pad('David Hunter #2\n### Scritto nelle ossa\nSimon Beckett\nLanguage: Italian'));
+  if(n.includes('/books/0edbd72c-d6a2-4f35-af42-7eb0ffa63e99/editions'))return response(200,pad('David Hunter #4\n### La voce dei morti\nSimon Beckett\nLanguage: Italian'));
+  if(n.includes('/books/1191ad0c-733e-4770-b642-0af72c515804'))return response(200,pad('### Written in Bone\nSimon Beckett\nDavid Hunter #2'));
+  if(n.includes('/books/0edbd72c-d6a2-4f35-af42-7eb0ffa63e99'))return response(200,pad('### The Calling of the Grave\nSimon Beckett\nDavid Hunter #4'));
   return response(404,'not found');
 };
 vm.runInThisContext(fs.readFileSync('series-relation-stabilizer-v8.js','utf8'));
