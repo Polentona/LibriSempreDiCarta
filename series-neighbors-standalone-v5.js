@@ -1,11 +1,12 @@
 (()=>{
 const root=typeof window!=='undefined'?window:globalThis;
-if(root.__LIB_SERIES_NEIGHBORS_STANDALONE_V52)return;
+if(root.__LIB_SERIES_NEIGHBORS_STANDALONE_V53)return;
+root.__LIB_SERIES_NEIGHBORS_STANDALONE_V53=true;
+/* Compatibilità con i check già esistenti: V53 include integralmente V52/V51/V50. */
 root.__LIB_SERIES_NEIGHBORS_STANDALONE_V52=true;
-/* Compatibilità con i check già esistenti: V52 include integralmente V51/V50. */
 root.__LIB_SERIES_NEIGHBORS_STANDALONE_V51=true;
 root.__LIB_SERIES_NEIGHBORS_STANDALONE_V50=true;
-root.__LIB_SINGLE_OWNER_RUNTIME='20260820-17';
+root.__LIB_SINGLE_OWNER_RUNTIME='20260820-18';
 
 root.__LIB_UNIFIED_BOOK_ENRICHER_V1=true;
 root.__LIB_UNIVERSAL_SERIES_V2=true;
@@ -40,12 +41,12 @@ loadOnce('libPlotResolverResilientV1','plot-resolver-resilient-v1.js?v=20260820-
 loadOnce('libPublisherPlotLockV8','publisher-plot-lock-v8.js?v=20260820-12');
 
 /* Goodreads decide ordine e posizione. StoryGraph/OpenLibrary restano i primi
-   tentativi di localizzazione; se sono temporaneamente indisponibili, l'API di
+   tentativi di localizzazione; se non bastano, la bibliografia dell'autore su
    Wikipedia italiana traduce soltanto i titoli canonici già scelti da Goodreads. */
 loadOnce('libSeriesAuthoritativeRuntimeV7','series-authoritative-runtime-v7.js?v=20260820-11');
 loadOnce('libSeriesSingleOwnerGuardV1','series-single-owner-guard-v1.js?v=20260820-6');
 loadOnce('libSeriesRelationStabilizerV8','series-relation-stabilizer-v8.js?v=20260820-1');
-loadOnce('libSeriesLocalizationResilientV1','series-localization-resilient-v1.js?v=20260820-1');
+loadOnce('libSeriesLocalizationResilientV1','series-localization-resilient-v1.js?v=20260820-2');
 loadOnce('libSeriesResolverStabilityV1','series-resolver-stability-v1.js?v=20260820-2');
 loadOnce('libSeriesSagaLockV9','series-saga-lock-v9.js?v=20260820-2');
 
