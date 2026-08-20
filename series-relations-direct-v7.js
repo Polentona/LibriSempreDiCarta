@@ -2,8 +2,8 @@
 /* Bootstrap eseguito prima di ogni altro runtime legacy.
    Nessuna relazione viene più calcolata qui: il proprietario unico dei campi
    Saga/Prequel/Sequel è series-authoritative-runtime-v4.js. */
-if(window.__LIB_EARLY_RUNTIME_GUARD_V1)return;
-window.__LIB_EARLY_RUNTIME_GUARD_V1=true;
+if(window.__LIB_EARLY_RUNTIME_GUARD_V2)return;
+window.__LIB_EARLY_RUNTIME_GUARD_V2=true;
 window.__LIB_DIRECT_RELATIONS_V7=true;
 window.__LIB_UNIFIED_BOOK_ENRICHER_V1=true;
 window.__LIB_UNIVERSAL_SERIES_V2=true;
