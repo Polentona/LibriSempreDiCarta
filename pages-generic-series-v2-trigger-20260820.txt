@@ -1,0 +1,1 @@
+Deploy del resolver generico V2 basato su relazioni strutturate.
