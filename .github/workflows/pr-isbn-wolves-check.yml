@@ -12,6 +12,7 @@ on:
       - 'isbn-field-sanitizer-v1.js'
       - 'isbn-cover.js'
       - 'scripts/test-series-regressions-v6.js'
+      - 'scripts/diagnose-live-beckett-v1.js'
       - '.github/workflows/cache-bust-runtime-v1.yml'
       - '.github/workflows/pages.yml'
       - '.github/workflows/live-isbn-regression-v1.yml'
@@ -42,6 +43,7 @@ jobs:
           node --check publisher-plot-lock-v8.js
           node --check isbn-field-sanitizer-v1.js
           node --check scripts/test-series-regressions-v6.js
+          node --check scripts/diagnose-live-beckett-v1.js
           grep -q '__LIB_SERIES_NEIGHBORS_STANDALONE_V46' series-neighbors-standalone-v5.js
           grep -q 'series-authoritative-runtime-v6.js?v=20260820-10' series-neighbors-standalone-v5.js
           grep -q 'series-single-owner-guard-v1.js?v=20260820-4' series-neighbors-standalone-v5.js
@@ -134,3 +136,5 @@ jobs:
           exit 1
       - name: Test relazioni V6 e pulizia metadati
         run: node scripts/test-series-regressions-v6.js
+      - name: Diagnostica live ISBN 9788845279553
+        run: node scripts/diagnose-live-beckett-v1.js
