@@ -32,7 +32,7 @@ loadOnce('libPublisherPlotPriorityV3','publisher-plot-priority-v3.js?v=20260819-
 loadOnce('libPublisherPlotResilienceV5','publisher-plot-resilience-v5.js?v=20260820-5');
 loadOnce('libPublisherPlotResilienceV6','publisher-plot-resilience-v6.js?v=20260820-6');
 loadOnce('libPublisherPlotResilienceV7','publisher-plot-resilience-v7.js?v=20260820-7');
-loadOnce('libPublisherPlotLockV8','publisher-plot-lock-v8.js?v=20260820-8');
+loadOnce('libPublisherPlotLockV8','publisher-plot-lock-v8.js?v=20260820-10');
 loadOnce('libIsbnFieldSanitizerV1','isbn-field-sanitizer-v1.js?v=20260820-1');
 
 /* Un solo proprietario di Saga / Prequel / Sequel.

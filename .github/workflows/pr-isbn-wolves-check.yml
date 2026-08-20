@@ -8,6 +8,7 @@ on:
       - 'series-authoritative-runtime-v6.js'
       - 'series-single-owner-guard-v1.js'
       - 'storygraph-goodreads-genres-v3.js'
+      - 'publisher-plot-lock-v8.js'
       - 'isbn-field-sanitizer-v1.js'
       - 'isbn-cover.js'
       - 'scripts/test-series-regressions-v6.js'
@@ -38,15 +39,18 @@ jobs:
           node --check series-neighbors-standalone-v5.js
           node --check series-authoritative-runtime-v6.js
           node --check series-single-owner-guard-v1.js
+          node --check publisher-plot-lock-v8.js
           node --check isbn-field-sanitizer-v1.js
           node --check scripts/test-series-regressions-v6.js
           grep -q '__LIB_SERIES_NEIGHBORS_STANDALONE_V46' series-neighbors-standalone-v5.js
           grep -q 'series-authoritative-runtime-v6.js?v=20260820-10' series-neighbors-standalone-v5.js
           grep -q 'series-single-owner-guard-v1.js?v=20260820-4' series-neighbors-standalone-v5.js
+          grep -q 'publisher-plot-lock-v8.js?v=20260820-10' series-neighbors-standalone-v5.js
           grep -q 'isbn-field-sanitizer-v1.js?v=20260820-1' series-neighbors-standalone-v5.js
           grep -q 'single-owner-goodreads-complete-then-storygraph-then-wikipedia-v6' series-neighbors-standalone-v5.js
           grep -q 'goodreads-ordered-series-primary-v6' series-authoritative-runtime-v6.js
           grep -q 'storygraph-series-completion-v1' series-authoritative-runtime-v6.js
+          grep -q '__LIB_PUBLISHER_PLOT_LOCK_V8_LATE_RESOLVER' publisher-plot-lock-v8.js
           grep -q '__LIB_ISBN_FIELD_SANITIZER_V1' isbn-field-sanitizer-v1.js
           grep -q 'storygraph-goodreads-genres-v3.js?v=20260820-1' series-neighbors-standalone-v5.js
           ! grep -q 'series-authoritative-runtime-v5.js' series-neighbors-standalone-v5.js
@@ -63,6 +67,35 @@ jobs:
           grep -q 'GITHUB_SHA' .github/workflows/pages.yml
           test -f .nojekyll
           ! grep -Eq '^[[:space:]]*git[[:space:]]+push\b' .github/workflows/cache-bust-runtime-v1.yml
+      - name: Verifica late binding resolver trama
+        run: |
+          node <<'NODE'
+          const fs=require('fs'),vm=require('vm');
+          global.window=global;
+          const nodes={
+            editDialog:{open:true,addEventListener(){}},
+            editCode:{value:'9788845278389',addEventListener(){}},
+            editPlot:{value:'',addEventListener(){},dispatchEvent(){}},
+            editTitle:{value:'Il valzer lento delle tartarughe',addEventListener(){}},
+            editAuthor:{value:'Katherine Pancol',addEventListener(){}},
+            editPublisher:{value:'Bompiani',addEventListener(){}},
+            editSaga:{value:'',addEventListener(){}},
+            lookupStatus:{textContent:'',className:''}
+          };
+          global.document={getElementById:id=>nodes[id]||null};
+          global.MutationObserver=class{observe(){}};
+          global.setInterval=()=>0;global.clearInterval=()=>{};global.setTimeout=()=>0;global.clearTimeout=()=>{};
+          global.Event=class{constructor(type,opts={}){this.type=type;this.bubbles=!!opts.bubbles}};
+          delete global.__LIB_RESOLVE_OFFICIAL_PLOT;
+          vm.runInThisContext(fs.readFileSync('publisher-plot-lock-v8.js','utf8'));
+          global.__LIB_RESOLVE_OFFICIAL_PLOT=async()=>('Trama ufficiale recuperata in ritardo. '.repeat(5));
+          (async()=>{
+            await global.__LIB_PUBLISHER_PLOT_LOCK_V8_TEST__.enforce(true);
+            if(nodes.editPlot.value.length<60)throw new Error('Il lock non ha usato il resolver registrato dopo il caricamento.');
+            if(!global.__LIB_PUBLISHER_PLOT_LOCK_V8_LATE_RESOLVER)throw new Error('Marker late resolver assente.');
+            console.log('Late resolver trama: OK');
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
       - name: Verifica parser StoryGraph generi
         run: |
           node <<'NODE'
