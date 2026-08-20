@@ -18,6 +18,7 @@ on:
       - 'scripts/test-series-regressions-v7.js'
       - 'scripts/test-series-stabilizer-v8.js'
       - 'scripts/test-saga-genres-v9.js'
+      - 'scripts/test-plot-progress-v11.js'
       - '.github/workflows/cache-bust-runtime-v1.yml'
       - '.github/workflows/pages.yml'
       - '.github/workflows/live-isbn-regression-v1.yml'
@@ -53,25 +54,27 @@ jobs:
           node --check isbn-field-sanitizer-v2.js
           node --check scripts/test-series-stabilizer-v8.js
           node --check scripts/test-saga-genres-v9.js
-          grep -q '__LIB_SERIES_NEIGHBORS_STANDALONE_V49' series-neighbors-standalone-v5.js
+          node --check scripts/test-plot-progress-v11.js
+          grep -q '__LIB_SERIES_NEIGHBORS_STANDALONE_V50' series-neighbors-standalone-v5.js
           grep -q 'series-authoritative-runtime-v7.js?v=20260820-11' series-neighbors-standalone-v5.js
           grep -q 'series-relation-stabilizer-v8.js?v=20260820-1' series-neighbors-standalone-v5.js
           grep -q 'series-saga-lock-v9.js?v=20260820-2' series-neighbors-standalone-v5.js
           grep -q 'series-single-owner-guard-v1.js?v=20260820-6' series-neighbors-standalone-v5.js
-          grep -q 'publisher-plot-lock-v8.js?v=20260820-11' series-neighbors-standalone-v5.js
+          grep -q 'publisher-plot-lock-v8.js?v=20260820-12' series-neighbors-standalone-v5.js
           grep -q 'isbn-field-sanitizer-v2.js?v=20260820-2' series-neighbors-standalone-v5.js
           grep -q 'storygraph-goodreads-genres-v3.js?v=20260820-1' series-neighbors-standalone-v5.js
           grep -q 'storygraph-genre-lock-v4.js?v=20260820-2' series-neighbors-standalone-v5.js
-          grep -q 'isbn-enrichment-progress-v10.js?v=20260820-1' series-neighbors-standalone-v5.js
+          grep -q 'isbn-enrichment-progress-v10.js?v=20260820-2' series-neighbors-standalone-v5.js
           grep -q 'goodreads-order-canonical-localization-stable-v8' series-neighbors-standalone-v5.js
+          grep -q 'publisher-first-official-retry-lock-v9-sanitized' series-neighbors-standalone-v5.js
           grep -q '__LIB_SERIES_RELATION_STABILIZER_V8' series-relation-stabilizer-v8.js
           grep -q '__LIB_SERIES_AUTHORITATIVE_RUNTIME_V8' series-relation-stabilizer-v8.js
           grep -q 'canonical-title-localizer-v8' series-relation-stabilizer-v8.js
-          grep -q '__LIB_SERIES_SAGA_LOCK_V9' series-saga-lock-v9.js
           grep -q '__LIB_SERIES_SAGA_LOCK_V10' series-saga-lock-v9.js
-          grep -q '__LIB_STORYGRAPH_GENRE_LOCK_V4' storygraph-genre-lock-v4.js
           grep -q '__LIB_STORYGRAPH_GENRE_LOCK_V5' storygraph-genre-lock-v4.js
-          grep -q '__LIB_ISBN_ENRICHMENT_PROGRESS_V10' isbn-enrichment-progress-v10.js
+          grep -q '__LIB_ISBN_ENRICHMENT_PROGRESS_V11' isbn-enrichment-progress-v10.js
+          grep -q '__LIB_PUBLISHER_PLOT_LOCK_V9' publisher-plot-lock-v8.js
+          grep -q '__LIB_PUBLISHER_PLOT_LOCK_STATE__' publisher-plot-lock-v8.js
           grep -q 'goodreads-ordered-series-primary-v7' series-authoritative-runtime-v7.js
           grep -q '__LIB_ISBN_FIELD_SANITIZER_V2' isbn-field-sanitizer-v2.js
           grep -q '__LIB_PUBLISHER_PLOT_LOCK_V8_SANITIZED' publisher-plot-lock-v8.js
@@ -82,11 +85,13 @@ jobs:
           ! grep -q '9788845279553' series-saga-lock-v9.js
           ! grep -q '9788845279553' storygraph-genre-lock-v4.js
           ! grep -q '9788845279553' isbn-enrichment-progress-v10.js
+          ! grep -q '9788845279553' publisher-plot-lock-v8.js
           ! grep -q 'Simon Beckett' series-authoritative-runtime-v7.js
           ! grep -q 'Simon Beckett' series-relation-stabilizer-v8.js
           ! grep -q 'Simon Beckett' series-saga-lock-v9.js
           ! grep -q 'Simon Beckett' storygraph-genre-lock-v4.js
           ! grep -q 'Simon Beckett' isbn-enrichment-progress-v10.js
+          ! grep -q 'Simon Beckett' publisher-plot-lock-v8.js
           ! grep -q 'David Hunter' series-authoritative-runtime-v7.js
           ! grep -q 'David Hunter' series-relation-stabilizer-v8.js
           ! grep -q 'David Hunter' series-saga-lock-v9.js
@@ -102,7 +107,7 @@ jobs:
           grep -q 'GITHUB_SHA' .github/workflows/pages.yml
           test -f .nojekyll
           ! grep -Eq '^[[:space:]]*git[[:space:]]+push\b' .github/workflows/cache-bust-runtime-v1.yml
-      - name: Verifica lock trama pulito e late binding
+      - name: Verifica lock trama pulito, late binding e stato
         run: |
           node <<'NODE'
           const fs=require('fs'),vm=require('vm');
@@ -129,8 +134,10 @@ jobs:
             await global.__LIB_PUBLISHER_PLOT_LOCK_V8_TEST__.enforce(true);
             if(nodes.editPlot.value.length<60)throw new Error('Il lock non ha usato il resolver registrato dopo il caricamento.');
             if(/https?|www\s*\.|€|\bacquista\b/i.test(nodes.editPlot.value))throw new Error('Il lock ha riscritto una trama sporca: '+nodes.editPlot.value);
-            if(!global.__LIB_PUBLISHER_PLOT_LOCK_V8_LATE_RESOLVER||!global.__LIB_PUBLISHER_PLOT_LOCK_V8_SANITIZED)throw new Error('Marker lock trama mancanti.');
-            console.log('Lock trama pulito: OK');
+            const st=global.__LIB_PUBLISHER_PLOT_LOCK_STATE__;
+            if(!st?.settled||!st?.complete||st.reason!=='official')throw new Error('Stato trama non completo: '+JSON.stringify(st));
+            if(!global.__LIB_PUBLISHER_PLOT_LOCK_V9||!global.__LIB_PUBLISHER_PLOT_LOCK_V8_LATE_RESOLVER||!global.__LIB_PUBLISHER_PLOT_LOCK_V8_SANITIZED)throw new Error('Marker lock trama mancanti.');
+            console.log('Lock trama pulito e completo: OK');
           })().catch(e=>{console.error(e);process.exit(1)});
           NODE
       - name: Verifica parser StoryGraph generi
@@ -161,3 +168,5 @@ jobs:
         run: node scripts/test-series-stabilizer-v8.js
       - name: Test progress, Saga e Generi
         run: node scripts/test-saga-genres-v9.js
+      - name: Test progress trama V11
+        run: node scripts/test-plot-progress-v11.js
