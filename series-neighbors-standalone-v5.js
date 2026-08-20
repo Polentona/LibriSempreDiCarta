@@ -1,7 +1,7 @@
 (()=>{
 const root=typeof window!=='undefined'?window:globalThis;
 if(root.__LIB_SERIES_NEIGHBORS_STANDALONE_V41)return;root.__LIB_SERIES_NEIGHBORS_STANDALONE_V41=true;
-root.__LIB_SERIES_GENERIC_DEPLOY='20260820-5';
+root.__LIB_SERIES_GENERIC_DEPLOY='20260820-6';
 const clean=v=>String(v??'').replace(/\s+/g,' ').trim();
 const norm=v=>clean(v).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[’‘]/g,"'").replace(/[^a-z0-9']+/g,' ').trim();
 function safeSaga(v,title=''){let x=clean(v).replace(/^["“”«»']+|["“”«»']+$/g,'');const n=norm(x);if(!x||x.length>100||n===norm(title)||/(?:18|19|20)\d{2}|https?:|www\.|\.{2,}|…/.test(x)||/\b(?:iniziat[ao]|seguit[oa]|precedut[oa]|pubblicat[ao]|romanzo|libro|volume|capitolo|autore|editore|isbn|ean|film|cinema)\b/i.test(n))return'';return x.replace(/^(?:la\s+|the\s+)?(?:serie|series|saga|trilogia|trilogy)\s+(?:di\s+|of\s+)?/i,'').trim()}
