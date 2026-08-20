@@ -12,9 +12,12 @@ on:
       - 'series-google-books-order-v10.js'
       - 'series-authoritative-catalog-v1.js'
       - 'genres-authoritative-v3.js'
+      - 'storygraph-goodreads-genres-v3.js'
       - 'genres-multi-v1.js'
       - 'publisher-plot-lock-v8.js'
       - 'isbn-resilient-fallback-v1.js'
+      - 'isbn-cover.js'
+      - '.github/workflows/cache-bust-runtime-v1.yml'
 
 permissions:
   contents: write
@@ -43,9 +46,10 @@ jobs:
             'series-wikipedia-authoritative-v3.js':'20260820-disabled-1',
             'series-authoritative-catalog-v1.js':'6',
             'series-google-books-order-v10.js':'20260820-single-owner-2',
-            'series-neighbors-standalone-v5.js':'20260820-39',
+            'series-neighbors-standalone-v5.js':'20260820-40',
             'series-universal-resolver-v1.js':'20260819-7',
-            'isbn-resilient-fallback-v1.js':'20260819-11'
+            'isbn-resilient-fallback-v1.js':'20260819-11',
+            'isbn-cover.js':'20260820-relations-cache-1'
           }
           for filename,version in versions.items():
               s=re.sub(re.escape(filename)+r'\?v=[^"\']+', filename+'?v='+version, s)
