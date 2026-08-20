@@ -13,18 +13,18 @@ const privacy=v=>/per quanto riguarda la pubblicita|terze parti selezionate|dati
   page.on('pageerror',e=>console.log('PAGE_ERROR',e.message));
   page.on('response',r=>{if(r.status()>=400&&!/googleapis\.com\/books|r\.jina\.ai/.test(r.url()))console.log('HTTP',r.status(),r.url())});
 
-  // Solo i due endpoint che GitHub Actions rate-limita vengono simulati con
-  // dati già verificati. Wikipedia, il resolver di saga, la pagina editore,
-  // la copertina e tutta la logica di Libri di Carta restano live.
+  // Google Books e StoryGraph via Jina vengono spesso rate-limitati da GitHub Actions.
+  // Simuliamo solo questi input già verificati. Wikipedia, il resolver generico di
+  // saga, la pagina dell'editore, la copertina e tutta la logica del sito restano live.
   await page.route('**://www.googleapis.com/books/v1/volumes**',async route=>{
     const u=new URL(route.request().url()),q=u.searchParams.get('q')||'';if(!q.includes(ISBN)){await route.continue();return}
     await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({kind:'books#volumes',totalItems:1,items:[{id:'GeGoswEACAAJ',volumeInfo:{title:EXPECTED.title,authors:[EXPECTED.author],publisher:EXPECTED.publisher,publishedDate:EXPECTED.year,industryIdentifiers:[{type:'ISBN_13',identifier:ISBN},{type:'ISBN_10',identifier:'8868363712'}],imageLinks:{thumbnail:'https://books.google.com/books/content?id=GeGoswEACAAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api'}}}]})});
   });
-  await page.route('**://r.jina.ai/https://app.thestorygraph.com/browse?**',async route=>{
+  await page.route(/https:\/\/r\.jina\.ai\/https:\/\/app\.thestorygraph\.com\/browse\?.*/,async route=>{
     await route.fulfill({status:200,contentType:'text/plain',body:`### I lupi del Calla. La torre nera\nStephen King\nISBN/UID: ${ISBN}\nFiction Fantasy Horror Adventurous Dark Mysterious Medium-paced\n`});
   });
 
-  await page.goto('https://polentona.github.io/LibriSempreDiCarta/?generic-v2='+Date.now(),{waitUntil:'domcontentloaded',timeout:90000});
+  await page.goto('https://polentona.github.io/LibriSempreDiCarta/?generic-v3='+Date.now(),{waitUntil:'domcontentloaded',timeout:90000});
   await page.locator('#addBookBtn').click();
   await page.locator('#editDialog[open]').waitFor({timeout:15000});
   await page.locator('#editCode').fill(ISBN);
@@ -47,14 +47,14 @@ const privacy=v=>/per quanto riguarda la pubblicita|terze parti selezionate|dati
   const state=await page.evaluate(async({ISBN,EXPECTED})=>{
     const input={code:ISBN,title:document.getElementById('editTitle')?.value||EXPECTED.title,author:document.getElementById('editAuthor')?.value||EXPECTED.author,publisher:document.getElementById('editPublisher')?.value||EXPECTED.publisher,saga:document.getElementById('editSaga')?.value||EXPECTED.saga};
     let rel=null,official='';try{rel=await window.__LIB_RESOLVE_VERIFIED_SERIES_NEIGHBORS?.(input)}catch(e){rel={error:String(e)}}try{official=await window.__LIB_RESOLVE_OFFICIAL_PLOT?.(input)||''}catch(e){official='__ERROR__'+String(e)}
-    let src='';try{src=await (await fetch('series-verified-order-v2.js?source-check='+Date.now(),{cache:'no-store'})).text()}catch(e){}
-    return{rel,official,loader:!!window.__LIB_SERIES_NEIGHBORS_STANDALONE_V40,seriesV2:!!window.__LIB_VERIFIED_SERIES_ORDER_V2,seriesPolicy:window.__LIB_SERIES_RELATION_POLICY||'',catalogPolicy:window.__LIB_SERIES_CATALOG_POLICY||'',plotV8:!!window.__LIB_PUBLISHER_PLOT_LOCK_V8,plotPolicy:window.__LIB_PLOT_SOURCE_POLICY||'',genreV2:!!window.__LIB_GENRE_WHITELIST_ENFORCER_V2,genrePolicy:window.__LIB_GENRE_SOURCE_POLICY||'',genreLast:window.__LIB_GENRE_WHITELIST_LAST__||null,noSpecific:!!src&&!src.includes(ISBN)&&!src.includes(EXPECTED.author)&&!src.includes(EXPECTED.saga),seriesDiag:window.__LIB_VERIFIED_SERIES_V2_LAST__||null,seriesSource:window.__LIB_VERIFIED_SERIES_V2_LAST_SOURCE||null};
+    let src2='',src3='';try{src2=await (await fetch('series-verified-order-v2.js?source-check='+Date.now(),{cache:'no-store'})).text()}catch(e){}try{src3=await (await fetch('series-verified-saga-v3.js?source-check='+Date.now(),{cache:'no-store'})).text()}catch(e){}
+    return{rel,official,loader:!!window.__LIB_SERIES_NEIGHBORS_STANDALONE_V41,seriesV2:!!window.__LIB_VERIFIED_SERIES_ORDER_V2,seriesV3:!!window.__LIB_VERIFIED_SERIES_SAGA_V3,seriesPolicy:window.__LIB_SERIES_RELATION_POLICY||'',catalogPolicy:window.__LIB_SERIES_CATALOG_POLICY||'',plotV8:!!window.__LIB_PUBLISHER_PLOT_LOCK_V8,plotPolicy:window.__LIB_PLOT_SOURCE_POLICY||'',genreV2:!!window.__LIB_GENRE_WHITELIST_ENFORCER_V2,genrePolicy:window.__LIB_GENRE_SOURCE_POLICY||'',genreLast:window.__LIB_GENRE_WHITELIST_LAST__||null,noSpecific:!!src2&&!!src3&&!src2.includes(ISBN)&&!src2.includes(EXPECTED.author)&&!src2.includes(EXPECTED.saga)&&!src3.includes(ISBN)&&!src3.includes(EXPECTED.author)&&!src3.includes(EXPECTED.saga),seriesDiag:window.__LIB_VERIFIED_SERIES_V3_LAST__||window.__LIB_VERIFIED_SERIES_V2_LAST__||null,seriesSource:window.__LIB_VERIFIED_SERIES_V2_LAST_SOURCE||null};
   },{ISBN,EXPECTED});
   const status=await page.locator('#lookupStatus').innerText();
   console.log('FINAL',JSON.stringify({current,status,metadataChoiceSeen,coverChoiceSeen,state:{...state,officialLength:state.official.length,officialPreview:state.official.slice(0,180)}}));
   const bad=[];
-  if(!state.loader||!state.seriesV2)bad.push('series-runtime');
-  if(state.seriesPolicy!=='structured-book-relations-then-ordered-series')bad.push('series-policy:'+state.seriesPolicy);
+  if(!state.loader||!state.seriesV2||!state.seriesV3)bad.push('series-runtime');
+  if(state.seriesPolicy!=='structured-book-relations-with-verified-series-name')bad.push('series-policy:'+state.seriesPolicy);
   if(state.catalogPolicy!=='no-hardcoded-relations')bad.push('catalog-policy');
   if(!state.noSpecific)bad.push('book-specific-production-code');
   if(!state.plotV8||state.plotPolicy!=='publisher-first-official-retry-lock-v8')bad.push('plot-v8');
@@ -76,5 +76,5 @@ const privacy=v=>/per quanto riguarda la pubblicita|terze parti selezionate|dati
   if(!current.editCover&&!coverChoiceSeen)bad.push('cover');
   await browser.close();
   if(bad.length)throw new Error(bad.join(' | '));
-  console.log('ISBN_9788868363710_ALL_FIELDS_GENERIC_V2_OK');
-})().catch(e=>{console.error('ISBN_9788868363710_ALL_FIELDS_GENERIC_V2_FAIL',e.stack||e.message);process.exit(1)});
+  console.log('ISBN_9788868363710_ALL_FIELDS_GENERIC_V3_OK');
+})().catch(e=>{console.error('ISBN_9788868363710_ALL_FIELDS_GENERIC_V3_FAIL',e.stack||e.message);process.exit(1)});
