@@ -39,7 +39,7 @@ jobs:
           versions={
             'series-authoritative-catalog-v1.js':'6',
             'series-google-books-order-v10.js':'20260820-single-owner-1',
-            'series-neighbors-standalone-v5.js':'20260820-38',
+            'series-neighbors-standalone-v5.js':'20260820-39',
             'series-universal-resolver-v1.js':'20260819-7',
             'isbn-resilient-fallback-v1.js':'20260819-11'
           }
