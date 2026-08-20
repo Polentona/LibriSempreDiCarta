@@ -1,67 +1,22 @@
 outcome=failure
 tested_isbn=9788845278389
-source_commit=64c727753979ce56da9cb37170845e1b0eb91840
-mode=publisher-plot-v8-loader-v45
+source_commit=ae82f2d83a4ec6a395c534aa37c2c6f9b89b866c
+mode=runtime-v46-series-v6-sanitizer-v1
 ---
-HTTP_ERROR 429 https://www.googleapis.com/books/v1/volumes?q=isbn%3A9788845278389&maxResults=20&projection=full&printType=all
-HTTP_ERROR 429 https://r.jina.ai/https://html.duckduckgo.com/html/?q=site%3Abompiani.it%20%229788845278389%22%20%22Il%20valzer%20lento%20delle%20tartarughe%22
-HTTP_ERROR 429 https://r.jina.ai/http://html.duckduckgo.com/html/?q=site%3Abompiani.it%20%229788845278389%22%20%22Il%20valzer%20lento%20delle%20tartarughe%22
-HTTP_ERROR 403 https://corsproxy.io/?url=https%3A%2F%2Fhtml.duckduckgo.com%2Fhtml%2F%3Fq%3Dsite%253Abompiani.it%2520%25229788845278389%2522%2520%2522Il%2520valzer%2520lento%2520delle%2520tartarughe%2522
-HTTP_ERROR 429 https://r.jina.ai/https://www.bompiani.it/catalogo/il-valzer-lento-delle-tartarughe-9788845278389
-HTTP_ERROR 429 https://r.jina.ai/https://www.bompiani.it/catalogo/il-valzer-lento-delle-tartarughe-9788845278389
-HTTP_ERROR 429 https://r.jina.ai/http://www.bompiani.it/catalogo/il-valzer-lento-delle-tartarughe-9788845278389
-HTTP_ERROR 429 https://r.jina.ai/http://www.bompiani.it/catalogo/il-valzer-lento-delle-tartarughe-9788845278389
-HTTP_ERROR 429 https://r.jina.ai/https://www.bompiani.it/catalogo/il-valzer-lento-delle-tartarughe-9788845278389
-HTTP_ERROR 429 https://r.jina.ai/https://www.bompiani.it/catalogo/il-valzer-lento-delle-tartarughe-9788845278389
-HTTP_ERROR 429 https://r.jina.ai/http://www.bompiani.it/catalogo/il-valzer-lento-delle-tartarughe-9788845278389
-HTTP_ERROR 429 https://r.jina.ai/https://www.bompiani.it/catalogo/il-valzer-lento-delle-tartarughe-9788845278389
-HTTP_ERROR 429 https://r.jina.ai/https://www.bompiani.it/catalogo/il-valzer-lento-delle-tartarughe-9788845278389
-HTTP_ERROR 429 https://r.jina.ai/http://www.bompiani.it/catalogo/il-valzer-lento-delle-tartarughe-9788845278389
-HTTP_ERROR 429 https://r.jina.ai/http://www.bompiani.it/catalogo/il-valzer-lento-delle-tartarughe-9788845278389
-HTTP_ERROR 429 https://r.jina.ai/http://www.bompiani.it/catalogo/il-valzer-lento-delle-tartarughe-9788845278389
-HTTP_ERROR 429 https://r.jina.ai/https://www.bompiani.it/catalogo/il-valzer-lento-delle-tartarughe-9788845278389
-HTTP_ERROR 429 https://r.jina.ai/https://www.bompiani.it/catalogo/il-valzer-lento-delle-tartarughe-9788845278389
-HTTP_ERROR 429 https://r.jina.ai/http://www.bompiani.it/catalogo/il-valzer-lento-delle-tartarughe-9788845278389
-HTTP_ERROR 429 https://r.jina.ai/http://www.bompiani.it/catalogo/il-valzer-lento-delle-tartarughe-9788845278389
-HTTP_ERROR 429 https://r.jina.ai/https://www.bompiani.it/catalogo/il-valzer-lento-delle-tartarughe-9788845278389
-HTTP_ERROR 429 https://r.jina.ai/https://www.bompiani.it/catalogo/il-valzer-lento-delle-tartarughe-9788845278389
-HTTP_ERROR 429 https://r.jina.ai/http://www.bompiani.it/catalogo/il-valzer-lento-delle-tartarughe-9788845278389
-HTTP_ERROR 429 https://r.jina.ai/http://www.bompiani.it/catalogo/il-valzer-lento-delle-tartarughe-9788845278389
-HTTP_ERROR 429 https://r.jina.ai/https://www.bompiani.it/catalogo/il-valzer-lento-delle-tartarughe-9788845278389
-HTTP_ERROR 429 https://r.jina.ai/https://www.bompiani.it/catalogo/il-valzer-lento-delle-tartarughe-9788845278389
-HTTP_ERROR 429 https://r.jina.ai/http://www.bompiani.it/catalogo/il-valzer-lento-delle-tartarughe-9788845278389
-HTTP_ERROR 429 https://r.jina.ai/https://www.bompiani.it/catalogo/il-valzer-lento-delle-tartarughe-9788845278389
-HTTP_ERROR 429 https://r.jina.ai/http://www.bompiani.it/catalogo/il-valzer-lento-delle-tartarughe-9788845278389
-HTTP_ERROR 429 https://r.jina.ai/https://www.bompiani.it/catalogo/il-valzer-lento-delle-tartarughe-9788845278389
-HTTP_ERROR 429 https://r.jina.ai/http://www.bompiani.it/catalogo/il-valzer-lento-delle-tartarughe-9788845278389
-HTTP_ERROR 429 https://r.jina.ai/http://www.bompiani.it/catalogo/il-valzer-lento-delle-tartarughe-9788845278389
-HTTP_ERROR 429 https://r.jina.ai/https://www.bompiani.it/catalogo/il-valzer-lento-delle-tartarughe-9788845278389
-HTTP_ERROR 429 https://r.jina.ai/http://www.bompiani.it/catalogo/il-valzer-lento-delle-tartarughe-9788845278389
-HTTP_ERROR 429 https://r.jina.ai/https://www.bompiani.it/catalogo/il-valzer-lento-delle-tartarughe-9788845278389
-HTTP_ERROR 429 https://r.jina.ai/https://www.bompiani.it/catalogo/il-valzer-lento-delle-tartarughe-9788845278389
-HTTP_ERROR 429 https://r.jina.ai/https://www.bompiani.it/catalogo/il-valzer-lento-delle-tartarughe-9788845278389
-HTTP_ERROR 429 https://r.jina.ai/http://www.bompiani.it/catalogo/il-valzer-lento-delle-tartarughe-9788845278389
-HTTP_ERROR 429 https://r.jina.ai/http://www.bompiani.it/catalogo/il-valzer-lento-delle-tartarughe-9788845278389
-HTTP_ERROR 429 https://r.jina.ai/https://www.bompiani.it/catalogo/il-valzer-lento-delle-tartarughe-9788845278389
-HTTP_ERROR 429 https://r.jina.ai/https://www.bompiani.it/catalogo/il-valzer-lento-delle-tartarughe-9788845278389
-HTTP_ERROR 429 https://r.jina.ai/https://www.bompiani.it/catalogo/il-valzer-lento-delle-tartarughe-9788845278389
-HTTP_ERROR 429 https://r.jina.ai/https://www.bompiani.it/catalogo/il-valzer-lento-delle-tartarughe-9788845278389
-HTTP_ERROR 429 https://r.jina.ai/http://www.bompiani.it/catalogo/il-valzer-lento-delle-tartarughe-9788845278389
-HTTP_ERROR 429 https://r.jina.ai/http://www.bompiani.it/catalogo/il-valzer-lento-delle-tartarughe-9788845278389
-HTTP_ERROR 429 https://r.jina.ai/http://www.bompiani.it/catalogo/il-valzer-lento-delle-tartarughe-9788845278389
-HTTP_ERROR 429 https://r.jina.ai/http://www.bompiani.it/catalogo/il-valzer-lento-delle-tartarughe-9788845278389
-HTTP_ERROR 429 https://r.jina.ai/http://www.bompiani.it/catalogo/il-valzer-lento-delle-tartarughe-9788845278389
-HTTP_ERROR 429 https://r.jina.ai/https://www.bompiani.it/catalogo/il-valzer-lento-delle-tartarughe-9788845278389
-HTTP_ERROR 429 https://r.jina.ai/https://www.bompiani.it/catalogo/il-valzer-lento-delle-tartarughe-9788845278389
-HTTP_ERROR 429 https://r.jina.ai/http://www.bompiani.it/catalogo/il-valzer-lento-delle-tartarughe-9788845278389
-HTTP_ERROR 429 https://r.jina.ai/http://www.bompiani.it/catalogo/il-valzer-lento-delle-tartarughe-9788845278389
-HTTP_ERROR 429 https://r.jina.ai/https://www.bompiani.it/catalogo/il-valzer-lento-delle-tartarughe-9788845278389
-HTTP_ERROR 429 https://r.jina.ai/http://www.bompiani.it/catalogo/il-valzer-lento-delle-tartarughe-9788845278389
-HTTP_ERROR 429 https://r.jina.ai/https://html.duckduckgo.com/html/?q=%229788845278389%22%20(site%3Aibs.it%20OR%20site%3Alibraccio.it%20OR%20site%3Alibreriauniversitaria.it%20OR%20site%3Alafeltrinelli.it%20OR%20site%3Ahoepli.it%20OR%20site%3Aunilibro.it%20OR%20site%3Amondadoristore.it%20OR%20site%3Agiunti.it)
-HTTP_ERROR 404 https://images.weserv.nl/?url=https%3A%2F%2Fcovers.librarything.com%2Fdevkey%2Ffd11eebee79ccfcfe2f17d34a92e1011%2Fsmall%2Fisbn%2F9788845278389
-HTTP_ERROR 429 https://r.jina.ai/http://html.duckduckgo.com/html/?q=%229788845278389%22%20(site%3Aibs.it%20OR%20site%3Alibraccio.it%20OR%20site%3Alibreriauniversitaria.it%20OR%20site%3Alafeltrinelli.it%20OR%20site%3Ahoepli.it%20OR%20site%3Aunilibro.it%20OR%20site%3Amondadoristore.it%20OR%20site%3Agiunti.it)
-HTTP_ERROR 404 https://images.weserv.nl/?url=https%3A%2F%2Fcovers.openlibrary.org%2Fb%2Fisbn%2F9788845278389-L.jpg%3Fdefault%3Dfalse
-HTTP_ERROR 403 https://corsproxy.io/?url=https%3A%2F%2Fhtml.duckduckgo.com%2Fhtml%2F%3Fq%3D%25229788845278389%2522%2520(site%253Aibs.it%2520OR%2520site%253Alibraccio.it%2520OR%2520site%253Alibreriauniversitaria.it%2520OR%2520site%253Alafeltrinelli.it%2520OR%2520site%253Ahoepli.it%2520OR%2520site%253Aunilibro.it%2520OR%2520site%253Amondadoristore.it%2520OR%2520site%253Agiunti.it)
-FINAL_PLOT {"title":"Il valzer lento delle tartarughe","author":"Katherine Pancol","publisher":"Bompiani","publishedDate":"2015","genres":"Narrativa rosa/sentimentale","plotLength":0,"officialLength":0,"status":"","plotV8":true,"loaderV45":true,"plotPolicy":"publisher-first-official-retry-lock-v8"}
-PLOT_LIVE_FAIL Error: Campi trama non corretti: trama-editore
-    at /tmp/isbn-live/test.js:52:25
+/tmp/isbn-live/test.js:24
+  page.on('response',r=>{if(r.status()===429)http429++;if(r.status()>=400)console.log('HTTP_ERROR',r.status(),r.url())});
+                                                    ^
+
+TypeError: Assignment to constant variable.
+    at Page.<anonymous> (/tmp/isbn-live/test.js:24:53)
+    at Page._callHandler (/tmp/isbn-live/node_modules/playwright-core/lib/client/eventEmitter.js:66:29)
+    at Page.emit (/tmp/isbn-live/node_modules/playwright-core/lib/client/eventEmitter.js:56:12)
+    at BrowserContext._onResponse (/tmp/isbn-live/node_modules/playwright-core/lib/client/browserContext.js:178:12)
+    at Proxy.<anonymous> (/tmp/isbn-live/node_modules/playwright-core/lib/client/browserContext.js:129:63)
+    at Proxy._callHandler (/tmp/isbn-live/node_modules/playwright-core/lib/client/eventEmitter.js:66:29)
+    at Proxy.emit (/tmp/isbn-live/node_modules/playwright-core/lib/client/eventEmitter.js:56:12)
+    at Connection.dispatch (/tmp/isbn-live/node_modules/playwright-core/lib/client/connection.js:175:21)
+    at Immediate.<anonymous> (/tmp/isbn-live/node_modules/playwright-core/lib/inProcessFactory.js:48:85)
+    at process.processImmediate (node:internal/timers:483:21)
+
+Node.js v20.20.2
