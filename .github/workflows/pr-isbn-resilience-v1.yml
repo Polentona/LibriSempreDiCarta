@@ -1,0 +1,46 @@
+name: PR ISBN resilience check
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'isbn-request-broker-v1.js'
+      - 'series-resolver-stability-v1.js'
+      - 'genre-resolver-resilient-v1.js'
+      - 'plot-resolver-resilient-v1.js'
+      - 'series-neighbors-standalone-v5.js'
+      - 'scripts/test-isbn-network-resilience-v1.js'
+      - '.github/workflows/pr-isbn-resilience-v1.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  resilience:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Sintassi e policy
+        run: |
+          node --check isbn-request-broker-v1.js
+          node --check series-resolver-stability-v1.js
+          node --check genre-resolver-resilient-v1.js
+          node --check plot-resolver-resilient-v1.js
+          node --check series-neighbors-standalone-v5.js
+          node --check scripts/test-isbn-network-resilience-v1.js
+          grep -q '__LIB_SERIES_NEIGHBORS_STANDALONE_V51' series-neighbors-standalone-v5.js
+          grep -q 'isbn-request-broker-v1.js?v=20260820-1' series-neighbors-standalone-v5.js
+          grep -q 'series-resolver-stability-v1.js?v=20260820-1' series-neighbors-standalone-v5.js
+          grep -q 'genre-resolver-resilient-v1.js?v=20260820-1' series-neighbors-standalone-v5.js
+          grep -q 'plot-resolver-resilient-v1.js?v=20260820-1' series-neighbors-standalone-v5.js
+          for f in isbn-request-broker-v1.js series-resolver-stability-v1.js genre-resolver-resilient-v1.js plot-resolver-resilient-v1.js; do
+            ! grep -q '9788850225798' "$f"
+            ! grep -q '9788845279553' "$f"
+            ! grep -q 'Glenn Cooper' "$f"
+            ! grep -q 'Simon Beckett' "$f"
+          done
+      - name: Test regressioni resilienza
+        run: node scripts/test-isbn-network-resilience-v1.js
