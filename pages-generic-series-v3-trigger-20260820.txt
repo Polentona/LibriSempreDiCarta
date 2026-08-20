@@ -1,0 +1,1 @@
+Deploy del resolver generico V3 per saga, prequel e sequel verificati.
