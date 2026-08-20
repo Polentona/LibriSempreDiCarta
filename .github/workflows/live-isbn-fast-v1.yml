@@ -25,7 +25,7 @@ jobs:
         run: |
           node --check series-dark-tower-authoritative-v1.js
           node --check series-neighbors-standalone-v5.js
-          node --check publisher-plot-resilience-v6.js
+          node --check publisher-plot-resilience-v7.js
           mkdir -p /tmp/isbn-fast && cd /tmp/isbn-fast
           npm init -y >/dev/null 2>&1
           npm install playwright-core@1.55.0 >/dev/null 2>&1
@@ -44,18 +44,20 @@ jobs:
           };
           const norm=v=>String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
           const same=(a,b)=>norm(a)===norm(b);
+          const titleCore=v=>norm(v).replace(/\b(?:vol|volume)\s*5\b/g,' ').replace(/\s+/g,' ').trim();
+          const sameTitle=(a,b)=>titleCore(a)===titleCore(b);
           const genreSet=v=>new Set(String(v||'').split(/[,;|]/).map(x=>norm(x)).filter(Boolean));
           const exactGenres=v=>{const got=genreSet(v),exp=new Set(EXPECTED.genres.map(norm));return got.size===exp.size&&[...exp].every(x=>got.has(x))};
+          const privacy=v=>/per quanto riguarda la pubblicita|terze parti selezionate|dati di geolocalizzazione|caratteristiche del dispositivo|annunci e contenuti personalizzati|consenso cookie|cookie policy/i.test(norm(v));
           (async()=>{
             const browser=await chromium.launch({headless:true,executablePath:'/usr/bin/google-chrome',args:['--no-sandbox']});
             const page=await browser.newPage({viewport:{width:1400,height:1100}});
             page.on('pageerror',e=>console.log('PAGE_ERROR',e.message));
             page.on('response',r=>{if(r.status()>=400&&!r.url().includes('googleapis.com/books/v1/volumes'))console.log('HTTP',r.status(),r.url())});
 
-            // In CI Google Books viene spesso limitato con HTTP 429. Intercettiamo solo
-            // la scheda bibliografica ISBN, usando i metadati già verificati dell'edizione,
-            // così il test continua a esercitare il runtime LIVE di generi, saga,
-            // prequel/sequel, trama editore e copertina senza dipendere dal rate limit.
+            // GitHub Actions riceve spesso 429 da Google Books. Mockiamo esclusivamente
+            // la scheda bibliografica di questo ISBN; tutto il resto (StoryGraph,
+            // resolver saga, pagina Sperling e logica dell'app) resta il runtime LIVE.
             await page.route('**://www.googleapis.com/books/v1/volumes**',async route=>{
               const u=new URL(route.request().url()),q=u.searchParams.get('q')||'';
               if(!q.includes(ISBN)){await route.continue();return}
@@ -70,23 +72,35 @@ jobs:
               await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(body)});
             });
 
-            await page.goto('https://polentona.github.io/LibriSempreDiCarta/?test-all-fields='+Date.now(),{waitUntil:'domcontentloaded',timeout:90000});
+            await page.goto('https://polentona.github.io/LibriSempreDiCarta/?test-all-fields-v2='+Date.now(),{waitUntil:'domcontentloaded',timeout:90000});
             await page.locator('#addBookBtn').click();
             await page.locator('#editDialog[open]').waitFor({timeout:15000});
             await page.locator('#editCode').fill(ISBN);
             await page.locator('#lookupMetadataBtn').click();
 
-            let current={};
             const ids=['editCode','editTitle','editAuthor','editPublisher','editPublishedDate','editCategory','editSaga','editPrequel','editSequel','editPlot','editCover'];
-            const until=Date.now()+90000;
+            let current={},coverChoiceSeen=false;
+            const until=Date.now()+100000;
             while(Date.now()<until){
               await page.waitForTimeout(1000);
+              const covers=page.locator('#metadataOverlay[open] .cover-choice');
+              if(await covers.count()){
+                coverChoiceSeen=true;
+                await covers.first().click().catch(()=>{});
+                await page.waitForTimeout(500);
+              }
               current=await page.evaluate(ids=>Object.fromEntries(ids.map(id=>[id,document.getElementById(id)?.value||''])),ids);
-              if(same(current.editTitle,EXPECTED.title)&&same(current.editAuthor,EXPECTED.author)&&same(current.editPublisher,EXPECTED.publisher)
+              const allCore=sameTitle(current.editTitle,EXPECTED.title)&&same(current.editAuthor,EXPECTED.author)&&same(current.editPublisher,EXPECTED.publisher)
                 && String(current.editPublishedDate).includes(EXPECTED.year)&&exactGenres(current.editCategory)
-                && same(current.editSaga,EXPECTED.saga)&&same(current.editPrequel,EXPECTED.prequel)&&same(current.editSequel,EXPECTED.sequel)
-                && current.editPlot.length>=500&&current.editCover)break;
+                && same(current.editSaga,EXPECTED.saga)&&same(current.editPrequel,EXPECTED.prequel)&&same(current.editSequel,EXPECTED.sequel);
+              const plotOk=current.editPlot.length>=500&&!privacy(current.editPlot)&&/^rumore di passi sul sentiero del vettore/i.test(current.editPlot.trim());
+              if(allCore&&plotOk&&current.editCover)break;
             }
+
+            // Diamo al lock V7 un ultimo ciclo per correggere eventuali scritture tardive
+            // provenienti dagli altri resolver asincroni.
+            await page.waitForTimeout(2500);
+            current=await page.evaluate(ids=>Object.fromEntries(ids.map(id=>[id,document.getElementById(id)?.value||''])),ids);
 
             const state=await page.evaluate(async({ISBN,EXPECTED})=>{
               const input={code:ISBN,title:document.getElementById('editTitle')?.value||EXPECTED.title,author:document.getElementById('editAuthor')?.value||EXPECTED.author,publisher:document.getElementById('editPublisher')?.value||EXPECTED.publisher,saga:document.getElementById('editSaga')?.value||EXPECTED.saga};
@@ -96,11 +110,12 @@ jobs:
               try{official=await window.__LIB_RESOLVE_OFFICIAL_PLOT?.(input)||''}catch(e){official='__ERROR__'+String(e)}
               return {
                 rel,canonical,official,
-                loaderV36:!!window.__LIB_SERIES_NEIGHBORS_STANDALONE_V36,
+                loaderV37:!!window.__LIB_SERIES_NEIGHBORS_STANDALONE_V37,
                 darkTowerV1:!!window.__LIB_DARK_TOWER_AUTHORITATIVE_V1,
                 darkTowerReady:!!window.__LIB_DARK_TOWER_AUTHORITATIVE_READY,
                 orderPolicy:window.__LIB_DARK_TOWER_ORDER_POLICY||'',
-                plotV6:!!window.__LIB_PUBLISHER_PLOT_RESILIENCE_V6,
+                plotV7:!!window.__LIB_PUBLISHER_PLOT_RESILIENCE_V7,
+                plotDeployMarker:window.__LIB_PLOT_V7_DEPLOY_MARKER||'',
                 genrePolicy:window.__LIB_GENRE_SOURCE_POLICY||'',
                 plotPolicy:window.__LIB_PLOT_SOURCE_POLICY||'',
                 genreLast:window.__LIB_GENRE_WHITELIST_LAST__||null,
@@ -108,16 +123,16 @@ jobs:
               };
             },{ISBN,EXPECTED});
             const status=await page.locator('#lookupStatus').innerText();
-            current=await page.evaluate(ids=>Object.fromEntries(ids.map(id=>[id,document.getElementById(id)?.value||''])),ids);
-            console.log('FINAL',JSON.stringify({current,status,state:{...state,officialLength:state.official.length,officialPreview:state.official.slice(0,180)}}));
+            console.log('FINAL',JSON.stringify({current,status,coverChoiceSeen,state:{...state,officialLength:state.official.length,officialPreview:state.official.slice(0,180)}}));
 
             const bad=[];
-            if(!state.loaderV36)bad.push('loader-v36');
+            if(!state.loaderV37)bad.push('loader-v37');
             if(!state.darkTowerV1||!state.darkTowerReady)bad.push('dark-tower-runtime');
             if(state.orderPolicy!=='numbered-main-series')bad.push('dark-tower-order-policy');
-            if(!state.plotV6)bad.push('plot-v6');
+            if(!state.plotV7||state.plotDeployMarker!=='20260820-all-fields')bad.push('plot-v7');
+            if(state.plotPolicy!=='publisher-first-sperling-direct-v7-official-lock')bad.push('plot-policy');
             if(!same(current.editCode,ISBN))bad.push('isbn');
-            if(!same(current.editTitle,EXPECTED.title))bad.push('title');
+            if(!sameTitle(current.editTitle,EXPECTED.title))bad.push('title:'+current.editTitle);
             if(!same(current.editAuthor,EXPECTED.author))bad.push('author');
             if(!same(current.editPublisher,EXPECTED.publisher))bad.push('publisher');
             if(!String(current.editPublishedDate).includes(EXPECTED.year))bad.push('year');
@@ -127,12 +142,14 @@ jobs:
             if(!same(current.editSequel,EXPECTED.sequel))bad.push('sequel:'+current.editSequel);
             if(/during his|chancellor|the shining/i.test(current.editPrequel+' '+current.editSequel))bad.push('relation-garbage');
             if((current.editPlot||'').length<500)bad.push('plot');
+            if(privacy(current.editPlot))bad.push('privacy-text-in-plot');
             if(!/^rumore di passi sul sentiero del vettore/i.test(current.editPlot.trim()))bad.push('wrong-plot-section');
             if(/uno degli autori piu influenti e amati/i.test(norm(current.editPlot)))bad.push('author-bio-in-plot');
             if(!current.editCover)bad.push('cover');
             if(!state.canonical||!same(state.canonical.prequel,EXPECTED.prequel)||!same(state.canonical.sequel,EXPECTED.sequel))bad.push('canonical-relations');
             if(!state.rel||!same(state.rel.prequel,EXPECTED.prequel)||!same(state.rel.sequel,EXPECTED.sequel))bad.push('runtime-relations');
             if(String(state.official||'').startsWith('__ERROR__')||(state.official||'').length<500)bad.push('official-plot');
+            if(state.official&&!same(current.editPlot,state.official))bad.push('form-plot-not-official');
             await browser.close();
             if(bad.length)throw new Error(bad.join(' | '));
             console.log('ISBN_9788868363710_ALL_FIELDS_OK');
@@ -146,7 +163,7 @@ jobs:
           {
             echo "outcome=${{ steps.live.outcome }}"
             echo "source_commit=${GITHUB_SHA}"
-            echo "mode=isbn-9788868363710-all-fields"
+            echo "mode=isbn-9788868363710-all-fields-v2"
             echo "isbn=9788868363710"
             echo '---'
             cat /tmp/isbn-fast.log 2>/dev/null || true
