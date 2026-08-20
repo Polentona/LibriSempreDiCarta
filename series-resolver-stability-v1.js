@@ -24,6 +24,9 @@ function merge(a,b){
 }
 function install(){
   if(root.__LIB_SERIES_RESOLVER_STABILITY_V1_INSTALLED)return true;
+  /* Se il fallback italiano è stato caricato, deve diventare parte del resolver
+     prima che questa cache catturi il riferimento definitivo. */
+  if(root.__LIB_SERIES_LOCALIZATION_RESILIENT_V1&&!root.__LIB_SERIES_LOCALIZATION_RESILIENT_V1_INSTALLED)return false;
   if(!root.__LIB_SERIES_AUTHORITATIVE_RUNTIME_V8||typeof root.__LIB_RESOLVE_AUTHORITATIVE_SERIES_NEIGHBORS!=='function')return false;
   const base=root.__LIB_RESOLVE_AUTHORITATIVE_SERIES_NEIGHBORS;
   if(base.__stableResolverV1)return true;
@@ -44,6 +47,6 @@ function install(){
   for(const n of ['__LIB_RESOLVE_AUTHORITATIVE_SERIES_NEIGHBORS','__LIB_RESOLVE_VERIFIED_SERIES_NEIGHBORS','__LIB_RESOLVE_SERIES_NEIGHBORS','__LIB_FIND_RELATIONS','__LIB_RESOLVE_UNIVERSAL_SERIES','__LIB_RESOLVE_BOUNDED_RELATIONS'])root[n]=wrapped;
   root.__LIB_SERIES_RESOLVER_STABILITY_V1_INSTALLED=true;return true
 }
-(function start(n=0){if(install())return;if(n<120)setTimeout(()=>start(n+1),100)})();
+(function start(n=0){if(install())return;if(n<160)setTimeout(()=>start(n+1),100)})();
 root.__LIB_SERIES_RESOLVER_STABILITY_V1_TEST__={keyOf,shape,localized,merge,install,bestCache};
 })();
