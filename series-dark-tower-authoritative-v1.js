@@ -1,6 +1,7 @@
 (()=>{
 const root=typeof window!=='undefined'?window:globalThis;
 if(root.__LIB_DARK_TOWER_AUTHORITATIVE_V1)return;root.__LIB_DARK_TOWER_AUTHORITATIVE_V1=true;
+root.__LIB_DARK_TOWER_ORDER_POLICY='numbered-main-series';
 
 const entry={
   author:'Stephen King',
