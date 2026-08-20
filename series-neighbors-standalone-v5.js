@@ -1,8 +1,8 @@
 (()=>{
 const root=typeof window!=='undefined'?window:globalThis;
-if(root.__LIB_SERIES_NEIGHBORS_STANDALONE_V44)return;
-root.__LIB_SERIES_NEIGHBORS_STANDALONE_V44=true;
-root.__LIB_SINGLE_OWNER_RUNTIME='20260820-8';
+if(root.__LIB_SERIES_NEIGHBORS_STANDALONE_V45)return;
+root.__LIB_SERIES_NEIGHBORS_STANDALONE_V45=true;
+root.__LIB_SINGLE_OWNER_RUNTIME='20260820-9';
 
 /* I resolver legacy non devono più poter diventare proprietari dei campi.
    Questi marker sono letti dagli stessi moduli legacy prima di inizializzarsi:
@@ -36,10 +36,10 @@ loadOnce('libPublisherPlotResilienceV6','publisher-plot-resilience-v6.js?v=20260
 loadOnce('libPublisherPlotResilienceV7','publisher-plot-resilience-v7.js?v=20260820-7');
 loadOnce('libPublisherPlotLockV8','publisher-plot-lock-v8.js?v=20260820-8');
 
-/* Un solo proprietario dei campi Saga / Prequel / Sequel. Versione query nuova
-   per impedire a Chrome di riutilizzare copie precedenti dei due runtime. */
-loadOnce('libSeriesAuthoritativeRuntimeV4','series-authoritative-runtime-v4.js?v=20260820-8');
-loadOnce('libSeriesSingleOwnerGuardV1','series-single-owner-guard-v1.js?v=20260820-2');
+/* Un solo proprietario dei campi Saga / Prequel / Sequel.
+   Goodreads determina prima l'ordine della serie; Wikipedia è solo fallback. */
+loadOnce('libSeriesAuthoritativeRuntimeV5','series-authoritative-runtime-v5.js?v=20260820-9');
+loadOnce('libSeriesSingleOwnerGuardV1','series-single-owner-guard-v1.js?v=20260820-3');
 
 /* genres-multi gestisce persistenza/UI. StoryGraph v3 è l'unica sorgente di rete:
    prova anche la pagina libro diretta e usa Goodreads solo se StoryGraph è raggiungibile
@@ -49,5 +49,5 @@ loadOnce('libStoryGraphGoodreadsGenresV3','storygraph-goodreads-genres-v3.js?v=2
 
 root.__LIB_GENRE_SOURCE_POLICY='storygraph-direct-then-goodreads-only-if-absent-v3';
 root.__LIB_PLOT_SOURCE_POLICY='publisher-first-official-retry-lock-v8';
-root.__LIB_SERIES_RELATION_POLICY='single-owner-structured-book-then-ordered-series-v4';
+root.__LIB_SERIES_RELATION_POLICY='single-owner-goodreads-ordered-series-then-structured-book-v5';
 })();
