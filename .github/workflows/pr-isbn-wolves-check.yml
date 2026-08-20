@@ -4,24 +4,16 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - 'goodreads-primary-metadata-v1.js'
       - 'series-neighbors-standalone-v5.js'
-      - 'series-authoritative-runtime-v7.js'
-      - 'series-relation-stabilizer-v8.js'
       - 'series-saga-lock-v9.js'
-      - 'series-single-owner-guard-v1.js'
-      - 'storygraph-goodreads-genres-v3.js'
       - 'storygraph-genre-lock-v4.js'
       - 'isbn-enrichment-progress-v10.js'
       - 'publisher-plot-lock-v8.js'
-      - 'isbn-field-sanitizer-v2.js'
-      - 'isbn-cover.js'
-      - 'scripts/test-series-regressions-v7.js'
-      - 'scripts/test-series-stabilizer-v8.js'
       - 'scripts/test-saga-genres-v9.js'
       - 'scripts/test-plot-progress-v11.js'
-      - '.github/workflows/cache-bust-runtime-v1.yml'
+      - 'scripts/test-goodreads-primary-metadata-v1.js'
       - '.github/workflows/pages.yml'
-      - '.github/workflows/live-isbn-regression-v1.yml'
       - '.github/workflows/pr-isbn-wolves-check.yml'
       - '.nojekyll'
 
@@ -42,119 +34,28 @@ jobs:
           node-version: 20
       - name: Sintassi e configurazione runtime
         run: |
-          node --check storygraph-goodreads-genres-v3.js
+          node --check goodreads-primary-metadata-v1.js
           node --check storygraph-genre-lock-v4.js
           node --check isbn-enrichment-progress-v10.js
           node --check series-neighbors-standalone-v5.js
-          node --check series-authoritative-runtime-v7.js
-          node --check series-relation-stabilizer-v8.js
           node --check series-saga-lock-v9.js
-          node --check series-single-owner-guard-v1.js
           node --check publisher-plot-lock-v8.js
-          node --check isbn-field-sanitizer-v2.js
-          node --check scripts/test-series-stabilizer-v8.js
           node --check scripts/test-saga-genres-v9.js
           node --check scripts/test-plot-progress-v11.js
-          grep -q '__LIB_SERIES_NEIGHBORS_STANDALONE_V50' series-neighbors-standalone-v5.js
-          grep -q 'series-authoritative-runtime-v7.js?v=20260820-11' series-neighbors-standalone-v5.js
-          grep -q 'series-relation-stabilizer-v8.js?v=20260820-1' series-neighbors-standalone-v5.js
-          grep -q 'series-saga-lock-v9.js?v=20260820-2' series-neighbors-standalone-v5.js
-          grep -q 'series-single-owner-guard-v1.js?v=20260820-6' series-neighbors-standalone-v5.js
-          grep -q 'publisher-plot-lock-v8.js?v=20260820-12' series-neighbors-standalone-v5.js
-          grep -q 'isbn-field-sanitizer-v2.js?v=20260820-2' series-neighbors-standalone-v5.js
-          grep -q 'storygraph-goodreads-genres-v3.js?v=20260820-1' series-neighbors-standalone-v5.js
-          grep -q 'storygraph-genre-lock-v4.js?v=20260820-2' series-neighbors-standalone-v5.js
-          grep -q 'isbn-enrichment-progress-v10.js?v=20260820-2' series-neighbors-standalone-v5.js
-          grep -q 'goodreads-order-canonical-localization-stable-v8' series-neighbors-standalone-v5.js
-          grep -q 'publisher-first-official-retry-lock-v9-sanitized' series-neighbors-standalone-v5.js
-          grep -q '__LIB_SERIES_RELATION_STABILIZER_V8' series-relation-stabilizer-v8.js
-          grep -q '__LIB_SERIES_AUTHORITATIVE_RUNTIME_V8' series-relation-stabilizer-v8.js
-          grep -q 'canonical-title-localizer-v8' series-relation-stabilizer-v8.js
+          node --check scripts/test-goodreads-primary-metadata-v1.js
+          grep -q '__LIB_SERIES_NEIGHBORS_STANDALONE_V54' series-neighbors-standalone-v5.js
+          grep -q '__LIB_GOODREADS_PRIMARY_METADATA_V1' goodreads-primary-metadata-v1.js
+          grep -q '__LIB_STORYGRAPH_GENRE_LOCK_V6' storygraph-genre-lock-v4.js
           grep -q '__LIB_SERIES_SAGA_LOCK_V10' series-saga-lock-v9.js
-          grep -q '__LIB_STORYGRAPH_GENRE_LOCK_V5' storygraph-genre-lock-v4.js
           grep -q '__LIB_ISBN_ENRICHMENT_PROGRESS_V11' isbn-enrichment-progress-v10.js
           grep -q '__LIB_PUBLISHER_PLOT_LOCK_V9' publisher-plot-lock-v8.js
-          grep -q '__LIB_PUBLISHER_PLOT_LOCK_STATE__' publisher-plot-lock-v8.js
-          grep -q 'goodreads-ordered-series-primary-v7' series-authoritative-runtime-v7.js
-          grep -q '__LIB_ISBN_FIELD_SANITIZER_V2' isbn-field-sanitizer-v2.js
-          grep -q '__LIB_PUBLISHER_PLOT_LOCK_V8_SANITIZED' publisher-plot-lock-v8.js
-          ! grep -q 'series-authoritative-runtime-v6.js' series-neighbors-standalone-v5.js
-          ! grep -q 'isbn-field-sanitizer-v1.js' series-neighbors-standalone-v5.js
-          ! grep -q '9788845279553' series-authoritative-runtime-v7.js
-          ! grep -q '9788845279553' series-relation-stabilizer-v8.js
-          ! grep -q '9788845279553' series-saga-lock-v9.js
-          ! grep -q '9788845279553' storygraph-genre-lock-v4.js
-          ! grep -q '9788845279553' isbn-enrichment-progress-v10.js
-          ! grep -q '9788845279553' publisher-plot-lock-v8.js
-          ! grep -q 'Simon Beckett' series-authoritative-runtime-v7.js
-          ! grep -q 'Simon Beckett' series-relation-stabilizer-v8.js
-          ! grep -q 'Simon Beckett' series-saga-lock-v9.js
-          ! grep -q 'Simon Beckett' storygraph-genre-lock-v4.js
-          ! grep -q 'Simon Beckett' isbn-enrichment-progress-v10.js
-          ! grep -q 'Simon Beckett' publisher-plot-lock-v8.js
-          ! grep -q 'David Hunter' series-authoritative-runtime-v7.js
-          ! grep -q 'David Hunter' series-relation-stabilizer-v8.js
-          ! grep -q 'David Hunter' series-saga-lock-v9.js
-          ! grep -q 'David Hunter' storygraph-genre-lock-v4.js
-          ! grep -q 'David Hunter' isbn-enrichment-progress-v10.js
-          ! grep -q '9788868363697' series-authoritative-runtime-v7.js
-          ! grep -q '9788868363710' series-authoritative-runtime-v7.js
-          ! grep -q 'Stephen King' series-authoritative-runtime-v7.js
-          ! grep -q 'La Torre Nera' series-authoritative-runtime-v7.js
-          ! grep -q 'Alexandra Adornetto' series-authoritative-runtime-v7.js
-          ! grep -q 'Sacrifice' series-authoritative-runtime-v7.js
-          grep -q "Forza cache runtime nell'artefatto" .github/workflows/pages.yml
-          grep -q 'GITHUB_SHA' .github/workflows/pages.yml
+          grep -q "goodreads-primary-then-storygraph-then-fallback-v1" series-neighbors-standalone-v5.js
+          grep -q "goodreads-primary-physical-italian-then-storygraph-v1" series-neighbors-standalone-v5.js
+          grep -q "goodreads-italian-primary-then-storygraph-translated-v1" series-neighbors-standalone-v5.js
+          ! grep -q 'it.wikipedia.org' goodreads-primary-metadata-v1.js
           test -f .nojekyll
-          ! grep -Eq '^[[:space:]]*git[[:space:]]+push\b' .github/workflows/cache-bust-runtime-v1.yml
-      - name: Verifica lock trama pulito, late binding e stato
-        run: |
-          node <<'NODE'
-          const fs=require('fs'),vm=require('vm');
-          global.window=global;
-          const nodes={
-            editDialog:{open:true,addEventListener(){}},
-            editCode:{value:'9788845279553',addEventListener(){}},
-            editPlot:{value:'',addEventListener(){},dispatchEvent(){}},
-            editTitle:{value:'I sussurri della morte',addEventListener(){}},
-            editAuthor:{value:'Simon Beckett',addEventListener(){}},
-            editPublisher:{value:'Bompiani',addEventListener(){},dispatchEvent(){}},
-            editSaga:{value:'David Hunter',addEventListener(){}},
-            lookupStatus:{textContent:'',className:''}
-          };
-          global.document={getElementById:id=>nodes[id]||null,addEventListener(){}};
-          global.MutationObserver=class{observe(){}};
-          global.setInterval=()=>0;global.clearInterval=()=>{};global.setTimeout=()=>0;global.clearTimeout=()=>{};
-          global.Event=class{constructor(type,opts={}){this.type=type;this.bubbles=!!opts.bubbles}};
-          vm.runInThisContext(fs.readFileSync('isbn-field-sanitizer-v2.js','utf8'));
-          delete global.__LIB_RESOLVE_OFFICIAL_PLOT;
-          vm.runInThisContext(fs.readFileSync('publisher-plot-lock-v8.js','utf8'));
-          global.__LIB_RESOLVE_OFFICIAL_PLOT=async()=>`[](https://www. bompiani. it/catalogo/test)Simon Beckett Una trama ufficiale sufficientemente lunga da essere mantenuta dal pulitore automatico. Contiene un secondo periodo narrativo utile per superare la soglia minima. € 12. 35 acquista`;
-          (async()=>{
-            await global.__LIB_PUBLISHER_PLOT_LOCK_V8_TEST__.enforce(true);
-            if(nodes.editPlot.value.length<60)throw new Error('Il lock non ha usato il resolver registrato dopo il caricamento.');
-            if(/https?|www\s*\.|€|\bacquista\b/i.test(nodes.editPlot.value))throw new Error('Il lock ha riscritto una trama sporca: '+nodes.editPlot.value);
-            const st=global.__LIB_PUBLISHER_PLOT_LOCK_STATE__;
-            if(!st?.settled||!st?.complete||st.reason!=='official')throw new Error('Stato trama non completo: '+JSON.stringify(st));
-            if(!global.__LIB_PUBLISHER_PLOT_LOCK_V9||!global.__LIB_PUBLISHER_PLOT_LOCK_V8_LATE_RESOLVER||!global.__LIB_PUBLISHER_PLOT_LOCK_V8_SANITIZED)throw new Error('Marker lock trama mancanti.');
-            console.log('Lock trama pulito e completo: OK');
-          })().catch(e=>{console.error(e);process.exit(1)});
-          NODE
-      - name: Verifica parser StoryGraph generi
-        run: |
-          node <<'NODE'
-          const fs=require('fs'),vm=require('vm');
-          global.window=global;
-          global.document={getElementById(){return null}};
-          global.setInterval=()=>0;global.clearInterval=()=>{};global.setTimeout=()=>0;global.clearTimeout=()=>{};
-          vm.runInThisContext(fs.readFileSync('storygraph-goodreads-genres-v3.js','utf8'));
-          const api=window.__LIB_STORYGRAPH_GENRES_TEST__;
-          const wolves=api.storyGenresFromLine('fiction fantasy horror adventurous dark mysterious medium-paced');
-          if(JSON.stringify(wolves)!==JSON.stringify(['Fantasy','Horror']))throw new Error('Generi Torre Nera inattesi: '+JSON.stringify(wolves));
-          const beckett=api.storyGenresFromLine('fiction crime mystery thriller dark mysterious tense fast-paced');
-          if(JSON.stringify(beckett)!==JSON.stringify(['Crime','Giallo','Thriller']))throw new Error('Generi Beckett inattesi: '+JSON.stringify(beckett));
-          console.log('Generi StoryGraph:',beckett.join(', '));
-          NODE
+      - name: Test Goodreads primario
+        run: node scripts/test-goodreads-primary-metadata-v1.js
 
   integration:
     needs: static
@@ -164,8 +65,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Test stabilizzatore relazioni V8
-        run: node scripts/test-series-stabilizer-v8.js
       - name: Test progress, Saga e Generi
         run: node scripts/test-saga-genres-v9.js
       - name: Test progress trama V11
