@@ -4,6 +4,8 @@ on:
   push:
     branches: [main]
     paths:
+      - 'series-relations-direct-v7.js'
+      - 'series-wikipedia-authoritative-v3.js'
       - 'series-neighbors-standalone-v5.js'
       - 'series-authoritative-runtime-v4.js'
       - 'series-single-owner-guard-v1.js'
@@ -37,6 +39,8 @@ jobs:
           p=Path('index.html')
           s=p.read_text(encoding='utf-8')
           versions={
+            'series-relations-direct-v7.js':'20260820-guard-1',
+            'series-wikipedia-authoritative-v3.js':'20260820-disabled-1',
             'series-authoritative-catalog-v1.js':'6',
             'series-google-books-order-v10.js':'20260820-single-owner-2',
             'series-neighbors-standalone-v5.js':'20260820-39',
