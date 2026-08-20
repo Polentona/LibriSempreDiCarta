@@ -2,7 +2,7 @@
 const root=typeof window!=='undefined'?window:globalThis;
 if(root.__LIB_SERIES_NEIGHBORS_STANDALONE_V43)return;
 root.__LIB_SERIES_NEIGHBORS_STANDALONE_V43=true;
-root.__LIB_SINGLE_OWNER_RUNTIME='20260820-6';
+root.__LIB_SINGLE_OWNER_RUNTIME='20260820-7';
 
 /* I resolver legacy non devono più poter diventare proprietari dei campi.
    Questi marker sono letti dagli stessi moduli legacy prima di inizializzarsi:
