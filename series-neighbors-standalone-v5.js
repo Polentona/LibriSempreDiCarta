@@ -1,8 +1,8 @@
 (()=>{
 const root=typeof window!=='undefined'?window:globalThis;
-if(root.__LIB_SERIES_NEIGHBORS_STANDALONE_V46)return;
-root.__LIB_SERIES_NEIGHBORS_STANDALONE_V46=true;
-root.__LIB_SINGLE_OWNER_RUNTIME='20260820-10';
+if(root.__LIB_SERIES_NEIGHBORS_STANDALONE_V47)return;
+root.__LIB_SERIES_NEIGHBORS_STANDALONE_V47=true;
+root.__LIB_SINGLE_OWNER_RUNTIME='20260820-11';
 
 /* I resolver legacy non devono più poter diventare proprietari dei campi. */
 root.__LIB_UNIFIED_BOOK_ENRICHER_V1=true;
@@ -33,13 +33,13 @@ loadOnce('libPublisherPlotResilienceV5','publisher-plot-resilience-v5.js?v=20260
 loadOnce('libPublisherPlotResilienceV6','publisher-plot-resilience-v6.js?v=20260820-6');
 loadOnce('libPublisherPlotResilienceV7','publisher-plot-resilience-v7.js?v=20260820-7');
 loadOnce('libPublisherPlotLockV8','publisher-plot-lock-v8.js?v=20260820-10');
-loadOnce('libIsbnFieldSanitizerV1','isbn-field-sanitizer-v1.js?v=20260820-1');
+loadOnce('libIsbnFieldSanitizerV2','isbn-field-sanitizer-v2.js?v=20260820-2');
 
 /* Un solo proprietario di Saga / Prequel / Sequel.
-   Goodreads deve produrre una relazione completa; StoryGraph completa i buchi;
-   Wikipedia resta l'ultima risorsa. */
-loadOnce('libSeriesAuthoritativeRuntimeV6','series-authoritative-runtime-v6.js?v=20260820-10');
-loadOnce('libSeriesSingleOwnerGuardV1','series-single-owner-guard-v1.js?v=20260820-4');
+   Goodreads stabilisce ordine e posizione. StoryGraph completa e localizza
+   i titoli delle edizioni italiane senza cancellare relazioni già trovate. */
+loadOnce('libSeriesAuthoritativeRuntimeV7','series-authoritative-runtime-v7.js?v=20260820-11');
+loadOnce('libSeriesSingleOwnerGuardV1','series-single-owner-guard-v1.js?v=20260820-5');
 
 /* Generi: StoryGraph resta la sorgente primaria. */
 loadOnce('libGenresMultiV6','genres-multi-v1.js?v=20260820-8');
@@ -47,5 +47,5 @@ loadOnce('libStoryGraphGoodreadsGenresV3','storygraph-goodreads-genres-v3.js?v=2
 
 root.__LIB_GENRE_SOURCE_POLICY='storygraph-direct-then-goodreads-only-if-absent-v3';
 root.__LIB_PLOT_SOURCE_POLICY='publisher-first-official-retry-lock-v8';
-root.__LIB_SERIES_RELATION_POLICY='single-owner-goodreads-complete-then-storygraph-then-wikipedia-v6';
+root.__LIB_SERIES_RELATION_POLICY='goodreads-order-storygraph-localization-retry-v7';
 })();

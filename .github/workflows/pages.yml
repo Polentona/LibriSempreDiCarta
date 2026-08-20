@@ -97,27 +97,28 @@ jobs:
                 && grep -Fq "series-neighbors-standalone-v5.js?v=${token}" /tmp/pages-live.html \
                 && grep -Fq "isbn-cover.js?v=${token}" /tmp/pages-live.html; then
                 if curl -fsSL --max-time 20 "https://polentona.github.io/LibriSempreDiCarta/series-neighbors-standalone-v5.js?runtime=${GITHUB_RUN_ID}-${i}" -o /tmp/loader-live.js \
-                  && grep -q '__LIB_SERIES_NEIGHBORS_STANDALONE_V46' /tmp/loader-live.js \
+                  && grep -q '__LIB_SERIES_NEIGHBORS_STANDALONE_V47' /tmp/loader-live.js \
                   && grep -q '__LIB_GOODREADS_GENRES_LOADER_V1=true' /tmp/loader-live.js \
                   && grep -q '__LIB_GOODREADS_GENRES_ONLY_V10=true' /tmp/loader-live.js \
                   && grep -q '__LIB_GENRE_OPENLIBRARY_WORK_V1=true' /tmp/loader-live.js \
                   && grep -q '__LIB_GENRE_SEARCH_FALLBACK_V2=true' /tmp/loader-live.js \
-                  && grep -q 'series-authoritative-runtime-v6.js?v=20260820-10' /tmp/loader-live.js \
-                  && grep -q 'series-single-owner-guard-v1.js?v=20260820-4' /tmp/loader-live.js \
+                  && grep -q 'series-authoritative-runtime-v7.js?v=20260820-11' /tmp/loader-live.js \
+                  && grep -q 'series-single-owner-guard-v1.js?v=20260820-5' /tmp/loader-live.js \
                   && grep -q 'publisher-plot-lock-v8.js?v=20260820-10' /tmp/loader-live.js \
-                  && grep -q 'isbn-field-sanitizer-v1.js?v=20260820-1' /tmp/loader-live.js \
+                  && grep -q 'isbn-field-sanitizer-v2.js?v=20260820-2' /tmp/loader-live.js \
                   && grep -q 'storygraph-goodreads-genres-v3.js?v=20260820-1' /tmp/loader-live.js \
-                  && grep -q 'single-owner-goodreads-complete-then-storygraph-then-wikipedia-v6' /tmp/loader-live.js \
-                  && ! grep -q 'series-authoritative-runtime-v5.js' /tmp/loader-live.js \
+                  && grep -q 'goodreads-order-storygraph-localization-retry-v7' /tmp/loader-live.js \
+                  && ! grep -q 'series-authoritative-runtime-v6.js' /tmp/loader-live.js \
+                  && ! grep -q 'isbn-field-sanitizer-v1.js' /tmp/loader-live.js \
                   && ! grep -q 'series-verified-order-v1.js' /tmp/loader-live.js \
                   && ! grep -q 'series-verified-order-v2.js' /tmp/loader-live.js \
                   && ! grep -q 'series-verified-saga-v3.js' /tmp/loader-live.js \
                   && ! grep -q 'genre-whitelist-enforcer-v2.js' /tmp/loader-live.js \
-                  && curl -fsSL --max-time 20 "https://polentona.github.io/LibriSempreDiCarta/series-authoritative-runtime-v6.js?runtime=${GITHUB_RUN_ID}-${i}" -o /tmp/series-live.js \
-                  && grep -q '__LIB_SERIES_AUTHORITATIVE_RUNTIME_V6' /tmp/series-live.js \
-                  && grep -q 'goodreads-ordered-series-primary-v6' /tmp/series-live.js \
-                  && grep -q 'storygraph-series-completion-v1' /tmp/series-live.js \
-                  && grep -q 'single-owner-goodreads-complete-then-storygraph-then-wikipedia-v6' /tmp/series-live.js \
+                  && curl -fsSL --max-time 20 "https://polentona.github.io/LibriSempreDiCarta/series-authoritative-runtime-v7.js?runtime=${GITHUB_RUN_ID}-${i}" -o /tmp/series-live.js \
+                  && grep -q '__LIB_SERIES_AUTHORITATIVE_RUNTIME_V7' /tmp/series-live.js \
+                  && grep -q 'goodreads-ordered-series-primary-v7' /tmp/series-live.js \
+                  && grep -q 'goodreads-order-storygraph-localization-v7' /tmp/series-live.js \
+                  && grep -q 'goodreads-order-storygraph-localization-retry-v7' /tmp/series-live.js \
                   && ! grep -q '9788845279553' /tmp/series-live.js \
                   && ! grep -q 'Simon Beckett' /tmp/series-live.js \
                   && ! grep -q 'David Hunter' /tmp/series-live.js \
@@ -127,8 +128,8 @@ jobs:
                   && ! grep -q 'La Torre Nera' /tmp/series-live.js \
                   && ! grep -q 'Alexandra Adornetto' /tmp/series-live.js \
                   && ! grep -q 'Sacrifice' /tmp/series-live.js \
-                  && curl -fsSL --max-time 20 "https://polentona.github.io/LibriSempreDiCarta/isbn-field-sanitizer-v1.js?runtime=${GITHUB_RUN_ID}-${i}" -o /tmp/sanitizer-live.js \
-                  && grep -q '__LIB_ISBN_FIELD_SANITIZER_V1' /tmp/sanitizer-live.js \
+                  && curl -fsSL --max-time 20 "https://polentona.github.io/LibriSempreDiCarta/isbn-field-sanitizer-v2.js?runtime=${GITHUB_RUN_ID}-${i}" -o /tmp/sanitizer-live.js \
+                  && grep -q '__LIB_ISBN_FIELD_SANITIZER_V2' /tmp/sanitizer-live.js \
                   && grep -q '__LIB_CLEAN_PUBLISHER' /tmp/sanitizer-live.js \
                   && grep -q '__LIB_CLEAN_AUTOMATIC_PLOT' /tmp/sanitizer-live.js \
                   && curl -fsSL --max-time 20 "https://polentona.github.io/LibriSempreDiCarta/storygraph-goodreads-genres-v3.js?runtime=${GITHUB_RUN_ID}-${i}" -o /tmp/genre-live.js \
