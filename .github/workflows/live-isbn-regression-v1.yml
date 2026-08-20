@@ -47,97 +47,41 @@ jobs:
           const genreList=v=>String(v||'').split(/[,;|/\n]+/).map(norm).filter(Boolean).sort();
           const sameGenres=(v,expectedGenres)=>JSON.stringify(genreList(v))===JSON.stringify(expectedGenres.map(norm).sort());
           const dirtyPlot=v=>/https?|www\s*\.|€|\bacquista\b/i.test(String(v||''));
+          const officialPlot=v=>{const n=norm(v);return String(v||'').length>=800&&n.startsWith(norm("All'interno del bungalow"))&&n.includes(norm('Body Farm'))&&n.endsWith(norm('regno del male e della scienza'))&&!dirtyPlot(v)};
           const read=page=>page.evaluate(()=>({
-            title:document.getElementById('editTitle')?.value||'',
-            author:document.getElementById('editAuthor')?.value||'',
-            publisher:document.getElementById('editPublisher')?.value||'',
-            category:document.getElementById('editCategory')?.value||'',
-            genreSource:document.getElementById('editCategory')?.dataset?.genreSource||'',
-            saga:document.getElementById('editSaga')?.value||'',
-            prequel:document.getElementById('editPrequel')?.value||'',
-            sequel:document.getElementById('editSequel')?.value||'',
-            plot:document.getElementById('editPlot')?.value||'',
-            status:document.getElementById('lookupStatus')?.innerText||'',
-            spinner:document.getElementById('lookupStatus')?.classList?.contains('lookup-busy')||false,
-            loaderV49:!!window.__LIB_SERIES_NEIGHBORS_STANDALONE_V49,
-            seriesV7:!!window.__LIB_SERIES_AUTHORITATIVE_RUNTIME_V7,
-            seriesV8:!!window.__LIB_SERIES_AUTHORITATIVE_RUNTIME_V8,
-            sagaLockV9:!!window.__LIB_SERIES_SAGA_LOCK_V9,
-            sagaLockV10:!!window.__LIB_SERIES_SAGA_LOCK_V10,
-            sanitizerV2:!!window.__LIB_ISBN_FIELD_SANITIZER_V2,
-            genreV3:!!window.__LIB_STORYGRAPH_GOODREADS_GENRES_V3,
-            genreLockV4:!!window.__LIB_STORYGRAPH_GENRE_LOCK_V4,
-            genreLockV5:!!window.__LIB_STORYGRAPH_GENRE_LOCK_V5,
-            progressV10:!!window.__LIB_ISBN_ENRICHMENT_PROGRESS_V10,
-            sagaState:window.__LIB_SERIES_SAGA_LOCK_STATE__||null,
-            genreState:window.__LIB_STORYGRAPH_GENRE_LOCK_STATE__||null,
-            progressLast:window.__LIB_LOOKUP_PROGRESS_V10_LAST__||null,
-            plotSanitized:!!window.__LIB_PUBLISHER_PLOT_LOCK_V8_SANITIZED,
-            policy:window.__LIB_SERIES_RELATION_POLICY||'',
-            genrePolicy:window.__LIB_GENRE_SOURCE_POLICY||''
+            title:document.getElementById('editTitle')?.value||'',author:document.getElementById('editAuthor')?.value||'',publisher:document.getElementById('editPublisher')?.value||'',category:document.getElementById('editCategory')?.value||'',genreSource:document.getElementById('editCategory')?.dataset?.genreSource||'',saga:document.getElementById('editSaga')?.value||'',prequel:document.getElementById('editPrequel')?.value||'',sequel:document.getElementById('editSequel')?.value||'',plot:document.getElementById('editPlot')?.value||'',status:document.getElementById('lookupStatus')?.innerText||'',spinner:document.getElementById('lookupStatus')?.classList?.contains('lookup-busy')||false,
+            loaderV50:!!window.__LIB_SERIES_NEIGHBORS_STANDALONE_V50,seriesV7:!!window.__LIB_SERIES_AUTHORITATIVE_RUNTIME_V7,seriesV8:!!window.__LIB_SERIES_AUTHORITATIVE_RUNTIME_V8,sagaLockV10:!!window.__LIB_SERIES_SAGA_LOCK_V10,sanitizerV2:!!window.__LIB_ISBN_FIELD_SANITIZER_V2,genreV3:!!window.__LIB_STORYGRAPH_GOODREADS_GENRES_V3,genreLockV5:!!window.__LIB_STORYGRAPH_GENRE_LOCK_V5,plotLockV9:!!window.__LIB_PUBLISHER_PLOT_LOCK_V9,progressV11:!!window.__LIB_ISBN_ENRICHMENT_PROGRESS_V11,
+            sagaState:window.__LIB_SERIES_SAGA_LOCK_STATE__||null,genreState:window.__LIB_STORYGRAPH_GENRE_LOCK_STATE__||null,plotState:window.__LIB_PUBLISHER_PLOT_LOCK_STATE__||null,progressLast:window.__LIB_LOOKUP_PROGRESS_V11_LAST__||null,plotSanitized:!!window.__LIB_PUBLISHER_PLOT_LOCK_V8_SANITIZED,policy:window.__LIB_SERIES_RELATION_POLICY||'',genrePolicy:window.__LIB_GENRE_SOURCE_POLICY||'',plotPolicy:window.__LIB_PLOT_SOURCE_POLICY||''
           }));
           (async()=>{
             const browser=await chromium.launch({headless:true});
             const page=await browser.newPage({viewport:{width:1500,height:1200}}),errors=[];let http429=0,spinnerSeen=false,prematureSpinnerEnd=false,englishAfterSpinnerEnd=false;
-            page.on('pageerror',e=>errors.push(e.message));
-            page.on('response',r=>{if(r.status()===429)http429++;if(r.status()>=400)console.log('HTTP_ERROR',r.status(),r.url())});
+            page.on('pageerror',e=>errors.push(e.message));page.on('response',r=>{if(r.status()===429)http429++;if(r.status()>=400)console.log('HTTP_ERROR',r.status(),r.url())});
             try{
-              await page.goto('https://polentona.github.io/LibriSempreDiCarta/?beckett-progress-v10-live='+Date.now(),{waitUntil:'domcontentloaded',timeout:120000});
-              await page.locator('#addBookBtn').click();
-              await page.locator('#editDialog[open]').waitFor({state:'visible',timeout:20000});
-              await page.locator('#editCode').fill('9788845279553');
-              await page.locator('#lookupMetadataBtn').click();
-              let last={};const deadline=Date.now()+170000;
+              await page.goto('https://polentona.github.io/LibriSempreDiCarta/?beckett-plot-v11-live='+Date.now(),{waitUntil:'domcontentloaded',timeout:120000});
+              await page.locator('#addBookBtn').click();await page.locator('#editDialog[open]').waitFor({state:'visible',timeout:20000});await page.locator('#editCode').fill('9788845279553');await page.locator('#lookupMetadataBtn').click();
+              let last={};const deadline=Date.now()+185000;
               while(Date.now()<deadline){
-                await page.waitForTimeout(300);last=await read(page);
-                if(last.spinner)spinnerSeen=true;
-                const deferredComplete=!!last.sagaState?.settled&&!!last.genreState?.settled;
+                await page.waitForTimeout(300);last=await read(page);if(last.spinner)spinnerSeen=true;
+                const deferredComplete=!!last.sagaState?.settled&&!!last.genreState?.settled&&!!last.plotState?.settled;
                 if(spinnerSeen&&!last.spinner&&!deferredComplete)prematureSpinnerEnd=true;
                 if(spinnerSeen&&!last.spinner&&/\b(?:The Calling of the Grave|Written in Bone)\b/i.test(`${last.prequel} ${last.sequel}`))englishAfterSpinnerEnd=true;
                 const metadata=same(last.title,expected.title)&&same(last.author,expected.author)&&same(last.publisher,expected.publisher)&&same(last.saga,expected.saga)&&same(last.prequel,expected.prequel)&&same(last.sequel,expected.sequel)&&sameGenres(last.category,expected.genres);
-                const runtime=last.loaderV49&&last.seriesV7&&last.seriesV8&&last.sagaLockV9&&last.sagaLockV10&&last.sanitizerV2&&last.genreV3&&last.genreLockV4&&last.genreLockV5&&last.progressV10&&last.plotSanitized;
-                const plotOk=!last.plot||!dirtyPlot(last.plot);
-                if(metadata&&runtime&&plotOk&&last.genreSource==='storygraph'&&!last.spinner)break;
+                const runtime=last.loaderV50&&last.seriesV7&&last.seriesV8&&last.sagaLockV10&&last.sanitizerV2&&last.genreV3&&last.genreLockV5&&last.plotLockV9&&last.progressV11&&last.plotSanitized;
+                if(metadata&&runtime&&officialPlot(last.plot)&&last.genreSource==='storygraph'&&!last.spinner)break;
               }
-              const pure=await page.evaluate(()=>{
-                const dirty=`[](https://www. bompiani. it/catalogo/test)Simon Beckett Una trama abbastanza lunga da essere considerata valida e da consentire al pulitore di conservare il testo narrativo senza il rumore commerciale finale. Un secondo periodo completa la sinossi. € 12. 35 acquista`;
-                return{colon:window.__LIB_CLEAN_PUBLISHER?.('Bompiani : Giunti')||'',joined:window.__LIB_CLEAN_PUBLISHER?.('Bompiani Giunti')||'',giunti:window.__LIB_CLEAN_PUBLISHER?.('Giunti')||'',plot:window.__LIB_CLEAN_AUTOMATIC_PLOT?.(dirty,{author:'Simon Beckett',title:'I sussurri della morte'})||''};
-              });
-              let direct=null;
-              for(let i=0;i<5;i++){
-                direct=await page.evaluate(async()=>typeof window.__LIB_RESOLVE_AUTHORITATIVE_SERIES_NEIGHBORS==='function'?await window.__LIB_RESOLVE_AUTHORITATIVE_SERIES_NEIGHBORS({code:'9788845279553',title:document.getElementById('editTitle')?.value||'',author:document.getElementById('editAuthor')?.value||'',saga:document.getElementById('editSaga')?.value||''}):null);
-                if(same(direct?.saga,expected.saga)&&same(direct?.prequel,expected.prequel)&&same(direct?.sequel,expected.sequel))break;
-                await page.waitForTimeout(3500);
-              }
-              const diagnostics=await page.evaluate(()=>({sagaLock:window.__LIB_SERIES_SAGA_LOCK_LAST__||null,genreLock:window.__LIB_STORYGRAPH_GENRE_LOCK_LAST__||null,genreDelegate:window.__LIB_GENRE_DELEGATE_LAST__||null,progress:window.__LIB_LOOKUP_PROGRESS_V10_LAST__||null}));
-              last=await read(page);
-              console.log('FINAL_BECKETT_PROGRESS_V10',JSON.stringify({last,pure,direct,diagnostics,spinnerSeen,prematureSpinnerEnd,englishAfterSpinnerEnd,http429,plotDirty:dirtyPlot(last.plot)}));
-              const bad=[];
-              for(const k of ['title','author','publisher','saga','prequel','sequel'])if(!same(last[k],expected[k]))bad.push(k+':'+last[k]);
-              if(!sameGenres(last.category,expected.genres))bad.push('generi:'+last.category);
-              if(last.genreSource!=='storygraph')bad.push('sorgente-generi:'+last.genreSource);
-              if(!spinnerSeen)bad.push('spinner-mai-visto');
-              if(prematureSpinnerEnd)bad.push('spinner-scomparso-prima-del-completamento');
-              if(englishAfterSpinnerEnd)bad.push('relazione-inglese-a-ricerca-finita');
-              if(last.spinner)bad.push('spinner-ancora-attivo');
-              if(!last.loaderV49)bad.push('loader-v49');
-              if(!last.seriesV7||!last.seriesV8)bad.push('series-runtime');
-              if(!last.sagaLockV9||!last.sagaLockV10)bad.push('saga-lock-v10');
-              if(!last.genreV3||!last.genreLockV4||!last.genreLockV5)bad.push('genre-lock-v5');
-              if(!last.progressV10)bad.push('progress-v10');
-              if(!last.sanitizerV2)bad.push('sanitizer-v2');
-              if(!last.plotSanitized)bad.push('plot-lock-sanitized');
-              if(last.policy!=='goodreads-order-canonical-localization-stable-v8')bad.push('policy:'+last.policy);
-              if(last.genrePolicy!=='storygraph-direct-then-goodreads-only-if-absent-v3')bad.push('genre-policy:'+last.genrePolicy);
-              if(pure.colon!=='Bompiani'||pure.joined!=='Bompiani'||pure.giunti!=='Giunti')bad.push('pulizia-editore');
-              if(dirtyPlot(pure.plot)||pure.plot.length<80)bad.push('pulizia-trama-pura');
-              if(last.plot&&dirtyPlot(last.plot))bad.push('trama-live-sporca');
-              if(!same(direct?.saga,expected.saga)||!same(direct?.prequel,expected.prequel)||!same(direct?.sequel,expected.sequel))bad.push('resolver-diretto-relazioni');
-              if(errors.length)console.log('PAGE_ERRORS',JSON.stringify(errors));
-              if(bad.length)throw new Error('ISBN Beckett progress V10 non corretto: '+bad.join(', '));
-              console.log('ISBN_BECKETT_PROGRESS_V10_LIVE_OK');
+              const pure=await page.evaluate(()=>{const dirty=`[](https://www. bompiani. it/catalogo/test)Simon Beckett Una trama abbastanza lunga da essere considerata valida e da consentire al pulitore di conservare il testo narrativo senza il rumore commerciale finale. Un secondo periodo completa la sinossi. € 12. 35 acquista`;return{colon:window.__LIB_CLEAN_PUBLISHER?.('Bompiani : Giunti')||'',joined:window.__LIB_CLEAN_PUBLISHER?.('Bompiani Giunti')||'',giunti:window.__LIB_CLEAN_PUBLISHER?.('Giunti')||'',plot:window.__LIB_CLEAN_AUTOMATIC_PLOT?.(dirty,{author:'Simon Beckett',title:'I sussurri della morte'})||''}});
+              let direct=null;for(let i=0;i<5;i++){direct=await page.evaluate(async()=>typeof window.__LIB_RESOLVE_AUTHORITATIVE_SERIES_NEIGHBORS==='function'?await window.__LIB_RESOLVE_AUTHORITATIVE_SERIES_NEIGHBORS({code:'9788845279553',title:document.getElementById('editTitle')?.value||'',author:document.getElementById('editAuthor')?.value||'',saga:document.getElementById('editSaga')?.value||''}):null);if(same(direct?.saga,expected.saga)&&same(direct?.prequel,expected.prequel)&&same(direct?.sequel,expected.sequel))break;await page.waitForTimeout(3500)}
+              const diagnostics=await page.evaluate(()=>({sagaLock:window.__LIB_SERIES_SAGA_LOCK_LAST__||null,genreLock:window.__LIB_STORYGRAPH_GENRE_LOCK_LAST__||null,plotState:window.__LIB_PUBLISHER_PLOT_LOCK_STATE__||null,progress:window.__LIB_LOOKUP_PROGRESS_V11_LAST__||null}));last=await read(page);
+              console.log('FINAL_BECKETT_PLOT_V11',JSON.stringify({last,pure,direct,diagnostics,spinnerSeen,prematureSpinnerEnd,englishAfterSpinnerEnd,http429,plotDirty:dirtyPlot(last.plot),plotOfficial:officialPlot(last.plot)}));
+              const bad=[];for(const k of ['title','author','publisher','saga','prequel','sequel'])if(!same(last[k],expected[k]))bad.push(k+':'+last[k]);
+              if(!sameGenres(last.category,expected.genres))bad.push('generi:'+last.category);if(last.genreSource!=='storygraph')bad.push('sorgente-generi:'+last.genreSource);if(!spinnerSeen)bad.push('spinner-mai-visto');if(prematureSpinnerEnd)bad.push('spinner-scomparso-prima-del-completamento');if(englishAfterSpinnerEnd)bad.push('relazione-inglese-a-ricerca-finita');if(last.spinner)bad.push('spinner-ancora-attivo');
+              if(!last.loaderV50)bad.push('loader-v50');if(!last.seriesV7||!last.seriesV8)bad.push('series-runtime');if(!last.sagaLockV10)bad.push('saga-lock-v10');if(!last.genreV3||!last.genreLockV5)bad.push('genre-lock-v5');if(!last.plotLockV9)bad.push('plot-lock-v9');if(!last.progressV11)bad.push('progress-v11');if(!last.sanitizerV2||!last.plotSanitized)bad.push('sanitizer-plot');
+              if(last.policy!=='goodreads-order-canonical-localization-stable-v8')bad.push('policy:'+last.policy);if(last.genrePolicy!=='storygraph-direct-then-goodreads-only-if-absent-v3')bad.push('genre-policy:'+last.genrePolicy);if(last.plotPolicy!=='publisher-first-official-retry-lock-v9-sanitized')bad.push('plot-policy:'+last.plotPolicy);
+              if(pure.colon!=='Bompiani'||pure.joined!=='Bompiani'||pure.giunti!=='Giunti')bad.push('pulizia-editore');if(dirtyPlot(pure.plot)||pure.plot.length<80)bad.push('pulizia-trama-pura');if(!officialPlot(last.plot))bad.push('trama-live-non-ufficiale-o-incompleta');if(!last.plotState?.settled||!last.plotState?.complete||last.plotState?.reason!=='official')bad.push('stato-trama:'+JSON.stringify(last.plotState));if(last.progressLast?.reason!=='complete'||!last.progressLast?.plot?.complete)bad.push('progress-trama');
+              if(!same(direct?.saga,expected.saga)||!same(direct?.prequel,expected.prequel)||!same(direct?.sequel,expected.sequel))bad.push('resolver-diretto-relazioni');if(errors.length)console.log('PAGE_ERRORS',JSON.stringify(errors));if(bad.length)throw new Error('ISBN Beckett plot V11 non corretto: '+bad.join(', '));console.log('ISBN_BECKETT_PLOT_V11_LIVE_OK');
             }finally{await browser.close()}
-          })().catch(e=>{console.error('ISBN_BECKETT_PROGRESS_V10_LIVE_FAIL',e.stack||e.message);process.exit(1)});
+          })().catch(e=>{console.error('ISBN_BECKETT_PLOT_V11_LIVE_FAIL',e.stack||e.message);process.exit(1)});
           JS
           node test.js 2>&1 | tee /tmp/live-isbn.log
           test ${PIPESTATUS[0]} -eq 0
@@ -148,7 +92,7 @@ jobs:
             echo "outcome=${{ steps.test.outcome }}"
             echo "tested_isbn=9788845279553"
             echo "source_commit=${{ github.event.workflow_run.head_sha }}"
-            echo "mode=beckett-progress-v10-localized-relations"
+            echo "mode=beckett-plot-v11-required"
             echo '---'
             cat /tmp/live-isbn.log 2>/dev/null || true
           } > live-isbn-regression-result.txt
