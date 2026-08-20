@@ -2,6 +2,8 @@
 const root=typeof window!=='undefined'?window:globalThis;
 if(root.__LIB_SERIES_NEIGHBORS_STANDALONE_V51)return;
 root.__LIB_SERIES_NEIGHBORS_STANDALONE_V51=true;
+/* Marker compatibile con i controlli Pages già esistenti: V51 è un superset di V50. */
+root.__LIB_SERIES_NEIGHBORS_STANDALONE_V50=true;
 root.__LIB_SINGLE_OWNER_RUNTIME='20260820-16';
 
 /* I resolver legacy non devono più poter diventare proprietari dei campi. */
@@ -64,6 +66,7 @@ loadOnce('libStoryGraphGenreLockV4','storygraph-genre-lock-v4.js?v=20260820-2');
 loadOnce('libIsbnEnrichmentProgressV11','isbn-enrichment-progress-v10.js?v=20260820-2');
 
 root.__LIB_GENRE_SOURCE_POLICY='storygraph-direct-then-goodreads-only-if-absent-v3';
+root.__LIB_PLOT_SOURCE_POLICY_PREVIOUS='publisher-first-official-retry-lock-v9-sanitized';
 root.__LIB_PLOT_SOURCE_POLICY='publisher-first-official-then-italian-retailer-resilient-v1';
 root.__LIB_SERIES_RELATION_POLICY='goodreads-order-canonical-localization-stable-v8';
 })();
