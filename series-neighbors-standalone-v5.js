@@ -2,7 +2,7 @@
 const root=typeof window!=='undefined'?window:globalThis;
 if(root.__LIB_SERIES_NEIGHBORS_STANDALONE_V42)return;
 root.__LIB_SERIES_NEIGHBORS_STANDALONE_V42=true;
-root.__LIB_SINGLE_OWNER_RUNTIME='20260820-3';
+root.__LIB_SINGLE_OWNER_RUNTIME='20260820-4';
 
 /* Gli script legacy sono ancora referenziati dall'HTML storico. Impediamo che
    quelli caricati dopo questo loader possano reinstallare resolver concorrenti. */
