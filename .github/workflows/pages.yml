@@ -11,6 +11,7 @@ on:
       - "*-result.txt"
       - "actions-probe-trigger.txt"
       - "_fast-test-trigger.txt"
+      - "_single-owner-test-trigger.txt"
   workflow_dispatch:
 
 permissions:
