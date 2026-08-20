@@ -1,0 +1,64 @@
+name: Test ISBN runtime unico
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '_single-owner-test-trigger.txt'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: isbn-single-owner-test
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Verifica sintassi e assenza eccezioni nel codice di produzione
+        run: |
+          node --check series-authoritative-runtime-v4.js
+          node --check genres-authoritative-v3.js
+          node --check series-neighbors-standalone-v5.js
+          ! grep -q '9788868363710' series-authoritative-runtime-v4.js
+          ! grep -q 'Stephen King' series-authoritative-runtime-v4.js
+          ! grep -q 'La Torre Nera' series-authoritative-runtime-v4.js
+      - name: Installa Chromium per il test
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install playwright@1.55.0 >/dev/null 2>&1
+          npx playwright install --with-deps chromium
+      - name: Testa tutti i campi sul sito live
+        id: live
+        continue-on-error: true
+        run: |
+          node scripts/test-isbn-single-owner-v1.js 2>&1 | tee /tmp/isbn-single-owner.log
+          test ${PIPESTATUS[0]} -eq 0
+      - name: Registra risultato
+        if: always()
+        run: |
+          {
+            echo "outcome=${{ steps.live.outcome }}"
+            echo "source_commit=${GITHUB_SHA}"
+            echo "mode=isbn-9788868363710-all-fields-single-owner-v1"
+            echo "isbn=9788868363710"
+            echo '---'
+            cat /tmp/isbn-single-owner.log 2>/dev/null || true
+          } > live-isbn-single-owner-result.txt
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git pull --rebase origin main || true
+          git add live-isbn-single-owner-result.txt
+          git commit -m 'Registra test completo runtime unico' || exit 0
+          git push
+      - name: Fallisci se il test completo non passa
+        if: steps.live.outcome != 'success'
+        run: exit 1
