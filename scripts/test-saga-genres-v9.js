@@ -16,6 +16,7 @@ nodes.lookupStatus.className='lookup-status lookup-busy';
 global.document={getElementById:id=>nodes[id]||null,addEventListener(type,fn){(docListeners[type]||(docListeners[type]=[])).push(fn)}};
 global.MutationObserver=class{constructor(fn){this.fn=fn}observe(){}};
 global.__LIB_SERIES_AUTHORITATIVE_RUNTIME_V8=true;
+global.__LIB_PUBLISHER_PLOT_LOCK_STATE__={active:true,code:'9788845279553',title:'I sussurri della morte',author:'Simon Beckett',publisher:'Bompiani',pending:false,settled:true,complete:true,manual:false,exhausted:false,tries:1,reason:'official'};
 const pending={saga:'David Hunter',prequel:'Written in Bone',sequel:'The Calling of the Grave',authoritative:true,verified:true,checked:true,position:3,initial:false,terminal:false,localizedPrequel:false,localizedSequel:false,localizationPending:true};
 const localized={saga:'David Hunter',prequel:'Scritto nelle ossa',sequel:'La voce dei morti',authoritative:true,verified:true,checked:true,position:3,initial:false,terminal:false,localizedPrequel:true,localizedSequel:true,localizationPending:false};
 global.__LIB_SERIES_V8_APPLIED={result:pending};
@@ -33,13 +34,13 @@ global.__LIB_STORYGRAPH_GENRES_TEST__={
 };
 (async()=>{
   vm.runInThisContext(fs.readFileSync('isbn-enrichment-progress-v10.js','utf8'));
-  global.__LIB_LOOKUP_PROGRESS_V10_TEST__.activate();
+  global.__LIB_LOOKUP_PROGRESS_V11_TEST__.activate();
   vm.runInThisContext(fs.readFileSync('series-saga-lock-v9.js','utf8'));
   vm.runInThisContext(fs.readFileSync('storygraph-genre-lock-v4.js','utf8'));
 
   await new Promise(r=>setTimeout(r,180));
   nodes.lookupStatus.className='lookup-status ok';nodes.lookupStatus.textContent='Trama recuperata dal sito ufficiale.';
-  global.__LIB_LOOKUP_PROGRESS_V10_TEST__.onStatusMutation();
+  global.__LIB_LOOKUP_PROGRESS_V11_TEST__.onStatusMutation();
   if(!nodes.lookupStatus.className.includes('lookup-busy'))throw new Error('Lo spinner è scomparso prima del completamento differito.');
   if(nodes.editPrequel.value==='Written in Bone'||nodes.editSequel.value==='The Calling of the Grave')throw new Error('Il lock ha mantenuto un titolo canonico inglese non localizzato.');
 
@@ -48,13 +49,14 @@ global.__LIB_STORYGRAPH_GENRES_TEST__={
   global.__LIB_SERIES_V8_APPLIED={result:localized};
 
   await new Promise(r=>setTimeout(r,1700));
-  global.__LIB_LOOKUP_PROGRESS_V10_TEST__.tick();
+  global.__LIB_LOOKUP_PROGRESS_V11_TEST__.tick();
   if(nodes.editSaga.value!=='David Hunter'||nodes.editPrequel.value!=='Scritto nelle ossa'||nodes.editSequel.value!=='La voce dei morti')throw new Error('Relazioni italiane non applicate: '+JSON.stringify({saga:nodes.editSaga.value,prequel:nodes.editPrequel.value,sequel:nodes.editSequel.value}));
   if(nodes.editCategory.value!=='Crime, Giallo, Thriller')throw new Error('Generi StoryGraph inattesi: '+nodes.editCategory.value);
   if(nodes.lookupStatus.className.includes('lookup-busy'))throw new Error('Lo spinner è rimasto attivo dopo il completamento di tutti i dati.');
   if(!global.__LIB_SERIES_SAGA_LOCK_STATE__?.complete)throw new Error('Stato Saga non completato.');
   if(!global.__LIB_STORYGRAPH_GENRE_LOCK_STATE__?.complete)throw new Error('Stato Generi non completato.');
-  if(!global.__LIB_SERIES_SAGA_LOCK_V10||!global.__LIB_STORYGRAPH_GENRE_LOCK_V5||!global.__LIB_ISBN_ENRICHMENT_PROGRESS_V10)throw new Error('Marker progress/localizzazione mancanti.');
-  console.log('SAGA_GENRES_PROGRESS_V10_OK',JSON.stringify({saga:nodes.editSaga.value,prequel:nodes.editPrequel.value,sequel:nodes.editSequel.value,genres:nodes.editCategory.value,status:nodes.lookupStatus.textContent}));
+  if(!global.__LIB_PUBLISHER_PLOT_LOCK_STATE__?.complete)throw new Error('Stato Trama non completato.');
+  if(!global.__LIB_SERIES_SAGA_LOCK_V10||!global.__LIB_STORYGRAPH_GENRE_LOCK_V5||!global.__LIB_ISBN_ENRICHMENT_PROGRESS_V11)throw new Error('Marker progress/localizzazione mancanti.');
+  console.log('SAGA_GENRES_PROGRESS_V11_OK',JSON.stringify({saga:nodes.editSaga.value,prequel:nodes.editPrequel.value,sequel:nodes.editSequel.value,genres:nodes.editCategory.value,status:nodes.lookupStatus.textContent}));
   process.exit(0);
-})().catch(e=>{console.error('SAGA_GENRES_PROGRESS_V10_FAIL',e.stack||e.message);process.exit(1)});
+})().catch(e=>{console.error('SAGA_GENRES_PROGRESS_V11_FAIL',e.stack||e.message);process.exit(1)});
