@@ -57,15 +57,20 @@ jobs:
                 && grep -q 'data-author-letter' /tmp/pages-live.html \
                 && grep -q 'class="series-row"' /tmp/pages-live.html \
                 && grep -q 'id="addBookBtn"' /tmp/pages-live.html \
-                && grep -q 'series-neighbors-standalone-v5.js?v=20260820-34' /tmp/pages-live.html; then
+                && grep -q 'series-authoritative-catalog-v1.js?v=6' /tmp/pages-live.html \
+                && grep -q 'series-neighbors-standalone-v5.js?v=20260820-35' /tmp/pages-live.html; then
                 if curl -fsSL --max-time 20 "https://polentona.github.io/LibriSempreDiCarta/series-neighbors-standalone-v5.js?runtime=${GITHUB_RUN_ID}-${i}" -o /tmp/loader-live.js \
-                  && grep -q '__LIB_SERIES_NEIGHBORS_STANDALONE_V37' /tmp/loader-live.js \
-                  && grep -q 'series-dark-tower-authoritative-v1.js?v=20260820-1' /tmp/loader-live.js \
-                  && grep -q 'publisher-plot-resilience-v7.js?v=20260820-7' /tmp/loader-live.js \
-                  && curl -fsSL --max-time 20 "https://polentona.github.io/LibriSempreDiCarta/series-dark-tower-authoritative-v1.js?runtime=${GITHUB_RUN_ID}-${i}" -o /tmp/darktower-live.js \
-                  && grep -q '__LIB_DARK_TOWER_AUTHORITATIVE_V1' /tmp/darktower-live.js \
-                  && grep -q 'La sfera del buio' /tmp/darktower-live.js \
-                  && grep -q 'La canzone di Susannah' /tmp/darktower-live.js \
+                  && grep -q '__LIB_SERIES_NEIGHBORS_STANDALONE_V38' /tmp/loader-live.js \
+                  && grep -q 'series-verified-order-v1.js?v=20260820-1' /tmp/loader-live.js \
+                  && ! grep -q 'series-dark-tower-authoritative-v1.js' /tmp/loader-live.js \
+                  && curl -fsSL --max-time 20 "https://polentona.github.io/LibriSempreDiCarta/series-verified-order-v1.js?runtime=${GITHUB_RUN_ID}-${i}" -o /tmp/series-live.js \
+                  && grep -q '__LIB_VERIFIED_SERIES_ORDER_V1' /tmp/series-live.js \
+                  && grep -q 'verified-ordered-source-only' /tmp/series-live.js \
+                  && ! grep -q '9788868363710' /tmp/series-live.js \
+                  && ! grep -q 'Stephen King' /tmp/series-live.js \
+                  && ! grep -q 'La Torre Nera' /tmp/series-live.js \
+                  && curl -fsSL --max-time 20 "https://polentona.github.io/LibriSempreDiCarta/series-authoritative-catalog-v1.js?runtime=${GITHUB_RUN_ID}-${i}" -o /tmp/catalog-live.js \
+                  && grep -q 'no-hardcoded-relations' /tmp/catalog-live.js \
                   && curl -fsSL --max-time 20 "https://polentona.github.io/LibriSempreDiCarta/publisher-plot-resilience-v7.js?runtime=${GITHUB_RUN_ID}-${i}" -o /tmp/plot-live.js \
                   && grep -q '__LIB_PUBLISHER_PLOT_RESILIENCE_V7' /tmp/plot-live.js \
                   && grep -q 'privacyNoise' /tmp/plot-live.js; then
