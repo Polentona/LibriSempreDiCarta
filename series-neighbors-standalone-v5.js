@@ -61,6 +61,7 @@ loadOnce('libStoryGraphGenreLockV4','storygraph-genre-lock-v4.js?v=20260820-3');
 loadOnce('libIsbnEnrichmentProgressV11','isbn-enrichment-progress-v10.js?v=20260820-2');
 /* Router UI: blocca il vecchio lookup ISBN e mantiene un unico spinner continuo. */
 loadOnce('libGoodreadsPrimaryUiRouterV2','goodreads-primary-spinner-guard-v1.js?v=20260821-2');
+root.__LIB_METADATA_SOURCE_POLICY_PREVIOUS='goodreads-primary-then-storygraph-then-fallback-v3';
 root.__LIB_METADATA_SOURCE_POLICY='goodreads-primary-then-exact-isbn-edition-then-storygraph-v4';
 root.__LIB_GENRE_SOURCE_POLICY='goodreads-primary-then-storygraph-v3';
 root.__LIB_PLOT_SOURCE_POLICY_PREVIOUS='publisher-first-official-retry-lock-v9-sanitized';
