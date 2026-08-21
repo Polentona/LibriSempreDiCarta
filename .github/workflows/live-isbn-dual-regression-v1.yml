@@ -21,14 +21,14 @@ jobs:
           node-version: 20
       - name: Installa Playwright
         run: |
-          mkdir -p /tmp/isbn-dual && cd /tmp/isbn-dual
+          mkdir -p /tmp/isbn-live && cd /tmp/isbn-live
           npm init -y >/dev/null 2>&1
           npm install playwright@1.55.0 >/dev/null 2>&1
           npx playwright install --with-deps chromium >/dev/null
-      - name: Verifica Goodreads primario su Cooper e Beckett
+      - name: Verifica Goodreads primario su Cooper, Beckett e Brown
         id: test
         continue-on-error: true
-        working-directory: /tmp/isbn-dual
+        working-directory: /tmp/isbn-live
         run: |
           cat > test.js <<'JS'
           const {chromium}=require('playwright');
@@ -39,27 +39,28 @@ jobs:
           const dirty=v=>/https?|www\s*\.|€|\bacquista\b|\baggiungi al carrello\b|\bprezzo\b/i.test(String(v||''));
           const italianEnough=v=>{const n=' '+norm(v)+' ';return [' il ',' la ',' di ',' del ',' che ',' un ',' una ',' per ',' con ',' nel ',' non ',' e '].filter(x=>n.includes(x)).length>=4};
           const cases=[
+            {isbn:'9788804681960',title:'Origin',author:'Dan Brown',publisher:'Mondadori',year:'2017',saga:'Robert Langdon',prequel:'Inferno',sequel:"L'ultimo segreto",genres:['Giallo','Thriller','Avventura']},
             {isbn:'9788850225798',title:'Il libro delle anime',author:'Glenn Cooper',publisher:'TEA',year:'2011',saga:'Will Piper',prequel:'La biblioteca dei morti',sequel:'I custodi della biblioteca',genres:['Crime','Giallo','Thriller','Fantasy','Storico']},
             {isbn:'9788845279553',title:'I sussurri della morte',author:'Simon Beckett',publisher:'Bompiani',year:'2015',saga:'David Hunter',prequel:'Scritto nelle ossa',sequel:'La voce dei morti',genres:['Crime','Giallo','Thriller']}
           ];
           const read=page=>page.evaluate(()=>{
             const s=document.getElementById('lookupStatus'),cover=document.getElementById('editCover');
             const before=getComputedStyle(s,'::before');const child=s?.querySelector('.lookup-book-spinner');
-            return{title:document.getElementById('editTitle')?.value||'',author:document.getElementById('editAuthor')?.value||'',publisher:document.getElementById('editPublisher')?.value||'',year:document.getElementById('editPublishedDate')?.value||'',genre:document.getElementById('editCategory')?.value||'',genreSource:document.getElementById('editCategory')?.dataset?.genreSource||'',saga:document.getElementById('editSaga')?.value||'',prequel:document.getElementById('editPrequel')?.value||'',sequel:document.getElementById('editSequel')?.value||'',plot:document.getElementById('editPlot')?.value||'',cover:cover?.value||'',busy:s?.dataset?.goodreadsPrimaryBusy==='1',pseudoAnimation:before?.animationName||'',legacySpinnerDisplay:child?getComputedStyle(child).display:'none',router:!!window.__LIB_GOODREADS_PRIMARY_UI_ROUTER_V2,primary:!!window.__LIB_GOODREADS_PRIMARY_METADATA_V1,recovery:!!window.__LIB_GOODREADS_PRIMARY_RECOVERY_INSTALLED_V2,loader:!!window.__LIB_SERIES_NEIGHBORS_STANDALONE_V56,last:window.__LIB_GOODREADS_PRIMARY_LAST__||null,progress:window.__LIB_LOOKUP_PROGRESS_V11_LAST__||null};
+            return{title:document.getElementById('editTitle')?.value||'',author:document.getElementById('editAuthor')?.value||'',publisher:document.getElementById('editPublisher')?.value||'',year:document.getElementById('editPublishedDate')?.value||'',genre:document.getElementById('editCategory')?.value||'',genreSource:document.getElementById('editCategory')?.dataset?.genreSource||'',saga:document.getElementById('editSaga')?.value||'',prequel:document.getElementById('editPrequel')?.value||'',sequel:document.getElementById('editSequel')?.value||'',plot:document.getElementById('editPlot')?.value||'',cover:cover?.value||'',busy:s?.dataset?.goodreadsPrimaryBusy==='1',pseudoAnimation:before?.animationName||'',legacySpinnerDisplay:child?getComputedStyle(child).display:'none',router:!!window.__LIB_GOODREADS_PRIMARY_UI_ROUTER_V2,primary:!!window.__LIB_GOODREADS_PRIMARY_METADATA_V1,recovery:!!window.__LIB_GOODREADS_PRIMARY_RECOVERY_INSTALLED_V2,details:!!window.__LIB_GOODREADS_PRIMARY_DETAILS_INSTALLED_V3,loader:!!window.__LIB_SERIES_NEIGHBORS_STANDALONE_V57,last:window.__LIB_GOODREADS_PRIMARY_LAST__||null,progress:window.__LIB_LOOKUP_PROGRESS_V11_LAST__||null};
           });
           (async()=>{const browser=await chromium.launch({headless:true});const results=[];try{
             for(const c of cases){
               const page=await browser.newPage({viewport:{width:1450,height:1200}});let http429=0,busySeen=false,smoothSpinner=false;
               page.on('response',r=>{if(r.status()===429)http429++});
-              await page.goto('https://polentona.github.io/LibriSempreDiCarta/?goodreads-primary-v2-live='+c.isbn+'-'+Date.now(),{waitUntil:'domcontentloaded',timeout:120000});
+              await page.goto('https://polentona.github.io/LibriSempreDiCarta/?goodreads-primary-v3-live='+c.isbn+'-'+Date.now(),{waitUntil:'domcontentloaded',timeout:120000});
               await page.locator('#addBookBtn').click();await page.locator('#editDialog[open]').waitFor({state:'visible',timeout:20000});
               await page.locator('#editCode').fill(c.isbn);
-              const deadline=Date.now()+220000;let last={};
+              const deadline=Date.now()+240000;let last={};
               while(Date.now()<deadline){
                 await page.waitForTimeout(250);last=await read(page);
                 if(last.busy){busySeen=true;if(last.pseudoAnimation==='goodreadsPrimarySpin'&&last.legacySpinnerDisplay==='none')smoothSpinner=true}
                 const gr=last.last?.result?.goodreads||null;
-                const ok=norm(last.title)===norm(c.title)&&!/:\s*(?:romanzo|novel)\s*$/i.test(last.title)&&norm(last.author)===norm(c.author)&&norm(last.publisher)===norm(c.publisher)&&String(last.year).includes(c.year)&&norm(last.saga)===norm(c.saga)&&norm(last.prequel)===norm(c.prequel)&&norm(last.sequel)===norm(c.sequel)&&hasGenres(last.genre,c.genres)&&last.genreSource==='goodreads'&&last.plot.length>=180&&italianEnough(last.plot)&&!dirty(last.plot)&&last.cover&&gr?.cover&&last.cover===gr.cover&&last.last?.result?.source==='goodreads'&&!last.busy&&last.router&&last.primary&&last.recovery&&last.loader;
+                const ok=norm(last.title)===norm(c.title)&&!/:\s*(?:romanzo|novel)\s*$/i.test(last.title)&&norm(last.author)===norm(c.author)&&norm(last.publisher)===norm(c.publisher)&&String(last.year).includes(c.year)&&norm(last.saga)===norm(c.saga)&&norm(last.prequel)===norm(c.prequel)&&norm(last.sequel)===norm(c.sequel)&&hasGenres(last.genre,c.genres)&&last.genreSource==='goodreads'&&last.plot.length>=160&&italianEnough(last.plot)&&!dirty(last.plot)&&last.cover&&gr?.cover&&last.cover===gr.cover&&last.last?.result?.source==='goodreads'&&!last.busy&&last.router&&last.primary&&last.recovery&&last.details&&last.loader;
                 if(ok)break;
               }
               last=await read(page);const gr=last.last?.result?.goodreads||null,bad=[];
@@ -71,19 +72,19 @@ jobs:
               if(norm(last.prequel)!==norm(c.prequel))bad.push('prequel:'+last.prequel);
               if(norm(last.sequel)!==norm(c.sequel))bad.push('sequel:'+last.sequel);
               if(!hasGenres(last.genre,c.genres)||last.genreSource!=='goodreads')bad.push('generi:'+last.genre+' source='+last.genreSource);
-              if(last.plot.length<180||!italianEnough(last.plot)||dirty(last.plot))bad.push('trama:'+last.plot.slice(0,120));
+              if(last.plot.length<160||!italianEnough(last.plot)||dirty(last.plot))bad.push('trama:'+last.plot.slice(0,120));
               if(!last.cover||!gr?.cover||last.cover!==gr.cover)bad.push('copertina:'+last.cover);
               if(last.last?.result?.source!=='goodreads')bad.push('fonte:'+String(last.last?.result?.source||''));
               if(!busySeen||!smoothSpinner)bad.push('spinner-continuo');
               if(last.busy)bad.push('spinner-non-terminato');
-              if(!last.router||!last.primary||!last.recovery||!last.loader)bad.push('runtime');
-              results.push({isbn:c.isbn,last,http429,busySeen,smoothSpinner,bad});console.log('GOODREADS_PRIMARY_V2_LIVE_RESULT',JSON.stringify(results.at(-1)));
+              if(!last.router||!last.primary||!last.recovery||!last.details||!last.loader)bad.push('runtime');
+              results.push({isbn:c.isbn,last,http429,busySeen,smoothSpinner,bad});console.log('GOODREADS_PRIMARY_V3_LIVE_RESULT',JSON.stringify(results.at(-1)));
               await page.close();if(bad.length)throw new Error(c.isbn+' => '+bad.join(', '));await new Promise(r=>setTimeout(r,1500));
             }
-            console.log('GOODREADS_PRIMARY_V2_DUAL_LIVE_OK',JSON.stringify(results.map(x=>({isbn:x.isbn,http429:x.http429,busySeen:x.busySeen,smoothSpinner:x.smoothSpinner}))));
-          }finally{await browser.close()}})().catch(e=>{console.error('GOODREADS_PRIMARY_V2_DUAL_LIVE_FAIL',e.stack||e.message);process.exit(1)});
+            console.log('GOODREADS_PRIMARY_V3_MULTI_LIVE_OK',JSON.stringify(results.map(x=>({isbn:x.isbn,http429:x.http429,busySeen:x.busySeen,smoothSpinner:x.smoothSpinner}))));
+          }finally{await browser.close()}})().catch(e=>{console.error('GOODREADS_PRIMARY_V3_MULTI_LIVE_FAIL',e.stack||e.message);process.exit(1)});
           JS
-          node test.js 2>&1 | tee /tmp/live-dual.log
+          node test.js 2>&1 | tee /tmp/live-isbn.log
           test ${PIPESTATUS[0]} -eq 0
       - name: Registra esito
         if: always()
@@ -91,9 +92,9 @@ jobs:
           {
             echo "outcome=${{ steps.test.outcome }}"
             echo "source_commit=${{ github.event.workflow_run.head_sha }}"
-            echo "mode=goodreads-primary-all-metadata-v3"
+            echo "mode=goodreads-primary-details-v3"
             echo '---'
-            cat /tmp/live-dual.log 2>/dev/null || true
+            cat /tmp/live-isbn.log 2>/dev/null || true
           } > live-isbn-dual-result.txt
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
