@@ -60,5 +60,6 @@ root.__LIB_METADATA_SOURCE_POLICY='goodreads-primary-then-storygraph-then-fallba
 root.__LIB_GENRE_SOURCE_POLICY='goodreads-primary-then-storygraph-v3';
 root.__LIB_PLOT_SOURCE_POLICY_PREVIOUS='publisher-first-official-retry-lock-v9-sanitized';
 root.__LIB_PLOT_SOURCE_POLICY='goodreads-italian-primary-then-storygraph-translated-v3';
+root.__LIB_SERIES_RELATION_POLICY_PREVIOUS='goodreads-primary-position-search-italian-physical-v3';
 root.__LIB_SERIES_RELATION_POLICY='goodreads-primary-then-italian-retailer-series-v1';
 })();
