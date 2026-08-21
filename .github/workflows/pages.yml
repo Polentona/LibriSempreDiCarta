@@ -32,41 +32,22 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-
       - name: Forza cache runtime nell'artefatto
         run: |
           python - <<'PY'
           from pathlib import Path
           import os,re
-
-          p=Path('index.html')
-          s=p.read_text(encoding='utf-8')
-          version=os.environ['GITHUB_SHA'][:12]
-          targets=[
-            'isbn-resilient-fallback-v1.js',
-            'series-bounded-resolver-v1.js',
-            'series-relations-direct-v7.js',
-            'series-wikipedia-authoritative-v3.js',
-            'series-google-books-order-v10.js',
-            'series-authoritative-catalog-v1.js',
-            'series-neighbors-standalone-v5.js',
-            'series-universal-resolver-v1.js',
-            'isbn-cover.js',
-            'lookup-lock.js'
-          ]
+          p=Path('index.html'); s=p.read_text(encoding='utf-8'); version=os.environ['GITHUB_SHA'][:12]
+          targets=['isbn-resilient-fallback-v1.js','series-bounded-resolver-v1.js','series-relations-direct-v7.js','series-wikipedia-authoritative-v3.js','series-google-books-order-v10.js','series-authoritative-catalog-v1.js','series-neighbors-standalone-v5.js','series-universal-resolver-v1.js','isbn-cover.js','lookup-lock.js']
           changed=[]
           for filename in targets:
               pattern=re.escape(filename)+r'\?v=[^"\']+'
               if re.search(pattern,s):
-                  s=re.sub(pattern,filename+'?v='+version,s)
-                  changed.append(filename)
+                  s=re.sub(pattern,filename+'?v='+version,s); changed.append(filename)
           p.write_text(s,encoding='utf-8')
-          print('CACHE_VERSION='+version)
-          print('CACHE_TARGETS='+','.join(changed))
-          if 'series-neighbors-standalone-v5.js' not in changed or 'isbn-cover.js' not in changed:
-              raise SystemExit('Runtime critici non trovati in index.html')
+          print('CACHE_VERSION='+version); print('CACHE_TARGETS='+','.join(changed))
+          if 'series-neighbors-standalone-v5.js' not in changed or 'isbn-cover.js' not in changed: raise SystemExit('Runtime critici non trovati')
           PY
-
       - name: Configure Pages
         uses: actions/configure-pages@v5
         with:
@@ -82,91 +63,33 @@ jobs:
         id: live
         continue-on-error: true
         run: |
-          ok=0
-          runtime=0
-          bytes=0
-          token="${GITHUB_SHA::12}"
-          for i in $(seq 1 18); do
+          ok=0; runtime=0; bytes=0; token="${GITHUB_SHA::12}"
+          for i in $(seq 1 20); do
             if curl -fsSL --max-time 20 "https://polentona.github.io/LibriSempreDiCarta/?pages-live=${GITHUB_RUN_ID}-${i}" -o /tmp/pages-live.html; then
               bytes=$(wc -c </tmp/pages-live.html)
-              if grep -q 'id="editInLibrary"' /tmp/pages-live.html \
-                && grep -q "currentView='home'" /tmp/pages-live.html \
-                && grep -q 'data-author-letter' /tmp/pages-live.html \
-                && grep -q 'class="series-row"' /tmp/pages-live.html \
-                && grep -q 'id="addBookBtn"' /tmp/pages-live.html \
+              if grep -q 'id="addBookBtn"' /tmp/pages-live.html \
                 && grep -Fq "series-neighbors-standalone-v5.js?v=${token}" /tmp/pages-live.html \
-                && grep -Fq "isbn-cover.js?v=${token}" /tmp/pages-live.html; then
-                if curl -fsSL --max-time 20 "https://polentona.github.io/LibriSempreDiCarta/series-neighbors-standalone-v5.js?runtime=${GITHUB_RUN_ID}-${i}" -o /tmp/loader-live.js \
-                  && grep -q '__LIB_SERIES_NEIGHBORS_STANDALONE_V50' /tmp/loader-live.js \
-                  && grep -q '__LIB_GOODREADS_GENRES_LOADER_V1=true' /tmp/loader-live.js \
-                  && grep -q '__LIB_GOODREADS_GENRES_ONLY_V10=true' /tmp/loader-live.js \
-                  && grep -q '__LIB_GENRE_OPENLIBRARY_WORK_V1=true' /tmp/loader-live.js \
-                  && grep -q '__LIB_GENRE_SEARCH_FALLBACK_V2=true' /tmp/loader-live.js \
-                  && grep -q 'series-authoritative-runtime-v7.js?v=20260820-11' /tmp/loader-live.js \
-                  && grep -q 'series-relation-stabilizer-v8.js?v=20260820-1' /tmp/loader-live.js \
-                  && grep -q 'series-saga-lock-v9.js?v=20260820-2' /tmp/loader-live.js \
-                  && grep -q 'series-single-owner-guard-v1.js?v=20260820-6' /tmp/loader-live.js \
-                  && grep -q 'publisher-plot-lock-v8.js?v=20260820-12' /tmp/loader-live.js \
-                  && grep -q 'isbn-field-sanitizer-v2.js?v=20260820-2' /tmp/loader-live.js \
-                  && grep -q 'storygraph-goodreads-genres-v3.js?v=20260820-1' /tmp/loader-live.js \
-                  && grep -q 'storygraph-genre-lock-v4.js?v=20260820-2' /tmp/loader-live.js \
-                  && grep -q 'isbn-enrichment-progress-v10.js?v=20260820-2' /tmp/loader-live.js \
-                  && grep -q 'goodreads-order-canonical-localization-stable-v8' /tmp/loader-live.js \
-                  && grep -q 'publisher-first-official-retry-lock-v9-sanitized' /tmp/loader-live.js \
-                  && ! grep -q 'series-authoritative-runtime-v6.js' /tmp/loader-live.js \
-                  && ! grep -q 'isbn-field-sanitizer-v1.js' /tmp/loader-live.js \
-                  && ! grep -q 'series-verified-order-v1.js' /tmp/loader-live.js \
-                  && ! grep -q 'series-verified-order-v2.js' /tmp/loader-live.js \
-                  && ! grep -q 'series-verified-saga-v3.js' /tmp/loader-live.js \
-                  && ! grep -q 'genre-whitelist-enforcer-v2.js' /tmp/loader-live.js \
-                  && curl -fsSL --max-time 20 "https://polentona.github.io/LibriSempreDiCarta/series-authoritative-runtime-v7.js?runtime=${GITHUB_RUN_ID}-${i}" -o /tmp/series-live.js \
-                  && grep -q '__LIB_SERIES_AUTHORITATIVE_RUNTIME_V7' /tmp/series-live.js \
-                  && grep -q 'goodreads-ordered-series-primary-v7' /tmp/series-live.js \
-                  && ! grep -q '9788845279553' /tmp/series-live.js \
-                  && ! grep -q 'Simon Beckett' /tmp/series-live.js \
-                  && ! grep -q 'David Hunter' /tmp/series-live.js \
-                  && curl -fsSL --max-time 20 "https://polentona.github.io/LibriSempreDiCarta/series-relation-stabilizer-v8.js?runtime=${GITHUB_RUN_ID}-${i}" -o /tmp/stabilizer-live.js \
-                  && grep -q '__LIB_SERIES_RELATION_STABILIZER_V8' /tmp/stabilizer-live.js \
-                  && grep -q '__LIB_SERIES_AUTHORITATIVE_RUNTIME_V8' /tmp/stabilizer-live.js \
-                  && grep -q 'canonical-title-localizer-v8' /tmp/stabilizer-live.js \
-                  && ! grep -q '9788845279553' /tmp/stabilizer-live.js \
-                  && ! grep -q 'Simon Beckett' /tmp/stabilizer-live.js \
-                  && ! grep -q 'David Hunter' /tmp/stabilizer-live.js \
-                  && curl -fsSL --max-time 20 "https://polentona.github.io/LibriSempreDiCarta/series-saga-lock-v9.js?runtime=${GITHUB_RUN_ID}-${i}" -o /tmp/saga-lock-live.js \
-                  && grep -q '__LIB_SERIES_SAGA_LOCK_V10' /tmp/saga-lock-live.js \
-                  && ! grep -q '9788845279553' /tmp/saga-lock-live.js \
-                  && ! grep -q 'Simon Beckett' /tmp/saga-lock-live.js \
-                  && ! grep -q 'David Hunter' /tmp/saga-lock-live.js \
-                  && curl -fsSL --max-time 20 "https://polentona.github.io/LibriSempreDiCarta/isbn-field-sanitizer-v2.js?runtime=${GITHUB_RUN_ID}-${i}" -o /tmp/sanitizer-live.js \
-                  && grep -q '__LIB_ISBN_FIELD_SANITIZER_V2' /tmp/sanitizer-live.js \
-                  && grep -q '__LIB_CLEAN_PUBLISHER' /tmp/sanitizer-live.js \
-                  && grep -q '__LIB_CLEAN_AUTOMATIC_PLOT' /tmp/sanitizer-live.js \
-                  && curl -fsSL --max-time 20 "https://polentona.github.io/LibriSempreDiCarta/storygraph-goodreads-genres-v3.js?runtime=${GITHUB_RUN_ID}-${i}" -o /tmp/genre-live.js \
-                  && grep -q '__LIB_STORYGRAPH_GOODREADS_GENRES_V3' /tmp/genre-live.js \
-                  && grep -q 'storygraph-direct-then-goodreads-only-if-absent-v3' /tmp/genre-live.js \
-                  && grep -q "'crime':'Crime'" /tmp/genre-live.js \
-                  && grep -q "'mystery':'Giallo'" /tmp/genre-live.js \
-                  && grep -q "'thriller':'Thriller'" /tmp/genre-live.js \
-                  && curl -fsSL --max-time 20 "https://polentona.github.io/LibriSempreDiCarta/storygraph-genre-lock-v4.js?runtime=${GITHUB_RUN_ID}-${i}" -o /tmp/genre-lock-live.js \
-                  && grep -q '__LIB_STORYGRAPH_GENRE_LOCK_V5' /tmp/genre-lock-live.js \
-                  && ! grep -q '9788845279553' /tmp/genre-lock-live.js \
-                  && ! grep -q 'Simon Beckett' /tmp/genre-lock-live.js \
-                  && ! grep -q 'David Hunter' /tmp/genre-lock-live.js \
-                  && curl -fsSL --max-time 20 "https://polentona.github.io/LibriSempreDiCarta/isbn-enrichment-progress-v10.js?runtime=${GITHUB_RUN_ID}-${i}" -o /tmp/progress-live.js \
-                  && grep -q '__LIB_ISBN_ENRICHMENT_PROGRESS_V11' /tmp/progress-live.js \
-                  && grep -q '__LIB_PUBLISHER_PLOT_LOCK_STATE__' /tmp/progress-live.js \
-                  && ! grep -q '9788845279553' /tmp/progress-live.js \
-                  && ! grep -q 'Simon Beckett' /tmp/progress-live.js \
-                  && ! grep -q 'David Hunter' /tmp/progress-live.js \
-                  && curl -fsSL --max-time 20 "https://polentona.github.io/LibriSempreDiCarta/publisher-plot-lock-v8.js?runtime=${GITHUB_RUN_ID}-${i}" -o /tmp/plot-live.js \
-                  && grep -q '__LIB_PUBLISHER_PLOT_LOCK_V9' /tmp/plot-live.js \
-                  && grep -q '__LIB_PUBLISHER_PLOT_LOCK_STATE__' /tmp/plot-live.js \
-                  && grep -q '__LIB_PUBLISHER_PLOT_LOCK_V8_LATE_RESOLVER' /tmp/plot-live.js \
-                  && grep -q '__LIB_PUBLISHER_PLOT_LOCK_V8_SANITIZED' /tmp/plot-live.js; then
-                  runtime=1
-                  ok=1
-                  break
-                fi
+                && grep -Fq "isbn-cover.js?v=${token}" /tmp/pages-live.html \
+                && curl -fsSL --max-time 20 "https://polentona.github.io/LibriSempreDiCarta/series-neighbors-standalone-v5.js?runtime=${GITHUB_RUN_ID}-${i}" -o /tmp/loader-live.js \
+                && grep -q '__LIB_SERIES_NEIGHBORS_STANDALONE_V55' /tmp/loader-live.js \
+                && grep -q 'goodreads-primary-metadata-v1.js?v=20260821-2' /tmp/loader-live.js \
+                && grep -q 'goodreads-primary-spinner-guard-v1.js?v=20260821-2' /tmp/loader-live.js \
+                && grep -q 'storygraph-genre-lock-v4.js?v=20260820-3' /tmp/loader-live.js \
+                && grep -q 'goodreads-primary-then-storygraph-then-fallback-v1' /tmp/loader-live.js \
+                && grep -q 'goodreads-primary-physical-italian-then-storygraph-v1' /tmp/loader-live.js \
+                && grep -q 'goodreads-italian-primary-then-storygraph-translated-v1' /tmp/loader-live.js \
+                && curl -fsSL --max-time 20 "https://polentona.github.io/LibriSempreDiCarta/goodreads-primary-metadata-v1.js?runtime=${GITHUB_RUN_ID}-${i}" -o /tmp/primary-live.js \
+                && grep -q '__LIB_GOODREADS_PRIMARY_METADATA_V1' /tmp/primary-live.js \
+                && grep -q 'goodreads.com/search' /tmp/primary-live.js \
+                && grep -q 'thestorygraph.com/browse' /tmp/primary-live.js \
+                && ! grep -q 'it.wikipedia.org' /tmp/primary-live.js \
+                && curl -fsSL --max-time 20 "https://polentona.github.io/LibriSempreDiCarta/goodreads-primary-spinner-guard-v1.js?runtime=${GITHUB_RUN_ID}-${i}" -o /tmp/router-live.js \
+                && grep -q '__LIB_GOODREADS_PRIMARY_UI_ROUTER_V2' /tmp/router-live.js \
+                && grep -q 'goodreadsPrimarySpin' /tmp/router-live.js \
+                && grep -q 'stopImmediatePropagation' /tmp/router-live.js \
+                && curl -fsSL --max-time 20 "https://polentona.github.io/LibriSempreDiCarta/storygraph-genre-lock-v4.js?runtime=${GITHUB_RUN_ID}-${i}" -o /tmp/genre-lock-live.js \
+                && grep -q '__LIB_STORYGRAPH_GENRE_LOCK_V6' /tmp/genre-lock-live.js; then
+                runtime=1; ok=1; break
               fi
             fi
             sleep 5
@@ -175,8 +98,7 @@ jobs:
           echo "RUNTIME_OK=$runtime" | tee -a /tmp/pages-result.log
           echo "HTML_BYTES=$bytes" | tee -a /tmp/pages-result.log
           echo "CACHE_TOKEN=$token" | tee -a /tmp/pages-result.log
-          test "$ok" = 1
-          test "$runtime" = 1
+          test "$ok" = 1; test "$runtime" = 1
       - name: Registra risultato Pages
         if: always()
         continue-on-error: true

@@ -4,13 +4,17 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - 'goodreads-primary-metadata-v1.js'
+      - 'goodreads-primary-spinner-guard-v1.js'
       - 'isbn-request-broker-v1.js'
       - 'series-localization-resilient-v1.js'
       - 'series-resolver-stability-v1.js'
       - 'genre-resolver-resilient-v1.js'
       - 'plot-resolver-resilient-v1.js'
+      - 'storygraph-genre-lock-v4.js'
       - 'series-neighbors-standalone-v5.js'
       - 'scripts/test-isbn-network-resilience-v1.js'
+      - 'scripts/test-goodreads-primary-metadata-v1.js'
       - '.github/workflows/pr-isbn-resilience-v1.yml'
 
 permissions:
@@ -26,29 +30,35 @@ jobs:
           node-version: 20
       - name: Sintassi e policy
         run: |
-          node --check isbn-request-broker-v1.js
-          node --check series-localization-resilient-v1.js
-          node --check series-resolver-stability-v1.js
-          node --check genre-resolver-resilient-v1.js
-          node --check plot-resolver-resilient-v1.js
+          node --check goodreads-primary-metadata-v1.js
+          node --check goodreads-primary-spinner-guard-v1.js
+          node --check storygraph-genre-lock-v4.js
           node --check series-neighbors-standalone-v5.js
-          node --check scripts/test-isbn-network-resilience-v1.js
-          grep -q '__LIB_SERIES_NEIGHBORS_STANDALONE_V53' series-neighbors-standalone-v5.js
-          grep -q 'isbn-request-broker-v1.js?v=20260820-1' series-neighbors-standalone-v5.js
-          grep -q 'series-localization-resilient-v1.js?v=20260820-2' series-neighbors-standalone-v5.js
-          grep -q 'series-resolver-stability-v1.js?v=20260820-2' series-neighbors-standalone-v5.js
-          grep -q 'genre-resolver-resilient-v1.js?v=20260820-1' series-neighbors-standalone-v5.js
-          grep -q 'plot-resolver-resilient-v1.js?v=20260820-1' series-neighbors-standalone-v5.js
-          grep -q '__LIB_SERIES_LOCALIZATION_RESILIENT_V2' series-localization-resilient-v1.js
-          grep -q 'authorBibliographyItalianTitle' series-localization-resilient-v1.js
-          grep -q 'it.wikipedia.org/w/api.php' series-localization-resilient-v1.js
-          for f in isbn-request-broker-v1.js series-localization-resilient-v1.js series-resolver-stability-v1.js genre-resolver-resilient-v1.js plot-resolver-resilient-v1.js; do
+          node --check scripts/test-goodreads-primary-metadata-v1.js
+          grep -q '__LIB_SERIES_NEIGHBORS_STANDALONE_V55' series-neighbors-standalone-v5.js
+          grep -q 'goodreads-primary-metadata-v1.js?v=20260821-2' series-neighbors-standalone-v5.js
+          grep -q 'goodreads-primary-spinner-guard-v1.js?v=20260821-2' series-neighbors-standalone-v5.js
+          grep -q 'storygraph-genre-lock-v4.js?v=20260820-3' series-neighbors-standalone-v5.js
+          grep -q "__LIB_METADATA_SOURCE_POLICY='goodreads-primary-then-storygraph-then-fallback-v1'" series-neighbors-standalone-v5.js
+          grep -q "__LIB_GENRE_SOURCE_POLICY='goodreads-primary-then-storygraph-v1'" series-neighbors-standalone-v5.js
+          grep -q "__LIB_PLOT_SOURCE_POLICY='goodreads-italian-primary-then-storygraph-translated-v1'" series-neighbors-standalone-v5.js
+          grep -q "__LIB_SERIES_RELATION_POLICY='goodreads-primary-physical-italian-then-storygraph-v1'" series-neighbors-standalone-v5.js
+          grep -q '__LIB_STORYGRAPH_GENRE_LOCK_V6' storygraph-genre-lock-v4.js
+          grep -q '__LIB_GOODREADS_PRIMARY_UI_ROUTER_V2' goodreads-primary-spinner-guard-v1.js
+          grep -q 'goodreadsPrimarySpin' goodreads-primary-spinner-guard-v1.js
+          grep -q 'stopImmediatePropagation' goodreads-primary-spinner-guard-v1.js
+          grep -q 'goodreads.com/search' goodreads-primary-metadata-v1.js
+          grep -q 'thestorygraph.com/browse' goodreads-primary-metadata-v1.js
+          ! grep -q 'it.wikipedia.org' goodreads-primary-metadata-v1.js
+          for f in goodreads-primary-metadata-v1.js goodreads-primary-spinner-guard-v1.js storygraph-genre-lock-v4.js; do
             ! grep -q '9788850225798' "$f"
             ! grep -q '9788845279553' "$f"
             ! grep -q 'Glenn Cooper' "$f"
             ! grep -q 'Simon Beckett' "$f"
-            ! grep -q 'David Hunter' "$f"
             ! grep -q 'Will Piper' "$f"
+            ! grep -q 'David Hunter' "$f"
           done
-      - name: Test regressioni resilienza
+      - name: Test Goodreads primario
+        run: node scripts/test-goodreads-primary-metadata-v1.js
+      - name: Test resilienza preesistente
         run: node scripts/test-isbn-network-resilience-v1.js
