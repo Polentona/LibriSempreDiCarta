@@ -2,7 +2,7 @@ const fs=require('fs'),vm=require('vm');
 global.window=global;
 global.document={getElementById:()=>null,head:{appendChild(){}},createElement:()=>({})};
 global.Event=function(){};
-global.setTimeout=(fn)=>{return 0};global.clearTimeout=()=>{};
+global.setTimeout=(fn)=>0;global.clearTimeout=()=>{};
 global.__LIB_RESOLVE_AUTHORITATIVE_GENRES=async()=>({found:false});
 global.__LIB_RESOLVE_AUTHORITATIVE_SERIES_NEIGHBORS=async()=>null;
 global.__LIB_RESOLVE_OFFICIAL_PLOT=async()=>'';
@@ -11,7 +11,7 @@ const pages=new Map(),gr='https://www.goodreads.com/';
 const pad=s=>String(s)+'\n'+('fixture Goodreads abbastanza lunga per superare la soglia del broker. '.repeat(3));
 pages.set(gr+'search?q=9788850225798&search_type=books',pad('No Goodreads ISBN search results'));
 pages.set(gr+'book/auto_complete?format=json&q=9788850225798',pad('[]'));
-pages.set(gr+'book/isbn/9788850225798',pad(`
+const current=pad(`
 ### Will Piper #2
 # Il libro delle anime
 ### Glenn Cooper
@@ -28,7 +28,9 @@ Genres
 [Will Piper](${gr}series/12345-will-piper)
 ![cover](https://images-na.ssl-images-amazon.com/images/S/compressed.photo.goodreads.com/books/abc.jpg)
 ISBN: 9788850225798
-`));
+`);
+pages.set(gr+'book/isbn/9788850225798',current);
+pages.set(gr+'book/show/13379510-il-libro-delle-anime',current);
 pages.set(gr+'work/editions/6865913-the-book-of-souls',pad(`
 ## Il libro delle anime (Will Piper, #2)
 Published May 1st 2011 by TEA
@@ -43,7 +45,7 @@ pages.set(gr+'series/12345-will-piper',pad(`
 ### Book 1.5
 [Short Digital](${gr}book/show/15-short)
 ### Book 2
-[Book of Souls (Will Piper #2)](${gr}book/isbn/9788850225798)
+[Book of Souls (Will Piper #2)](${gr}book/show/13379510-il-libro-delle-anime)
 ### Book 2.5
 [Digital Interlude](${gr}book/show/25-digital)
 ### Book 3
@@ -65,7 +67,7 @@ vm.runInThisContext(fs.readFileSync('goodreads-primary-recovery-v2.js','utf8'));
   if(t.validStoryGraph({title:'Title: Browse Books | The StoryGraph',bookUrl:'https://app.thestorygraph.com/browse?search_term=x',raw:`There's nothing on The StoryGraph matching "x".`}))throw Error('Il no-match StoryGraph è stato accettato');
   const grbook=await t.locateGoodreads('9788850225798',{});if(!grbook)throw Error('ISBN Goodreads diretto non trovato');
   if(grbook.title!=='Il libro delle anime'||grbook.publisher!=='TEA'||grbook.published!=='2011')throw Error('Edizione Goodreads errata '+JSON.stringify(grbook));
-  const r=await t.resolveEnhanced({code:'9788850225798',legacy:{}});
+  const r=await t.resolveEnhanced({code:'9788850225798',title:'',author:'',legacy:{}});
   if(r.source!=='goodreads')throw Error('Fonte non Goodreads: '+r.source);
   if(r.title!=='Il libro delle anime'||r.author!=='Glenn Cooper'||r.publisher!=='TEA'||r.published!=='2011')throw Error('Metadati base errati '+JSON.stringify(r));
   if(r.saga!=='Will Piper'||r.prequel!=='La biblioteca dei morti'||r.sequel!=='I custodi della biblioteca')throw Error('Relazioni errate '+JSON.stringify({saga:r.saga,prequel:r.prequel,sequel:r.sequel}));
