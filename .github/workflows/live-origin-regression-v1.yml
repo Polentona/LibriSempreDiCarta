@@ -1,0 +1,98 @@
+name: Verifica live ISBN Origin
+
+on:
+  workflow_run:
+    workflows: ["Deploy GitHub Pages"]
+    types: [completed]
+
+permissions:
+  contents: write
+
+jobs:
+  live-origin:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Installa Playwright
+        run: |
+          mkdir -p /tmp/origin-live && cd /tmp/origin-live
+          npm init -y >/dev/null 2>&1
+          npm install playwright@1.55.0 >/dev/null 2>&1
+          npx playwright install --with-deps chromium >/dev/null
+      - name: Verifica ISBN 9788804681960 sul sito pubblicato
+        id: test
+        continue-on-error: true
+        working-directory: /tmp/origin-live
+        run: |
+          cat > test.js <<'JS'
+          const {chromium}=require('playwright');
+          const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
+          const norm=v=>clean(v).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
+          const genres=v=>new Set(String(v||'').split(/[,;|/\n]+/).map(norm).filter(Boolean));
+          const hasGenres=v=>['Giallo','Thriller','Avventura'].every(x=>genres(v).has(norm(x)));
+          const italianEnough=v=>{const n=' '+norm(v)+' ';return [' il ',' la ',' di ',' del ',' che ',' un ',' una ',' per ',' con ',' nel ',' non ',' e '].filter(x=>n.includes(x)).length>=4};
+          const dirty=v=>/https?|www\s*\.|€|\bacquista\b|\baggiungi al carrello\b|\bprezzo\b/i.test(String(v||''));
+          const expected={title:'Origin',author:'Dan Brown',publisher:'Mondadori',year:'2017',saga:'Robert Langdon',prequel:'Inferno',sequel:"L'ultimo segreto"};
+          const read=page=>page.evaluate(()=>{
+            const s=document.getElementById('lookupStatus'),cover=document.getElementById('editCover');
+            const before=getComputedStyle(s,'::before');
+            return {title:document.getElementById('editTitle')?.value||'',author:document.getElementById('editAuthor')?.value||'',publisher:document.getElementById('editPublisher')?.value||'',year:document.getElementById('editPublishedDate')?.value||'',genre:document.getElementById('editCategory')?.value||'',genreSource:document.getElementById('editCategory')?.dataset?.genreSource||'',saga:document.getElementById('editSaga')?.value||'',prequel:document.getElementById('editPrequel')?.value||'',sequel:document.getElementById('editSequel')?.value||'',plot:document.getElementById('editPlot')?.value||'',cover:cover?.value||'',busy:s?.dataset?.goodreadsPrimaryBusy==='1',spin:before?.animationName||'',source:window.__LIB_GOODREADS_PRIMARY_LAST__?.result?.source||'',grCover:window.__LIB_GOODREADS_PRIMARY_LAST__?.result?.goodreads?.cover||'',details:!!window.__LIB_GOODREADS_PRIMARY_DETAILS_INSTALLED_V3,recovery:!!window.__LIB_GOODREADS_PRIMARY_RECOVERY_INSTALLED_V2,loader:!!window.__LIB_SERIES_NEIGHBORS_STANDALONE_V57};
+          });
+          const validate=(x,seenSpin)=>{
+            const bad=[];
+            for(const k of ['title','author','publisher','saga','prequel','sequel'])if(norm(x[k])!==norm(expected[k]))bad.push(k+':'+x[k]);
+            if(!String(x.year).includes(expected.year))bad.push('anno:'+x.year);
+            if(!hasGenres(x.genre)||x.genreSource!=='goodreads')bad.push('generi:'+x.genre+' source='+x.genreSource);
+            if(x.plot.length<160||!italianEnough(x.plot)||dirty(x.plot))bad.push('trama');
+            if(!x.cover||!x.grCover||x.cover!==x.grCover)bad.push('copertina');
+            if(x.source!=='goodreads')bad.push('fonte:'+x.source);
+            if(x.busy)bad.push('spinner-non-terminato');
+            if(!seenSpin)bad.push('spinner-non-osservato');
+            if(!x.details||!x.recovery||!x.loader)bad.push('runtime');
+            return bad;
+          };
+          (async()=>{
+            const browser=await chromium.launch({headless:true});let final=null;
+            try{
+              for(let attempt=1;attempt<=3;attempt++){
+                const page=await browser.newPage({viewport:{width:1450,height:1200}});let seenSpin=false,http429=0;
+                page.on('response',r=>{if(r.status()===429)http429++});
+                await page.goto('https://polentona.github.io/LibriSempreDiCarta/?origin-dedicated-live='+Date.now()+'-'+attempt,{waitUntil:'domcontentloaded',timeout:120000});
+                await page.locator('#addBookBtn').click();await page.locator('#editDialog[open]').waitFor({state:'visible',timeout:20000});
+                await page.locator('#editCode').fill('9788804681960');
+                const deadline=Date.now()+240000;let last={};
+                while(Date.now()<deadline){await page.waitForTimeout(300);last=await read(page);if(last.busy&&last.spin==='goodreadsPrimarySpin')seenSpin=true;const bad=validate(last,seenSpin);if(!bad.length)break}
+                last=await read(page);const bad=validate(last,seenSpin);final={attempt,http429,seenSpin,last,bad};console.log('ORIGIN_LIVE_ATTEMPT',JSON.stringify(final));await page.close();
+                if(!bad.length){console.log('ORIGIN_LIVE_OK',JSON.stringify(final));return}
+                if(attempt<3)await new Promise(r=>setTimeout(r,15000));
+              }
+              throw new Error('Origin non corretto dopo 3 tentativi: '+JSON.stringify(final));
+            } finally {await browser.close()}
+          })().catch(e=>{console.error('ORIGIN_LIVE_FAIL',e.stack||e.message);process.exit(1)});
+          JS
+          node test.js 2>&1 | tee /tmp/origin-live.log
+          test ${PIPESTATUS[0]} -eq 0
+      - name: Registra esito Origin
+        if: always()
+        run: |
+          {
+            echo "outcome=${{ steps.test.outcome }}"
+            echo "source_commit=${{ github.event.workflow_run.head_sha }}"
+            echo "mode=origin-goodreads-details-v3-dedicated"
+            echo '---'
+            cat /tmp/origin-live.log 2>/dev/null || true
+          } > live-origin-result.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add live-origin-result.txt
+          git commit -m "Registra esito test live Origin" || exit 0
+          git push origin HEAD:main || true
+      - name: Fallisci se Origin non passa
+        if: steps.test.outcome != 'success'
+        run: exit 1
