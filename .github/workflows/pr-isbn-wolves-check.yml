@@ -6,6 +6,7 @@ on:
     paths:
       - 'goodreads-primary-metadata-v1.js'
       - 'goodreads-primary-recovery-v2.js'
+      - 'goodreads-primary-details-v3.js'
       - 'goodreads-primary-spinner-guard-v1.js'
       - 'series-neighbors-standalone-v5.js'
       - 'series-saga-lock-v9.js'
@@ -16,6 +17,7 @@ on:
       - 'scripts/test-plot-progress-v11.js'
       - 'scripts/test-goodreads-primary-metadata-v1.js'
       - 'scripts/test-goodreads-primary-recovery-v2.js'
+      - 'scripts/test-goodreads-primary-details-v3.js'
       - '.github/workflows/pages.yml'
       - '.github/workflows/pr-isbn-wolves-check.yml'
       - '.nojekyll'
@@ -39,6 +41,7 @@ jobs:
         run: |
           node --check goodreads-primary-metadata-v1.js
           node --check goodreads-primary-recovery-v2.js
+          node --check goodreads-primary-details-v3.js
           node --check goodreads-primary-spinner-guard-v1.js
           node --check storygraph-genre-lock-v4.js
           node --check isbn-enrichment-progress-v10.js
@@ -49,9 +52,11 @@ jobs:
           node --check scripts/test-plot-progress-v11.js
           node --check scripts/test-goodreads-primary-metadata-v1.js
           node --check scripts/test-goodreads-primary-recovery-v2.js
-          grep -q '__LIB_SERIES_NEIGHBORS_STANDALONE_V56' series-neighbors-standalone-v5.js
+          node --check scripts/test-goodreads-primary-details-v3.js
+          grep -q '__LIB_SERIES_NEIGHBORS_STANDALONE_V57' series-neighbors-standalone-v5.js
           grep -q '__LIB_GOODREADS_PRIMARY_METADATA_V1' goodreads-primary-metadata-v1.js
           grep -q '__LIB_GOODREADS_PRIMARY_RECOVERY_V2' goodreads-primary-recovery-v2.js
+          grep -q '__LIB_GOODREADS_PRIMARY_DETAILS_V3' goodreads-primary-details-v3.js
           grep -q '__LIB_GOODREADS_PRIMARY_UI_ROUTER_V2' goodreads-primary-spinner-guard-v1.js
           grep -q '__LIB_STORYGRAPH_GENRE_LOCK_V6' storygraph-genre-lock-v4.js
           grep -q '__LIB_SERIES_SAGA_LOCK_V10' series-saga-lock-v9.js
@@ -59,19 +64,23 @@ jobs:
           grep -q '__LIB_PUBLISHER_PLOT_LOCK_V9' publisher-plot-lock-v8.js
           grep -q 'goodreads-primary-metadata-v1.js?v=20260821-2' series-neighbors-standalone-v5.js
           grep -q 'goodreads-primary-recovery-v2.js?v=20260821-1' series-neighbors-standalone-v5.js
+          grep -q 'goodreads-primary-details-v3.js?v=20260821-1' series-neighbors-standalone-v5.js
           grep -q 'goodreads-primary-spinner-guard-v1.js?v=20260821-2' series-neighbors-standalone-v5.js
-          grep -q "goodreads-primary-then-storygraph-then-fallback-v2" series-neighbors-standalone-v5.js
-          grep -q "goodreads-primary-physical-italian-then-storygraph-v2" series-neighbors-standalone-v5.js
-          grep -q "goodreads-italian-primary-then-storygraph-translated-v2" series-neighbors-standalone-v5.js
+          grep -q "goodreads-primary-then-storygraph-then-fallback-v3" series-neighbors-standalone-v5.js
+          grep -q "goodreads-primary-position-search-italian-physical-v3" series-neighbors-standalone-v5.js
+          grep -q "goodreads-italian-primary-then-storygraph-translated-v3" series-neighbors-standalone-v5.js
           grep -q 'goodreadsPrimarySpin' goodreads-primary-spinner-guard-v1.js
           grep -q 'stopImmediatePropagation' goodreads-primary-spinner-guard-v1.js
           ! grep -q 'it.wikipedia.org' goodreads-primary-metadata-v1.js
           ! grep -q 'it.wikipedia.org' goodreads-primary-recovery-v2.js
+          ! grep -q 'it.wikipedia.org' goodreads-primary-details-v3.js
           test -f .nojekyll
       - name: Test Goodreads primario
         run: node scripts/test-goodreads-primary-metadata-v1.js
       - name: Test recupero Goodreads V2
         run: node scripts/test-goodreads-primary-recovery-v2.js
+      - name: Test dettagli e serie Goodreads V3
+        run: node scripts/test-goodreads-primary-details-v3.js
 
   integration:
     needs: static

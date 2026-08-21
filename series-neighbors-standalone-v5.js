@@ -1,6 +1,7 @@
 (()=>{
 const root=typeof window!=='undefined'?window:globalThis;
-if(root.__LIB_SERIES_NEIGHBORS_STANDALONE_V56)return;
+if(root.__LIB_SERIES_NEIGHBORS_STANDALONE_V57)return;
+root.__LIB_SERIES_NEIGHBORS_STANDALONE_V57=true;
 root.__LIB_SERIES_NEIGHBORS_STANDALONE_V56=true;
 root.__LIB_SERIES_NEIGHBORS_STANDALONE_V55=true;
 root.__LIB_SERIES_NEIGHBORS_STANDALONE_V54=true;
@@ -8,7 +9,7 @@ root.__LIB_SERIES_NEIGHBORS_STANDALONE_V53=true;
 root.__LIB_SERIES_NEIGHBORS_STANDALONE_V52=true;
 root.__LIB_SERIES_NEIGHBORS_STANDALONE_V51=true;
 root.__LIB_SERIES_NEIGHBORS_STANDALONE_V50=true;
-root.__LIB_SINGLE_OWNER_RUNTIME='20260821-3';
+root.__LIB_SINGLE_OWNER_RUNTIME='20260821-4';
 root.__LIB_UNIFIED_BOOK_ENRICHER_V1=true;
 root.__LIB_UNIVERSAL_SERIES_V2=true;
 root.__LIB_GOODREADS_GENRES_LOADER_V1=true;
@@ -42,18 +43,19 @@ loadOnce('libSeriesResolverStabilityV1','series-resolver-stability-v1.js?v=20260
 loadOnce('libGenresMultiV6','genres-multi-v1.js?v=20260820-8');
 loadOnce('libStoryGraphGoodreadsGenresV3','storygraph-goodreads-genres-v3.js?v=20260820-1');
 loadOnce('libGenreResolverResilientV1','genre-resolver-resilient-v1.js?v=20260820-1');
-/* Goodreads resta primario; V2 aggiunge percorsi diretti ISBN/autocomplete e rifiuta i no-match StoryGraph. */
+/* Goodreads resta primario: V2 recupera l'ISBN, V3 completa editore/data e vicini di serie direttamente da Goodreads. */
 loadOnce('libGoodreadsPrimaryMetadataV1','goodreads-primary-metadata-v1.js?v=20260821-2');
 loadOnce('libGoodreadsPrimaryRecoveryV2','goodreads-primary-recovery-v2.js?v=20260821-1');
+loadOnce('libGoodreadsPrimaryDetailsV3','goodreads-primary-details-v3.js?v=20260821-1');
 loadOnce('libPublisherPlotLockV8','publisher-plot-lock-v8.js?v=20260820-12');
 loadOnce('libSeriesSagaLockV9','series-saga-lock-v9.js?v=20260820-2');
 loadOnce('libStoryGraphGenreLockV4','storygraph-genre-lock-v4.js?v=20260820-3');
 loadOnce('libIsbnEnrichmentProgressV11','isbn-enrichment-progress-v10.js?v=20260820-2');
 /* Router UI: blocca il vecchio lookup ISBN e mantiene un unico spinner continuo. */
 loadOnce('libGoodreadsPrimaryUiRouterV2','goodreads-primary-spinner-guard-v1.js?v=20260821-2');
-root.__LIB_METADATA_SOURCE_POLICY='goodreads-primary-then-storygraph-then-fallback-v2';
-root.__LIB_GENRE_SOURCE_POLICY='goodreads-primary-then-storygraph-v2';
+root.__LIB_METADATA_SOURCE_POLICY='goodreads-primary-then-storygraph-then-fallback-v3';
+root.__LIB_GENRE_SOURCE_POLICY='goodreads-primary-then-storygraph-v3';
 root.__LIB_PLOT_SOURCE_POLICY_PREVIOUS='publisher-first-official-retry-lock-v9-sanitized';
-root.__LIB_PLOT_SOURCE_POLICY='goodreads-italian-primary-then-storygraph-translated-v2';
-root.__LIB_SERIES_RELATION_POLICY='goodreads-primary-physical-italian-then-storygraph-v2';
+root.__LIB_PLOT_SOURCE_POLICY='goodreads-italian-primary-then-storygraph-translated-v3';
+root.__LIB_SERIES_RELATION_POLICY='goodreads-primary-position-search-italian-physical-v3';
 })();
