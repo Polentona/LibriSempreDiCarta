@@ -48,18 +48,28 @@ jobs:
       - name: Registra risultato
         if: always()
         run: |
-          {
-            echo "outcome=${{ steps.test.outcome }}"
-            echo "source_commit=${{ github.event.workflow_run.head_sha }}"
-            echo "mode=origin-goodreads-v3-workflow-run"
-            echo '---'
-            cat /tmp/origin-push.log 2>/dev/null || true
-          } > live-origin-push-result.txt
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add live-origin-push-result.txt
-          git commit -m "Registra test live Origin workflow-run" || exit 0
-          git push origin HEAD:main || true
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git checkout -B main origin/main
+            {
+              echo "outcome=${{ steps.test.outcome }}"
+              echo "source_commit=${{ github.event.workflow_run.head_sha }}"
+              echo "mode=origin-goodreads-v3-workflow-run"
+              echo "record_attempt=${attempt}"
+              echo '---'
+              cat /tmp/origin-push.log 2>/dev/null || true
+            } > live-origin-push-result.txt
+            git add live-origin-push-result.txt
+            git commit -m "Registra test live Origin workflow-run" || true
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "Impossibile registrare il risultato Origin dopo 3 tentativi" >&2
+          exit 1
       - name: Fallisci se il test non passa
         if: steps.test.outcome != 'success'
         run: exit 1
