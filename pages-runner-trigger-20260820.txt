@@ -1,3 +1,4 @@
 Trigger deploy GitHub Pages con runner ubuntu-slim.
 Redeploy dopo correzione test live ISBN: 2026-08-20T13:55Z
 Redeploy per verifica live Goodreads V3 Origin: 2026-08-21T18:47Z
+Redeploy per test live dedicato Origin: 2026-08-22T00:32+02:00
