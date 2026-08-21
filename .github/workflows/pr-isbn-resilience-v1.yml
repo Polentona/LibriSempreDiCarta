@@ -6,6 +6,7 @@ on:
     paths:
       - 'goodreads-primary-metadata-v1.js'
       - 'goodreads-primary-recovery-v2.js'
+      - 'goodreads-primary-details-v3.js'
       - 'goodreads-primary-spinner-guard-v1.js'
       - 'isbn-request-broker-v1.js'
       - 'series-localization-resilient-v1.js'
@@ -17,6 +18,7 @@ on:
       - 'scripts/test-isbn-network-resilience-v1.js'
       - 'scripts/test-goodreads-primary-metadata-v1.js'
       - 'scripts/test-goodreads-primary-recovery-v2.js'
+      - 'scripts/test-goodreads-primary-details-v3.js'
       - '.github/workflows/pr-isbn-resilience-v1.yml'
 
 permissions:
@@ -34,41 +36,54 @@ jobs:
         run: |
           node --check goodreads-primary-metadata-v1.js
           node --check goodreads-primary-recovery-v2.js
+          node --check goodreads-primary-details-v3.js
           node --check goodreads-primary-spinner-guard-v1.js
           node --check storygraph-genre-lock-v4.js
           node --check series-neighbors-standalone-v5.js
           node --check scripts/test-goodreads-primary-metadata-v1.js
           node --check scripts/test-goodreads-primary-recovery-v2.js
-          grep -q '__LIB_SERIES_NEIGHBORS_STANDALONE_V56' series-neighbors-standalone-v5.js
+          node --check scripts/test-goodreads-primary-details-v3.js
+          grep -q '__LIB_SERIES_NEIGHBORS_STANDALONE_V57' series-neighbors-standalone-v5.js
           grep -q 'goodreads-primary-metadata-v1.js?v=20260821-2' series-neighbors-standalone-v5.js
           grep -q 'goodreads-primary-recovery-v2.js?v=20260821-1' series-neighbors-standalone-v5.js
+          grep -q 'goodreads-primary-details-v3.js?v=20260821-1' series-neighbors-standalone-v5.js
           grep -q 'goodreads-primary-spinner-guard-v1.js?v=20260821-2' series-neighbors-standalone-v5.js
           grep -q 'storygraph-genre-lock-v4.js?v=20260820-3' series-neighbors-standalone-v5.js
-          grep -q "__LIB_METADATA_SOURCE_POLICY='goodreads-primary-then-storygraph-then-fallback-v2'" series-neighbors-standalone-v5.js
-          grep -q "__LIB_GENRE_SOURCE_POLICY='goodreads-primary-then-storygraph-v2'" series-neighbors-standalone-v5.js
-          grep -q "__LIB_PLOT_SOURCE_POLICY='goodreads-italian-primary-then-storygraph-translated-v2'" series-neighbors-standalone-v5.js
-          grep -q "__LIB_SERIES_RELATION_POLICY='goodreads-primary-physical-italian-then-storygraph-v2'" series-neighbors-standalone-v5.js
+          grep -q "__LIB_METADATA_SOURCE_POLICY='goodreads-primary-then-storygraph-then-fallback-v3'" series-neighbors-standalone-v5.js
+          grep -q "__LIB_GENRE_SOURCE_POLICY='goodreads-primary-then-storygraph-v3'" series-neighbors-standalone-v5.js
+          grep -q "__LIB_PLOT_SOURCE_POLICY='goodreads-italian-primary-then-storygraph-translated-v3'" series-neighbors-standalone-v5.js
+          grep -q "__LIB_SERIES_RELATION_POLICY='goodreads-primary-position-search-italian-physical-v3'" series-neighbors-standalone-v5.js
           grep -q '__LIB_GOODREADS_PRIMARY_RECOVERY_V2' goodreads-primary-recovery-v2.js
+          grep -q '__LIB_GOODREADS_PRIMARY_DETAILS_V3' goodreads-primary-details-v3.js
           grep -q 'goodreads.com/book/isbn/' goodreads-primary-recovery-v2.js
           grep -q 'goodreads.com/book/auto_complete' goodreads-primary-recovery-v2.js
-          grep -q 'validStoryGraph' goodreads-primary-recovery-v2.js
+          grep -q 'goodreads.com/search' goodreads-primary-details-v3.js
+          grep -q 'parsePublisherDate' goodreads-primary-details-v3.js
+          grep -q 'neighborByPosition' goodreads-primary-details-v3.js
+          grep -q 'physical' goodreads-primary-details-v3.js
           grep -q '__LIB_STORYGRAPH_GENRE_LOCK_V6' storygraph-genre-lock-v4.js
           grep -q '__LIB_GOODREADS_PRIMARY_UI_ROUTER_V2' goodreads-primary-spinner-guard-v1.js
           grep -q 'goodreadsPrimarySpin' goodreads-primary-spinner-guard-v1.js
           grep -q 'stopImmediatePropagation' goodreads-primary-spinner-guard-v1.js
           ! grep -q 'it.wikipedia.org' goodreads-primary-metadata-v1.js
           ! grep -q 'it.wikipedia.org' goodreads-primary-recovery-v2.js
-          for f in goodreads-primary-metadata-v1.js goodreads-primary-recovery-v2.js goodreads-primary-spinner-guard-v1.js storygraph-genre-lock-v4.js; do
+          ! grep -q 'it.wikipedia.org' goodreads-primary-details-v3.js
+          for f in goodreads-primary-metadata-v1.js goodreads-primary-recovery-v2.js goodreads-primary-details-v3.js goodreads-primary-spinner-guard-v1.js storygraph-genre-lock-v4.js; do
             ! grep -q '9788850225798' "$f"
             ! grep -q '9788845279553' "$f"
+            ! grep -q '9788804681960' "$f"
             ! grep -q 'Glenn Cooper' "$f"
             ! grep -q 'Simon Beckett' "$f"
+            ! grep -q 'Dan Brown' "$f"
             ! grep -q 'Will Piper' "$f"
             ! grep -q 'David Hunter' "$f"
+            ! grep -q 'Robert Langdon' "$f"
           done
       - name: Test Goodreads primario
         run: node scripts/test-goodreads-primary-metadata-v1.js
       - name: Test recupero ISBN Goodreads V2
         run: node scripts/test-goodreads-primary-recovery-v2.js
+      - name: Test dettagli e serie Goodreads V3
+        run: node scripts/test-goodreads-primary-details-v3.js
       - name: Test resilienza preesistente
         run: node scripts/test-isbn-network-resilience-v1.js
