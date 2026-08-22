@@ -1,6 +1,7 @@
 (()=>{
 const root=typeof window!=='undefined'?window:globalThis;
-if(root.__LIB_SERIES_NEIGHBORS_STANDALONE_V61)return;
+if(root.__LIB_SERIES_NEIGHBORS_STANDALONE_V62)return;
+root.__LIB_SERIES_NEIGHBORS_STANDALONE_V62=true;
 root.__LIB_SERIES_NEIGHBORS_STANDALONE_V61=true;
 root.__LIB_SERIES_NEIGHBORS_STANDALONE_V60=true;
 root.__LIB_SERIES_NEIGHBORS_STANDALONE_V59=true;
@@ -13,7 +14,7 @@ root.__LIB_SERIES_NEIGHBORS_STANDALONE_V53=true;
 root.__LIB_SERIES_NEIGHBORS_STANDALONE_V52=true;
 root.__LIB_SERIES_NEIGHBORS_STANDALONE_V51=true;
 root.__LIB_SERIES_NEIGHBORS_STANDALONE_V50=true;
-root.__LIB_SINGLE_OWNER_RUNTIME='20260822-4';
+root.__LIB_SINGLE_OWNER_RUNTIME='20260822-5';
 root.__LIB_UNIFIED_BOOK_ENRICHER_V1=true;
 root.__LIB_UNIVERSAL_SERIES_V2=true;
 root.__LIB_GOODREADS_GENRES_LOADER_V1=true;
@@ -47,8 +48,8 @@ loadOnce('libSeriesResolverStabilityV1','series-resolver-stability-v1.js?v=20260
 loadOnce('libGenresMultiV6','genres-multi-v1.js?v=20260820-8');
 loadOnce('libStoryGraphGoodreadsGenresV3','storygraph-goodreads-genres-v3.js?v=20260820-1');
 loadOnce('libGenreResolverResilientV1','genre-resolver-resilient-v1.js?v=20260820-1');
-/* Goodreads è davvero primario per i generi: prova l'ISBN diretto tramite route CORS prima di StoryGraph. */
-loadOnce('libGoodreadsGenreDirectFallbackV1','goodreads-genre-direct-fallback-v1.js?v=20260822-1');
+/* Goodreads è davvero primario per i generi: ISBN diretto, ricerca e pagina libro verificata prima di StoryGraph. */
+loadOnce('libGoodreadsGenreDirectFallbackV1','goodreads-genre-direct-fallback-v1.js?v=20260822-2');
 /* Goodreads resta primario: V2 recupera l'ISBN, V3 completa editore/data e vicini di serie direttamente da Goodreads. */
 loadOnce('libGoodreadsPrimaryMetadataV1','goodreads-primary-metadata-v1.js?v=20260821-2');
 loadOnce('libGoodreadsPrimaryRecoveryV2','goodreads-primary-recovery-v2.js?v=20260821-1');
@@ -57,7 +58,7 @@ loadOnce('libGoodreadsPrimaryDetailsV3','goodreads-primary-details-v3.js?v=20260
 loadOnce('libItalianRetailerSeriesFallbackV1','italian-retailer-series-fallback-v1.js?v=20260822-1');
 loadOnce('libWikidataSeriesFallbackV1','wikidata-series-fallback-v1.js?v=20260822-1');
 /* Per editore, anno e copertina, l'edizione legata all'ISBN esatto prevale sui risultati generici titolo/autore. */
-loadOnce('libOpenLibraryExactEditionFallbackV1','openlibrary-exact-edition-fallback-v1.js?v=20260822-1');
+loadOnce('libOpenLibraryExactEditionFallbackV1','openlibrary-exact-edition-fallback-v1.js?v=20260822-2');
 loadOnce('libPublisherPlotLockV8','publisher-plot-lock-v8.js?v=20260820-12');
 loadOnce('libSeriesSagaLockV9','series-saga-lock-v9.js?v=20260820-2');
 loadOnce('libStoryGraphGenreLockV4','storygraph-genre-lock-v4.js?v=20260820-3');
@@ -67,7 +68,7 @@ loadOnce('libGoodreadsPrimaryUiRouterV2','goodreads-primary-spinner-guard-v1.js?
 root.__LIB_METADATA_SOURCE_POLICY_PREVIOUS='goodreads-primary-then-storygraph-then-fallback-v3';
 root.__LIB_METADATA_SOURCE_POLICY='goodreads-primary-then-exact-isbn-edition-then-storygraph-v4';
 root.__LIB_GENRE_SOURCE_POLICY_PREVIOUS='goodreads-primary-then-storygraph-v3';
-root.__LIB_GENRE_SOURCE_POLICY='goodreads-direct-isbn-then-storygraph-v4';
+root.__LIB_GENRE_SOURCE_POLICY='goodreads-direct-isbn-discovery-then-storygraph-v5';
 root.__LIB_PLOT_SOURCE_POLICY_PREVIOUS='publisher-first-official-retry-lock-v9-sanitized';
 root.__LIB_PLOT_SOURCE_POLICY='goodreads-italian-primary-then-storygraph-translated-v3';
 root.__LIB_SERIES_RELATION_POLICY_PREVIOUS='goodreads-primary-position-search-italian-physical-v3';
