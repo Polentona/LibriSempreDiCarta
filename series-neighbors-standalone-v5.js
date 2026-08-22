@@ -1,6 +1,7 @@
 (()=>{
 const root=typeof window!=='undefined'?window:globalThis;
-if(root.__LIB_SERIES_NEIGHBORS_STANDALONE_V66)return;
+if(root.__LIB_SERIES_NEIGHBORS_STANDALONE_V67)return;
+root.__LIB_SERIES_NEIGHBORS_STANDALONE_V67=true;
 root.__LIB_SERIES_NEIGHBORS_STANDALONE_V66=true;
 root.__LIB_SERIES_NEIGHBORS_STANDALONE_V65=true;
 root.__LIB_SERIES_NEIGHBORS_STANDALONE_V64=true;
@@ -18,7 +19,7 @@ root.__LIB_SERIES_NEIGHBORS_STANDALONE_V53=true;
 root.__LIB_SERIES_NEIGHBORS_STANDALONE_V52=true;
 root.__LIB_SERIES_NEIGHBORS_STANDALONE_V51=true;
 root.__LIB_SERIES_NEIGHBORS_STANDALONE_V50=true;
-root.__LIB_SINGLE_OWNER_RUNTIME='20260822-10';
+root.__LIB_SINGLE_OWNER_RUNTIME='20260822-11';
 root.__LIB_UNIFIED_BOOK_ENRICHER_V1=true;
 root.__LIB_UNIVERSAL_SERIES_V2=true;
 root.__LIB_GOODREADS_GENRES_LOADER_V1=true;
@@ -51,7 +52,7 @@ loadOnce('libSeriesResolverStabilityV1','series-resolver-stability-v1.js?v=20260
 loadOnce('libGenresMultiV6','genres-multi-v1.js?v=20260820-8');
 loadOnce('libStoryGraphGoodreadsGenresV3','storygraph-goodreads-genres-v3.js?v=20260820-1');
 loadOnce('libGenreResolverResilientV1','genre-resolver-resilient-v1.js?v=20260820-1');
-loadOnce('libGoodreadsGenreDirectFallbackV1','goodreads-genre-direct-fallback-v1.js?v=20260822-4');
+loadOnce('libGoodreadsGenreDirectFallbackV1','goodreads-genre-direct-fallback-v1.js?v=20260822-5');
 loadOnce('libGoodreadsPrimaryMetadataV1','goodreads-primary-metadata-v1.js?v=20260821-2');
 loadOnce('libGoodreadsPrimaryRecoveryV2','goodreads-primary-recovery-v2.js?v=20260821-1');
 loadOnce('libGoodreadsPrimaryDetailsV3','goodreads-primary-details-v3.js?v=20260821-1');
@@ -66,8 +67,8 @@ loadOnce('libGoodreadsPrimaryUiRouterV2','goodreads-primary-spinner-guard-v1.js?
 root.__LIB_METADATA_SOURCE_POLICY_LEGACY='goodreads-primary-then-storygraph-then-fallback-v3';
 root.__LIB_METADATA_SOURCE_POLICY_PREVIOUS='goodreads-primary-then-exact-isbn-edition-then-storygraph-v4';
 root.__LIB_METADATA_SOURCE_POLICY='goodreads-primary-then-exact-isbn-author-challenge-rescue-v5';
-root.__LIB_GENRE_SOURCE_POLICY_PREVIOUS='goodreads-bounded-genre-block-then-storygraph-v6';
-root.__LIB_GENRE_SOURCE_POLICY='goodreads-retry-indexed-then-storygraph-v7';
+root.__LIB_GENRE_SOURCE_POLICY_PREVIOUS='goodreads-retry-indexed-then-storygraph-v7';
+root.__LIB_GENRE_SOURCE_POLICY='goodreads-next-data-xml-then-storygraph-v8';
 root.__LIB_PLOT_SOURCE_POLICY_PREVIOUS='publisher-first-official-retry-lock-v9-sanitized';
 root.__LIB_PLOT_SOURCE_POLICY='goodreads-italian-primary-then-storygraph-translated-v3';
 root.__LIB_SERIES_RELATION_POLICY_PREVIOUS='goodreads-primary-position-search-italian-physical-v3';
