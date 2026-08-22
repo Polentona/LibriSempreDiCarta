@@ -59,9 +59,10 @@ function labelsFromRaw(raw){
   if(!labels.length){
     const m=/Genres?/i.exec(raw);
     if(m){
-      const section=raw.slice(m.index,Math.min(raw.length,m.index+1400));
+      const section=raw.slice(m.index,Math.min(raw.length,m.index+1400)),low=section.toLowerCase(),compact={Giallo:['mystery','detective'],Noir:['noir'],Thriller:['thriller'],Fantasy:['fantasy'],Fantascienza:['science fiction','sci-fi','sci fi'],Horror:['horror'],'Romanzo rosa':['romance'],'Romanzo storico':['historical fiction','historical'],Avventura:['adventure'],Comics:['comics','comic','graphic novel'],Crime:['crime']};
       for(const [name,res] of MATCHERS){
-        if(res.some(re=>{const ok=re.test(section);re.lastIndex=0;return ok}))labels.push(name)
+        const bounded=res.some(re=>{const ok=re.test(section);re.lastIndex=0;return ok}),joined=(compact[name]||[]).some(x=>low.includes(x));
+        if(bounded||joined)labels.push(name)
       }
     }
   }
@@ -76,14 +77,15 @@ async function fetchRaw(url,timeout=7500){
     return text
   }finally{clearTimeout(t)}
 }
-async function reader(target){
+async function readerCandidates(target){
   const routes=[
     'https://api.allorigins.win/raw?url='+encodeURIComponent(target),
     'https://corsproxy.io/?url='+encodeURIComponent(target),
-    'https://api.codetabs.com/v1/proxy?quest='+encodeURIComponent(target)
+    'https://api.codetabs.com/v1/proxy?quest='+encodeURIComponent(target),
+    'https://r.jina.ai/'+target
   ];
-  try{return await Promise.any(routes.map(u=>fetchRaw(u).then(x=>x||Promise.reject(new Error('empty')))))}catch(e){}
-  try{return await fetchRaw('https://r.jina.ai/'+target,9000)}catch(e){return''}
+  const settled=await Promise.allSettled(routes.map((u,i)=>fetchRaw(u,i===routes.length-1?9000:7500)));
+  return uniq(settled.filter(x=>x.status==='fulfilled'&&x.value).map(x=>x.value))
 }
 async function directGoodreads(input={}){
   const code=isbn(input.code),title=clean(input.title),author=clean(input.author);
@@ -95,9 +97,12 @@ async function directGoodreads(input={}){
       'https://www.goodreads.com/search?q='+encodeURIComponent(code)
     ];
     for(const target of targets){
-      const raw=await reader(target);if(!raw||!identityOk(raw,input))continue;
-      const labels=labelsFromRaw(raw),genres=canonicalize(labels);
-      if(genres.length)return{found:true,reachable:true,genres,labels,url:target,matchedTitle:title,matchedCode:code,source:'goodreads',method:'goodreads-isbn-direct-proxy-v1'}
+      const raws=await readerCandidates(target);
+      for(const raw of raws){
+        if(!identityOk(raw,input))continue;
+        const labels=labelsFromRaw(raw),genres=canonicalize(labels);
+        if(genres.length)return{found:true,reachable:true,genres,labels,url:target,matchedTitle:title,matchedCode:code,source:'goodreads',method:'goodreads-isbn-direct-proxy-v1'}
+      }
     }
     return null
   })();
