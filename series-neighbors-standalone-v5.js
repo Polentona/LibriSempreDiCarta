@@ -1,6 +1,7 @@
 (()=>{
 const root=typeof window!=='undefined'?window:globalThis;
-if(root.__LIB_SERIES_NEIGHBORS_STANDALONE_V64)return;
+if(root.__LIB_SERIES_NEIGHBORS_STANDALONE_V65)return;
+root.__LIB_SERIES_NEIGHBORS_STANDALONE_V65=true;
 root.__LIB_SERIES_NEIGHBORS_STANDALONE_V64=true;
 root.__LIB_SERIES_NEIGHBORS_STANDALONE_V63=true;
 root.__LIB_SERIES_NEIGHBORS_STANDALONE_V62=true;
@@ -16,7 +17,7 @@ root.__LIB_SERIES_NEIGHBORS_STANDALONE_V53=true;
 root.__LIB_SERIES_NEIGHBORS_STANDALONE_V52=true;
 root.__LIB_SERIES_NEIGHBORS_STANDALONE_V51=true;
 root.__LIB_SERIES_NEIGHBORS_STANDALONE_V50=true;
-root.__LIB_SINGLE_OWNER_RUNTIME='20260822-8';
+root.__LIB_SINGLE_OWNER_RUNTIME='20260822-9';
 root.__LIB_UNIFIED_BOOK_ENRICHER_V1=true;
 root.__LIB_UNIVERSAL_SERIES_V2=true;
 root.__LIB_GOODREADS_GENRES_LOADER_V1=true;
@@ -55,14 +56,14 @@ loadOnce('libGoodreadsPrimaryRecoveryV2','goodreads-primary-recovery-v2.js?v=202
 loadOnce('libGoodreadsPrimaryDetailsV3','goodreads-primary-details-v3.js?v=20260821-1');
 loadOnce('libItalianRetailerSeriesFallbackV1','italian-retailer-series-fallback-v1.js?v=20260822-1');
 loadOnce('libWikidataSeriesFallbackV1','wikidata-series-fallback-v1.js?v=20260822-1');
-loadOnce('libOpenLibraryExactEditionFallbackV1','openlibrary-exact-edition-fallback-v1.js?v=20260822-2');
+loadOnce('libOpenLibraryExactEditionFallbackV1','openlibrary-exact-edition-fallback-v1.js?v=20260822-3');
 loadOnce('libPublisherPlotLockV8','publisher-plot-lock-v8.js?v=20260820-12');
 loadOnce('libSeriesSagaLockV9','series-saga-lock-v9.js?v=20260820-2');
 loadOnce('libStoryGraphGenreLockV4','storygraph-genre-lock-v4.js?v=20260820-3');
 loadOnce('libIsbnEnrichmentProgressV11','isbn-enrichment-progress-v10.js?v=20260820-2');
 loadOnce('libGoodreadsPrimaryUiRouterV2','goodreads-primary-spinner-guard-v1.js?v=20260821-2');
-root.__LIB_METADATA_SOURCE_POLICY_PREVIOUS='goodreads-primary-then-storygraph-then-fallback-v3';
-root.__LIB_METADATA_SOURCE_POLICY='goodreads-primary-then-exact-isbn-edition-then-storygraph-v4';
+root.__LIB_METADATA_SOURCE_POLICY_PREVIOUS='goodreads-primary-then-exact-isbn-edition-then-storygraph-v4';
+root.__LIB_METADATA_SOURCE_POLICY='goodreads-primary-then-exact-isbn-author-challenge-rescue-v5';
 root.__LIB_GENRE_SOURCE_POLICY_PREVIOUS='goodreads-bounded-genre-block-then-storygraph-v6';
 root.__LIB_GENRE_SOURCE_POLICY='goodreads-retry-indexed-then-storygraph-v7';
 root.__LIB_PLOT_SOURCE_POLICY_PREVIOUS='publisher-first-official-retry-lock-v9-sanitized';
