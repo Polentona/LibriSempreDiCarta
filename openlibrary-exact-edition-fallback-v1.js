@@ -1,6 +1,7 @@
 (()=>{
 const root=typeof window!=='undefined'?window:globalThis;
-if(root.__LIB_OPENLIBRARY_EXACT_EDITION_FALLBACK_V1)return;
+if(root.__LIB_OPENLIBRARY_EXACT_EDITION_FALLBACK_V2)return;
+root.__LIB_OPENLIBRARY_EXACT_EDITION_FALLBACK_V2=true;
 root.__LIB_OPENLIBRARY_EXACT_EDITION_FALLBACK_V1=true;
 
 const clean=v=>String(v??'').replace(/[\u200B-\u200F\u202A-\u202E\u2060\u2066-\u2069\uFEFF]/g,'').replace(/\u00a0/g,' ').replace(/\s+/g,' ').trim();
@@ -9,41 +10,50 @@ const cache=new Map();
 function yearOf(v){const m=clean(v).match(/\b((?:18|19|20)\d{2})\b/);return m?m[1]:''}
 function firstText(v){if(Array.isArray(v))return clean(v.find(Boolean)||'');return clean(v)}
 function coverUrl(id){id=Number(id);return Number.isInteger(id)&&id>0?`https://covers.openlibrary.org/b/id/${id}-L.jpg?default=false`:''}
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+async function fetchJson(url,attempts=2,timeout=7500){
+  let last='';
+  for(let a=1;a<=attempts;a++){
+    const c=new AbortController(),t=setTimeout(()=>c.abort(),timeout);
+    try{const r=await fetch(url,{signal:c.signal,headers:{Accept:'application/json'},cache:'no-store'});if(r.ok)return await r.json();last='HTTP '+r.status}catch(e){last=String(e&&e.message||e)}finally{clearTimeout(t)}
+    if(a<attempts)await wait(500*a)
+  }
+  if(last)root.__LIB_OPENLIBRARY_EXACT_EDITION_ERROR__=last;return null
+}
+function fromIsbnRecord(d,key){
+  if(!d||typeof d!=='object')return null;const ids=[...(d.isbn_13||[]),...(d.isbn_10||[])].map(isbn).filter(Boolean);if(ids.length&&!ids.includes(key))return null;
+  const out={code:key,title:clean(d.title||''),publisher:firstText(d.publishers),published:yearOf(d.publish_date),cover:coverUrl((d.covers||[])[0]),openLibraryKey:clean(d.key||''),source:'openlibrary-exact-isbn'};
+  return out.title||out.publisher||out.published||out.cover?out:null
+}
+function fromBooksApi(d,key){
+  const b=d?.['ISBN:'+key];if(!b||typeof b!=='object')return null;
+  const publisher=firstText((b.publishers||[]).map(x=>typeof x==='object'?x.name:x)),published=yearOf(b.publish_date),cover=clean(b.cover?.large||b.cover?.medium||'');
+  const out={code:key,title:clean(b.title||''),publisher,published,cover,openLibraryKey:clean(b.url||''),source:'openlibrary-exact-isbn-api'};
+  return out.title||out.publisher||out.published||out.cover?out:null
+}
+function mergeEdition(a,b,key){
+  if(!a&&!b)return null;return{code:key,title:clean(a?.title||b?.title||''),publisher:clean(a?.publisher||b?.publisher||''),published:clean(a?.published||b?.published||''),cover:clean(a?.cover||b?.cover||''),openLibraryKey:clean(a?.openLibraryKey||b?.openLibraryKey||''),source:a?.source||b?.source||'openlibrary-exact-isbn'}
+}
 async function exactEdition(code){
   const key=isbn(code);if(!key)return null;if(cache.has(key))return await cache.get(key);
   const p=(async()=>{
-    const c=new AbortController(),t=setTimeout(()=>c.abort(),9000);
-    try{
-      const r=await fetch(`https://openlibrary.org/isbn/${encodeURIComponent(key)}.json`,{signal:c.signal,headers:{Accept:'application/json'},cache:'no-store'});
-      if(!r.ok)return null;const d=await r.json();
-      const ids=[...(d.isbn_13||[]),...(d.isbn_10||[])].map(isbn).filter(Boolean);
-      if(ids.length&&!ids.includes(key))return null;
-      const publisher=firstText(d.publishers),published=yearOf(d.publish_date),cover=coverUrl((d.covers||[])[0]);
-      const out={code:key,title:clean(d.title||''),publisher,published,cover,openLibraryKey:clean(d.key||''),source:'openlibrary-exact-isbn'};
-      return out.title||out.publisher||out.published||out.cover?out:null
-    }catch(e){root.__LIB_OPENLIBRARY_EXACT_EDITION_ERROR__=String(e&&e.message||e);return null}
-    finally{clearTimeout(t)}
+    const primaryPromise=fetchJson(`https://openlibrary.org/isbn/${encodeURIComponent(key)}.json`,3,6500).then(d=>fromIsbnRecord(d,key)).catch(()=>null);
+    const apiPromise=fetchJson(`https://openlibrary.org/api/books?bibkeys=${encodeURIComponent('ISBN:'+key)}&jscmd=data&format=json`,2,6500).then(d=>fromBooksApi(d,key)).catch(()=>null);
+    const [primary,api]=await Promise.all([primaryPromise,apiPromise]),out=mergeEdition(primary,api,key);
+    root.__LIB_OPENLIBRARY_EXACT_EDITION_PROBE__={code:key,primary:!!primary,api:!!api,result:out,at:Date.now()};return out
   })();cache.set(key,p);return await p
 }
 function install(){
   const api=root.__LIB_GOODREADS_PRIMARY_METADATA_TEST__;if(!api?.resolveAll||!root.__LIB_GOODREADS_PRIMARY_DETAILS_INSTALLED_V3)return false;
-  const base=api.resolveAll;if(base.__openLibraryExactEditionFallbackV1)return true;
+  const base=api.resolveAll;if(base.__openLibraryExactEditionFallbackV2)return true;
   const wrapped=async input=>{
-    const r=await Promise.resolve(base(input)).catch(()=>null),ed=await exactEdition(input?.code).catch(()=>null);
+    const edPromise=exactEdition(input?.code).catch(()=>null),r=await Promise.resolve(base(input)).catch(()=>null),ed=await edPromise;
     if(!ed)return r;
-    const out={...(r||{}),exactEditionFallback:ed};
-    if(ed.title&&!clean(out.title))out.title=ed.title;
-    if(ed.publisher)out.publisher=ed.publisher;
-    if(ed.published)out.published=ed.published;
-    if(ed.cover)out.cover=ed.cover;
-    root.__LIB_OPENLIBRARY_EXACT_EDITION_LAST__={input:{code:isbn(input?.code),title:clean(input?.title),author:clean(input?.author)},edition:ed,result:{publisher:out.publisher||'',published:out.published||'',cover:out.cover||''},at:Date.now()};
-    return out
+    const out={...(r||{}),exactEditionFallback:ed};if(ed.title&&!clean(out.title))out.title=ed.title;if(ed.publisher)out.publisher=ed.publisher;if(ed.published)out.published=ed.published;if(ed.cover)out.cover=ed.cover;
+    root.__LIB_OPENLIBRARY_EXACT_EDITION_LAST__={input:{code:isbn(input?.code),title:clean(input?.title),author:clean(input?.author)},edition:ed,result:{publisher:out.publisher||'',published:out.published||'',cover:out.cover||''},at:Date.now()};return out
   };
-  wrapped.__openLibraryExactEditionFallbackV1=true;
-  api.resolveAll=wrapped;
-  root.__LIB_METADATA_EDITION_POLICY='exact-isbn-edition-before-generic-cover-v1';
-  return true
+  wrapped.__openLibraryExactEditionFallbackV2=true;wrapped.__openLibraryExactEditionFallbackV1=true;api.resolveAll=wrapped;root.__LIB_METADATA_EDITION_POLICY='exact-isbn-dual-endpoint-before-generic-cover-v2';return true
 }
 (function boot(n=0){if(install())return;if(n<600)setTimeout(()=>boot(n+1),100)})();
-root.__LIB_OPENLIBRARY_EXACT_EDITION_TEST__={exactEdition,yearOf,coverUrl};
+root.__LIB_OPENLIBRARY_EXACT_EDITION_TEST__={exactEdition,yearOf,coverUrl,fromIsbnRecord,fromBooksApi};
 })();
